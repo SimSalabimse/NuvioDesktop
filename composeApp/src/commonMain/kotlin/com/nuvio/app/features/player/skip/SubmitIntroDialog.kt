@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.PlayCircleOutline
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.StopCircle
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.BasicAlertDialog
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +60,7 @@ import nuvio.composeapp.generated.resources.submit_intro_capture_button
 import nuvio.composeapp.generated.resources.submit_intro_end_time_label
 import nuvio.composeapp.generated.resources.submit_intro_segment_intro
 import nuvio.composeapp.generated.resources.submit_intro_segment_outro
+import nuvio.composeapp.generated.resources.submit_intro_segment_preview
 import nuvio.composeapp.generated.resources.submit_intro_segment_recap
 import nuvio.composeapp.generated.resources.submit_intro_segment_type_label
 import nuvio.composeapp.generated.resources.submit_intro_start_time_label
@@ -73,6 +75,7 @@ fun SubmitIntroDialog(
     season: Int,
     episode: Int,
     currentTimeSec: Double,
+    durationMs: Long = 0L,
     segmentType: String,
     onSegmentTypeChange: (String) -> Unit,
     startTimeStr: String,
@@ -132,31 +135,57 @@ fun SubmitIntroDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.SemiBold,
                     )
-                    Row(
+
+                    if (durationMs > 0L) {
+                        Text(
+                            text = "Length ${formatSecondsToHMS(durationMs / 1000.0)} (from this stream)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        SegmentTypeButton(
-                            label = stringResource(Res.string.submit_intro_segment_intro),
-                            icon = Icons.Rounded.PlayCircleOutline,
-                            selected = segmentType == "intro",
-                            onClick = { onSegmentTypeChange("intro") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        SegmentTypeButton(
-                            label = stringResource(Res.string.submit_intro_segment_recap),
-                            icon = Icons.Rounded.Replay,
-                            selected = segmentType == "recap",
-                            onClick = { onSegmentTypeChange("recap") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        SegmentTypeButton(
-                            label = stringResource(Res.string.submit_intro_segment_outro),
-                            icon = Icons.Rounded.StopCircle,
-                            selected = segmentType == "outro",
-                            onClick = { onSegmentTypeChange("outro") },
-                            modifier = Modifier.weight(1f)
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            SegmentTypeButton(
+                                label = stringResource(Res.string.submit_intro_segment_intro),
+                                icon = Icons.Rounded.PlayCircleOutline,
+                                selected = segmentType == "intro",
+                                onClick = { onSegmentTypeChange("intro") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            SegmentTypeButton(
+                                label = stringResource(Res.string.submit_intro_segment_recap),
+                                icon = Icons.Rounded.Replay,
+                                selected = segmentType == "recap",
+                                onClick = { onSegmentTypeChange("recap") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            SegmentTypeButton(
+                                label = stringResource(Res.string.submit_intro_segment_outro),
+                                icon = Icons.Rounded.StopCircle,
+                                selected = segmentType == "credits",
+                                onClick = { onSegmentTypeChange("credits") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            SegmentTypeButton(
+                                label = stringResource(Res.string.submit_intro_segment_preview),
+                                icon = Icons.Rounded.Visibility,
+                                selected = segmentType == "preview",
+                                onClick = { onSegmentTypeChange("preview") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
 
@@ -165,7 +194,7 @@ fun SubmitIntroDialog(
                     label = stringResource(Res.string.submit_intro_start_time_label),
                     value = startTimeStr,
                     onValueChange = onStartTimeChange,
-                    onCapture = { onStartTimeChange(formatSecondsToMMSS(currentTimeSec)) }
+                    onCapture = { onStartTimeChange(formatSecondsToHMS(currentTimeSec)) }
                 )
 
                 // End Time
@@ -173,7 +202,7 @@ fun SubmitIntroDialog(
                     label = stringResource(Res.string.submit_intro_end_time_label),
                     value = endTimeStr,
                     onValueChange = onEndTimeChange,
-                    onCapture = { onEndTimeChange(formatSecondsToMMSS(currentTimeSec)) }
+                    onCapture = { onEndTimeChange(formatSecondsToHMS(currentTimeSec)) }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -360,10 +389,17 @@ private fun TimeInputRow(
     }
 }
 
-private fun formatSecondsToMMSS(seconds: Double): String {
-    val mins = floor(seconds / 60).toInt()
-    val secs = floor(seconds % 60).toInt()
-    return "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
+private fun formatSecondsToHMS(seconds: Double): String {
+    val totalSecs = seconds.toInt()
+    val hours = totalSecs / 3600
+    val mins = (totalSecs % 3600) / 60
+    val secs = totalSecs % 60
+    
+    return if (hours > 0) {
+        "$hours:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
+    } else {
+        "${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}"
+    }
 }
 
 private fun parseTimeToSeconds(input: String): Double? {
@@ -378,13 +414,25 @@ private fun parseTimeToSeconds(input: String): Double? {
 
     if (separator != null) {
         val parts = input.split(separator)
-        if (parts.size == 2) {
-            val mins = parts[0].toIntOrNull() ?: return null
-            val secs = parts[1].toIntOrNull() ?: return null
-            // If the user uses a dot, we assume they mean MM.SS (e.g. 1.24 = 1m 24s)
-            // But we only treat it as minutes if seconds are 0-59.
-            if (secs in 0..59) {
-                return (mins * 60 + secs).toDouble()
+        when (parts.size) {
+            3 -> {
+                // H:MM:SS format
+                val hours = parts[0].toIntOrNull() ?: return null
+                val mins = parts[1].toIntOrNull() ?: return null
+                val secs = parts[2].toIntOrNull() ?: return null
+                if (mins in 0..59 && secs in 0..59) {
+                    return (hours * 3600 + mins * 60 + secs).toDouble()
+                }
+            }
+            2 -> {
+                // MM:SS format (backward compatible)
+                val mins = parts[0].toIntOrNull() ?: return null
+                val secs = parts[1].toIntOrNull() ?: return null
+                // If the user uses a dot, we assume they mean MM.SS (e.g. 1.24 = 1m 24s)
+                // But we only treat it as minutes if seconds are 0-59.
+                if (secs in 0..59) {
+                    return (mins * 60 + secs).toDouble()
+                }
             }
         }
     }

@@ -28,30 +28,37 @@ enum class NextEpisodeThresholdMode {
     MINUTES_BEFORE_END,
 }
 
-// --- IntroDb API response models ---
+// --- IntroDb v3 API response models ---
 
 @Serializable
-data class IntroDbSegmentsResponse(
+data class IntroDbMediaResponse(
+    @SerialName("tmdb_id") val tmdbId: Int? = null,
     @SerialName("imdb_id") val imdbId: String? = null,
+    @SerialName("tvdb_id") val tvdbId: Int? = null,
     @SerialName("season") val season: Int? = null,
     @SerialName("episode") val episode: Int? = null,
+    @SerialName("duration_ms") val durationMs: Long? = null,
     @SerialName("intro") val intro: IntroDbSegment? = null,
     @SerialName("recap") val recap: IntroDbSegment? = null,
-    @SerialName("outro") val outro: IntroDbSegment? = null,
-    @SerialName("post_credits") val postCredits: IntroDbSegment? = null,
+    @SerialName("credits") val credits: IntroDbSegment? = null,
+    @SerialName("preview") val preview: IntroDbSegment? = null,
 )
 
-internal fun IntroDbSegmentsResponse.movieSkipIntervals(): List<SkipInterval> {
-    val credits = outro.movieIntervalOrNull("movie-credits")
-    val scene = postCredits.movieIntervalOrNull("post-credits")
-    // End-credit skipping must stop before the post-credits scene, even if data overlaps.
-    val safeCredits = if (credits != null && scene != null &&
-        scene.startTime < credits.endTime && scene.endTime > credits.startTime
+internal fun IntroDbMediaResponse.movieSkipIntervals(): List<SkipInterval> {
+    val creditsInterval = credits.movieIntervalOrNull("movie-credits")
+    val previewInterval = preview.movieIntervalOrNull("preview")
+    // End-credit skipping must stop before the preview/post-credits scene, even if data overlaps.
+    val safeCredits = if (creditsInterval != null && previewInterval != null &&
+        previewInterval.startTime < creditsInterval.endTime && previewInterval.endTime > creditsInterval.startTime
     ) {
-        credits.copy(endTime = scene.startTime).takeIf { it.endTime > it.startTime }
-    } else credits
-    return listOfNotNull(safeCredits, scene)
+        creditsInterval.copy(endTime = previewInterval.startTime).takeIf { it.endTime > it.startTime }
+    } else creditsInterval
+    return listOfNotNull(safeCredits, previewInterval)
 }
+
+// Backward compatibility alias
+@Deprecated("Use IntroDbMediaResponse", ReplaceWith("IntroDbMediaResponse"))
+typealias IntroDbSegmentsResponse = IntroDbMediaResponse
 
 private fun IntroDbSegment?.movieIntervalOrNull(type: String): SkipInterval? {
     if (this == null) return null
@@ -69,6 +76,10 @@ data class IntroDbSegment(
     @SerialName("end_ms") val endMs: Long? = null,
     @SerialName("confidence") val confidence: Double? = null,
     @SerialName("submission_count") val submissionCount: Int? = null,
+    @SerialName("accepted_count") val acceptedCount: Int? = null,
+    @SerialName("pending_count") val pendingCount: Int? = null,
+    @SerialName("rejected_count") val rejectedCount: Int? = null,
+    @SerialName("coverage_percent") val coveragePercent: Double? = null,
     @SerialName("updated_at") val updatedAt: String? = null,
 )
 
