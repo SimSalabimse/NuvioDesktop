@@ -111,6 +111,10 @@ internal object NativePlayerBridge {
     external fun shutdownWebView2Warmup()
     external fun setWindowsDisplaySleepInhibited(inhibited: Boolean): Boolean
 
+    external fun startAudioEnergyCapture(handle: Long, startTimeMs: Long)
+    external fun stopAudioEnergyCapture(handle: Long): String
+    external fun getAudioCaptureDuration(handle: Long): Long
+
     val controlsPageUrl: String by lazy { controlsPageAssets.url }
     private val controlsPageAssets: ControlsPageAssets by lazy { exportControlsPageAssets() }
 

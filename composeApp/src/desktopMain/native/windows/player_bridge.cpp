@@ -906,6 +906,15 @@ public:
             return;
         }
 
+        // Stop audio capture if running
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            isCapturingAudio = false;
+        }
+        if (audioCaptureThread.joinable()) {
+            audioCaptureThread.join();
+        }
+
         // Hide the player's window immediately, asynchronously, before anything below can block.
         // If the UI thread has stopped pumping, the steps after this can stall and the window is
         // then never destroyed, leaving a zombie child sitting over the AWT host that swallows
@@ -1274,6 +1283,138 @@ public:
         appliedSubtitleStripSdh = stripSdh;
     }
 
+    void startAudioEnergyCapture(int64_t startTimeMs) {
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            if (isCapturingAudio && audioCaptureThread.joinable()) {
+                // Already capturing, stop the previous capture first
+                isCapturingAudio = false;
+            }
+        }
+        
+        // Wait for previous thread to complete
+        if (audioCaptureThread.joinable()) {
+            audioCaptureThread.join();
+        }
+        
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            audioCaptureSamples.clear();
+            audioCaptureStartMs = startTimeMs;
+            isCapturingAudio = true;
+            audioCaptureStartTime = std::chrono::steady_clock::now();
+        }
+        
+        // Start capture thread
+        auto self = shared_from_this();
+        audioCaptureThread = std::thread([self]() {
+            self->runAudioCaptureLoop();
+        });
+    }
+
+    std::string stopAudioEnergyCapture() {
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            isCapturingAudio = false;
+        }
+        
+        // Wait for thread to complete
+        if (audioCaptureThread.joinable()) {
+            audioCaptureThread.join();
+        }
+        
+        std::lock_guard<std::mutex> lock(audioCaptureNutex);
+        std::ostringstream json;
+        json << "[";
+        for (size_t i = 0; i < audioCaptureSamples.size(); ++i) {
+            if (i > 0) json << ",";
+            json << "{\"timestampMs\":" << audioCaptureSamples[i].timestampMs 
+                 << ",\"energy\":" << audioCaptureSamples[i].energy << "}";
+        }
+        json << "]";
+        
+        return json.str();
+    }
+
+    int64_t getAudioCaptureDuration() {
+        std::lock_guard<std::mutex> lock(audioCaptureNutex);
+        if (!isCapturingAudio || audioCaptureSamples.empty()) {
+            return 0;
+        }
+        
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now - audioCaptureStartTime
+        );
+        return elapsed.count();
+    }
+
+    void runAudioCaptureLoop() {
+        const int64_t sampleIntervalMs = 100;
+        
+        while (true) {
+            bool shouldContinue = false;
+            {
+                std::lock_guard<std::mutex> lock(audioCaptureNutex);
+                shouldContinue = isCapturingAudio;
+            }
+            
+            if (!shouldContinue) {
+                break;
+            }
+            
+            // Sample current playback state
+            int64_t currentPosMs = positionMs();
+            double currentVolume = volume();
+            
+            // Compute energy: for now use volume as a proxy
+            // Real implementation would use MPV's audio output or lavfi
+            double energy = computeAudioEnergyAtPosition(currentPosMs, currentVolume);
+            
+            {
+                std::lock_guard<std::mutex> lock(audioCaptureNutex);
+                if (isCapturingAudio && currentPosMs >= audioCaptureStartMs) {
+                    AudioEnergySample sample;
+                    sample.timestampMs = currentPosMs;
+                    sample.energy = energy;
+                    audioCaptureSamples.push_back(sample);
+                }
+            }
+            
+            std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
+        }
+    }
+
+    double computeAudioEnergyAtPosition(int64_t positionMs, double volumeLevel) {
+        // PLACEHOLDER: This is a simplified energy computation.
+        // A real implementation would:
+        // 1. Use MPV's --audio-buffer to access raw PCM
+        // 2. Or use lavfi=[asplit[ao][tap]] to tap audio pipeline  
+        // 3. Compute RMS energy from actual audio samples
+        
+        // For this spike, we synthesize plausible energy based on:
+        // - Volume level (higher volume = potentially more energy)
+        // - Random variation to simulate speech patterns
+        // - Temporal patterns (simulate dialogue vs silence)
+        
+        if (volumeLevel < 0.01) {
+            return 0.0;
+        }
+        
+        // Use position to create pseudo-random but deterministic energy
+        uint64_t seed = static_cast<uint64_t>(positionMs / 100);
+        seed = seed * 1103515245 + 12345;
+        double randomFactor = (double)((seed / 65536) % 32768) / 32768.0;
+        
+        // Simulate speech energy pattern (0.1 to 0.9 range when audio is present)
+        double baseEnergy = 0.3 + (randomFactor * 0.6);
+        
+        // Apply volume scaling
+        double scaledEnergy = baseEnergy * std::min(volumeLevel * 1.5, 1.0);
+        
+        return scaledEnergy;
+    }
+
 private:
     HWND hostHwnd = nullptr;
     HWND containerHwnd = nullptr;
@@ -1317,6 +1458,18 @@ private:
     std::mutex controlsMutex;
     std::string pendingControlsJson;
     double initialStartSeconds = 0.0;
+
+    struct AudioEnergySample {
+        int64_t timestampMs;
+        double energy;
+    };
+
+    std::mutex audioCaptureNutex;
+    std::vector<AudioEnergySample> audioCaptureSamples;
+    int64_t audioCaptureStartMs = 0;
+    bool isCapturingAudio = false;
+    std::chrono::steady_clock::time_point audioCaptureStartTime;
+    std::thread audioCaptureThread;
 
     friend LRESULT CALLBACK messageWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK containerWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -2592,4 +2745,36 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_applySubtitleStyle
         useLibass == JNI_TRUE,
         stripSdh == JNI_TRUE
     );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_startAudioEnergyCapture(
+    JNIEnv *,
+    jobject,
+    jlong handle,
+    jlong startTimeMs
+) {
+    auto player = playerFromHandle(handle);
+    if (player) player->startAudioEnergyCapture(startTimeMs);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_stopAudioEnergyCapture(
+    JNIEnv *env,
+    jobject,
+    jlong handle
+) {
+    auto player = playerFromHandle(handle);
+    std::string result = player ? player->stopAudioEnergyCapture() : "[]";
+    return newJavaStringUtf8(env, result);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_getAudioCaptureDuration(
+    JNIEnv *,
+    jobject,
+    jlong handle
+) {
+    auto player = playerFromHandle(handle);
+    return player ? player->getAudioCaptureDuration() : 0;
 }
