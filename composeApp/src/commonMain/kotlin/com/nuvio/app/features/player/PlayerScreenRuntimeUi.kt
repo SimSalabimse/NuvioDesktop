@@ -1183,7 +1183,7 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         
         var submitted = false
         
-        if (introDbAppKey.startsWith("idb_", ignoreCase = true) && !isMoviePlayback && imdbId.startsWith("tt")) {
+        if (introDbAppKey.startsWith("idb_", ignoreCase = true) && !parentMetaType.equals("movie", ignoreCase = true) && imdbId.startsWith("tt")) {
             submitted = SkipIntroRepository.submitIntro(
                 imdbId = imdbId,
                 season = season,
@@ -1196,7 +1196,6 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         
         if (resolvedTheIntroKey.isNotBlank()) {
             val mediaType = when {
-                isMoviePlayback -> "movie"
                 parentMetaType.equals("movie", ignoreCase = true) -> "movie"
                 else -> "tv"
             }
