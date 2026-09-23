@@ -22,27 +22,38 @@ Audio capture approach:
 ### 1. MPV Audio Statistics Filter (Implemented)
 MPV's `astats` lavfi filter analyzes decoded PCM audio in real-time:
 ```cpp
-// During MPV initialization (Windows & Linux)
-mpv_set_option_string(mpv, "af", "lavfi=[astats=metadata=1:reset=1]");
+// During MPV initialization (Windows & Linux) - LABEL the filter
+mpv_set_option_string(mpv, "af", "@nuvio_astats:lavfi=[astats=metadata=1:reset=1]");
 ```
 
+The `@nuvio_astats:` label lets us read filter output from `af-metadata/nuvio_astats`.
+
 The `astats` filter computes:
-- **RMS level** (root mean square) - average audio power
+- **RMS level** (root mean square) - average audio power from PCM samples
 - **Peak level** - maximum sample amplitude
 - Values are in dB (decibels), typically -60 to 0 dB
 
-**Result**: Real audio analysis computed from actual decoded PCM, not a proxy.
+**Result**: Real audio analysis computed from actual decoded PCM.
 
 ### 2. Reading Filter Metadata (Implemented)
-Background thread queries MPV metadata properties every 100ms:
+Background thread reads `af-metadata/nuvio_astats` as a node map every 100ms:
 ```cpp
-// Query RMS level from astats filter
-char *rmsStr = nullptr;
-mpv_get_property(mpv, "metadata/by-key/lavfi.astats.Overall.RMS_level", 
-                 MPV_FORMAT_STRING, &rmsStr);
-double rmsDb = std::atof(rmsStr); // e.g., -25.4 dB
-mpv_free(rmsStr);
+// Read af-metadata/nuvio_astats (where labeled filter outputs metadata)
+mpv_node metadataNode;
+mpv_get_property(mpv, "af-metadata/nuvio_astats", MPV_FORMAT_NODE, &metadataNode);
+
+// Extract RMS from the node map
+for (int i = 0; i < metadataNode.u.list->num; i++) {
+    const char *key = metadataNode.u.list->keys[i];
+    if (strcmp(key, "lavfi.astats.Overall.RMS_level") == 0) {
+        double rmsDb = atof(metadataNode.u.list->values[i].u.string);
+        // e.g., -25.4 dB
+    }
+}
+mpv_free_node_contents(&metadataNode);
 ```
+
+**Critical**: Must use `af-metadata/<label>`, not `metadata/by-key/...` (file tags).
 
 ### 3. Converting dB to Energy (Implemented)
 Convert dB levels to normalized 0-1 energy scale:
@@ -70,15 +81,18 @@ external fun getAudioCaptureDuration(handle: Long): Long
 ```
 
 C++ implementation in `player_bridge.cpp` (Windows & Linux):
-- Background thread samples `astats` metadata every 100ms
-- Stores `{timestampMs, energy}` samples in thread-safe buffer
-- Returns JSON array on stop
+- Background thread reads `af-metadata/nuvio_astats` every 100ms
+- Parses node map to extract RMS/Peak levels
+- Converts dB to energy (0-1 scale)
+- Stores samples in thread-safe buffer
+- Returns -1.0 on failure (honest failure, no invented data)
+- Returns JSON array of valid samples on stop
 
 ```cpp
 // Sample storage
 struct AudioEnergySample {
     int64_t timestampMs;
-    double energy;  // 0.0 - 1.0, derived from PCM RMS
+    double energy;  // 0.0 - 1.0, derived from PCM RMS; -1.0 = no data
 };
 std::vector<AudioEnergySample> audioCaptureSamples;
 ```

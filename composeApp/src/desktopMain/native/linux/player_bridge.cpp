@@ -122,7 +122,7 @@ struct Player {
         int64_t timestampMs;
         double energy;
     };
-    std::mutex audioCaptureNutex;
+    std::mutex audioCaptureMutex;
     std::vector<AudioEnergySample> audioCaptureSamples;
     int64_t audioCaptureStartMs = 0;
     std::atomic<bool> isCapturingAudio{false};
@@ -1621,7 +1621,7 @@ void startAudioEnergyCapture(Player *p, int64_t startTimeMs) {
     if (!p) return;
     
     {
-        std::lock_guard<std::mutex> lock(p->audioCaptureNutex);
+        std::lock_guard<std::mutex> lock(p->audioCaptureMutex);
         if (p->isCapturingAudio.load() && p->audioCaptureThread.joinable()) {
             p->isCapturingAudio.store(false);
         }
@@ -1632,7 +1632,7 @@ void startAudioEnergyCapture(Player *p, int64_t startTimeMs) {
     }
     
     {
-        std::lock_guard<std::mutex> lock(p->audioCaptureNutex);
+        std::lock_guard<std::mutex> lock(p->audioCaptureMutex);
         p->audioCaptureSamples.clear();
         p->audioCaptureStartMs = startTimeMs;
         p->isCapturingAudio.store(true);
@@ -1646,7 +1646,7 @@ std::string stopAudioEnergyCapture(Player *p) {
     if (!p) return "[]";
     
     {
-        std::lock_guard<std::mutex> lock(p->audioCaptureNutex);
+        std::lock_guard<std::mutex> lock(p->audioCaptureMutex);
         p->isCapturingAudio.store(false);
     }
     
@@ -1654,7 +1654,7 @@ std::string stopAudioEnergyCapture(Player *p) {
         p->audioCaptureThread.join();
     }
     
-    std::lock_guard<std::mutex> lock(p->audioCaptureNutex);
+    std::lock_guard<std::mutex> lock(p->audioCaptureMutex);
     std::ostringstream json;
     json << "[";
     for (size_t i = 0; i < p->audioCaptureSamples.size(); ++i) {
@@ -1670,7 +1670,7 @@ std::string stopAudioEnergyCapture(Player *p) {
 int64_t getAudioCaptureDuration(Player *p) {
     if (!p) return 0;
     
-    std::lock_guard<std::mutex> lock(p->audioCaptureNutex);
+    std::lock_guard<std::mutex> lock(p->audioCaptureMutex);
     if (!p->isCapturingAudio.load() || p->audioCaptureSamples.empty()) {
         return 0;
     }
@@ -1900,7 +1900,7 @@ JNIEXPORT void JNICALL NP(dispose)(JNIEnv *env, jobject, jlong handle) {
     gtkSync([player] { destroyWebviewOnGtk(player); });
     // Stop audio capture thread if running
     {
-        std::lock_guard<std::mutex> lock(player->audioCaptureNutex);
+        std::lock_guard<std::mutex> lock(player->audioCaptureMutex);
         player->isCapturingAudio.store(false);
     }
     if (player->audioCaptureThread.joinable()) player->audioCaptureThread.join();
