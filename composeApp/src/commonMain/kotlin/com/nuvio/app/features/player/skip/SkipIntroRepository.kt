@@ -2,14 +2,18 @@ package com.nuvio.app.features.player.skip
 
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.tmdb.TmdbService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 
 object SkipIntroRepository {
 
     private val cache = HashMap<String, List<SkipInterval>>()
     private val animeSkipShowIdCache = HashMap<String, String>()
     private const val NO_ID = "__none__"
+    private const val INTRO_DB_TIMEOUT_MS = 5_000L
+    private const val THE_INTRO_DB_TIMEOUT_MS = 5_000L
 
     private val introDbConfigured: Boolean
         get() = IntroDbConfig.URL.isNotBlank()
@@ -19,19 +23,28 @@ object SkipIntroRepository {
         videoId: String?,
         durationMs: Long? = null,
         requireSkipIntroEnabled: Boolean = true,
-    ): List<SkipInterval> {
-        if (!introDbConfigured ||
-            (requireSkipIntroEnabled && !PlayerSettingsRepository.uiState.value.skipIntroEnabled)
-        ) return emptyList()
+    ): List<SkipInterval> = coroutineScope {
+        if (requireSkipIntroEnabled && !PlayerSettingsRepository.uiState.value.skipIntroEnabled) {
+            return@coroutineScope emptyList()
+        }
         val imdbId = resolveMovieSkipImdbId(
             contentId, videoId,
             resolveTmdb = { TmdbService.tmdbToImdb(it, "movie") },
             resolveAnime = { source, id -> SimklIdResolver.resolveIds(source, id)?.imdb },
-        ) ?: return emptyList()
+        )
+        if (imdbId == null) return@coroutineScope emptyList()
         val cacheKey = "movie:$imdbId"
-        cache[cacheKey]?.let { return it }
-        val data = SkipIntroApi.getIntroDbMedia(imdbId = imdbId, durationMs = durationMs) ?: return emptyList()
-        return data.movieSkipIntervals().also { cache[cacheKey] = it }
+        cache[cacheKey]?.let { return@coroutineScope it }
+
+        val theIntroDbDeferred = async { fetchMovieFromTheIntroDb(imdbId, durationMs) }
+        val introDbDeferred = async {
+            if (introDbConfigured) {
+                SkipIntroApi.getIntroDbMedia(imdbId = imdbId, durationMs = durationMs)?.movieSkipIntervals().orEmpty()
+            } else emptyList()
+        }
+        mergeByPriority(theIntroDbDeferred.await(), introDbDeferred.await()).also {
+            cache[cacheKey] = it
+        }
     }
 
     suspend fun getSkipIntervals(
@@ -48,6 +61,7 @@ object SkipIntroRepository {
         val cacheKey = "$imdbId:$season:$episode"
         cache[cacheKey]?.let { return@coroutineScope it }
 
+        val theIntroDbDeferred = async { fetchFromTheIntroDb(imdbId, season, episode, durationMs) }
         val introDbDeferred = async {
             if (introDbConfigured) fetchFromIntroDb(imdbId, season, episode, durationMs) else emptyList()
         }
@@ -73,6 +87,7 @@ object SkipIntroRepository {
         }
 
         return@coroutineScope mergeByPriority(
+            theIntroDbDeferred.await(),
             introDbDeferred.await(),
             animeSkipDeferred.await(),
             aniSkipDeferred.await(),
@@ -202,6 +217,32 @@ object SkipIntroRepository {
         "preview" -> "preview"
         else -> null
     }
+
+    private suspend fun fetchFromTheIntroDb(
+        imdbId: String,
+        season: Int,
+        episode: Int,
+        durationMs: Long? = null
+    ): List<SkipInterval> = withTimeoutOrNull(THE_INTRO_DB_TIMEOUT_MS) {
+        try {
+            TheIntroDb.fetchTvIntervals(imdbId = imdbId, season = season, episode = episode, durationMs = durationMs)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            emptyList()
+        }
+    } ?: emptyList()
+
+    private suspend fun fetchMovieFromTheIntroDb(imdbId: String, durationMs: Long? = null): List<SkipInterval> =
+        withTimeoutOrNull(THE_INTRO_DB_TIMEOUT_MS) {
+            try {
+                TheIntroDb.fetchMovieIntervals(imdbId = imdbId, durationMs = durationMs)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                emptyList()
+            }
+        } ?: emptyList()
 
     private suspend fun fetchFromIntroDb(imdbId: String, season: Int, episode: Int, durationMs: Long? = null): List<SkipInterval> {
         return try {

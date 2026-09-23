@@ -71,6 +71,7 @@ data class PlayerSettingsUiState(
     val animeSkipEnabled: Boolean = false,
     val animeSkipClientId: String = "",
     val introDbApiKey: String = "",
+    val theIntroDbApiKey: String = "",
     val introSubmitEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
@@ -142,6 +143,7 @@ object PlayerSettingsRepository {
     private var animeSkipEnabled = false
     private var animeSkipClientId = ""
     private var introDbApiKey = ""
+    private var theIntroDbApiKey = ""
     private var introSubmitEnabled = false
     private var streamAutoPlayNextEpisodeEnabled = false
     private var streamAutoPlayNextEpisodeFallbackEnabled = true
@@ -357,6 +359,7 @@ object PlayerSettingsRepository {
         animeSkipEnabled = PlayerSettingsStorage.loadAnimeSkipEnabled() ?: false
         animeSkipClientId = PlayerSettingsStorage.loadAnimeSkipClientId() ?: ""
         introDbApiKey = PlayerSettingsStorage.loadIntroDbApiKey() ?: ""
+        theIntroDbApiKey = PlayerSettingsStorage.loadTheIntroDbApiKey() ?: ""
         introSubmitEnabled = PlayerSettingsStorage.loadIntroSubmitEnabled() ?: false
         streamAutoPlayNextEpisodeEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeEnabled() ?: false
         streamAutoPlayNextEpisodeFallbackEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeFallbackEnabled() ?: true
@@ -736,6 +739,14 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveIntroDbApiKey(apiKey)
     }
 
+    fun setTheIntroDbApiKey(apiKey: String) {
+        ensureLoaded()
+        if (theIntroDbApiKey == apiKey) return
+        theIntroDbApiKey = apiKey
+        publish()
+        PlayerSettingsStorage.saveTheIntroDbApiKey(apiKey)
+    }
+
     fun setIntroSubmitEnabled(enabled: Boolean) {
         ensureLoaded()
         if (introSubmitEnabled == enabled) return
@@ -1029,6 +1040,7 @@ object PlayerSettingsRepository {
             animeSkipEnabled = animeSkipEnabled,
             animeSkipClientId = animeSkipClientId,
             introDbApiKey = introDbApiKey,
+            theIntroDbApiKey = theIntroDbApiKey,
             introSubmitEnabled = introSubmitEnabled,
             streamAutoPlayNextEpisodeEnabled = streamAutoPlayNextEpisodeEnabled,
             streamAutoPlayNextEpisodeFallbackEnabled = streamAutoPlayNextEpisodeFallbackEnabled,
