@@ -144,6 +144,7 @@ const episodeStreamList = document.getElementById("episodeStreamList");
 const submitIntroModal = document.getElementById("submitIntroModal");
 const submitIntroPanelTitle = document.getElementById("submitIntroPanelTitle");
 const submitIntroCloseButton = document.getElementById("submitIntroCloseButton");
+const submitIntroDurationLabel = document.getElementById("submitIntroDurationLabel");
 const segmentTypeLabel = document.getElementById("segmentTypeLabel");
 const segmentIntroButton = document.getElementById("segmentIntroButton");
 const segmentRecapButton = document.getElementById("segmentRecapButton");
@@ -1895,8 +1896,17 @@ const renderSubmitIntroModal = () => {
   segmentRecapButton.textContent = state.submitIntroSegmentRecapLabel || "Recap";
   segmentOutroButton.textContent = state.submitIntroSegmentOutroLabel || "Outro";
   segmentPreviewButton.textContent = state.submitIntroSegmentPreviewLabel || "Preview";
-  startTimeLabel.textContent = state.submitIntroStartTimeLabel || "START TIME (MM:SS)";
-  endTimeLabel.textContent = state.submitIntroEndTimeLabel || "END TIME (MM:SS)";
+  
+  if (state.durationMs > 0) {
+    submitIntroDurationLabel.textContent = `Length ${formatTime(state.durationMs)} (from this stream)`;
+    submitIntroDurationLabel.style.display = "";
+  } else {
+    submitIntroDurationLabel.textContent = "";
+    submitIntroDurationLabel.style.display = "none";
+  }
+  
+  startTimeLabel.textContent = state.submitIntroStartTimeLabel || "START TIME";
+  endTimeLabel.textContent = state.submitIntroEndTimeLabel || "END TIME";
   captureStartButton.textContent = state.submitIntroCaptureLabel || "Capture";
   captureEndButton.textContent = state.submitIntroCaptureLabel || "Capture";
   submitIntroCancelButton.textContent = state.cancelLabel || "Cancel";
@@ -2871,11 +2881,21 @@ const parseIntroTime = raw => {
   const separator = value.includes(":") ? ":" : (value.includes(".") ? "." : "");
   if (separator) {
     const parts = value.split(separator);
-    if (parts.length !== 2) return null;
-    const minutes = Number(parts[0]);
-    const seconds = Number(parts[1]);
-    if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || seconds < 0 || seconds >= 60) return null;
-    return minutes * 60 + seconds;
+    if (parts.length === 3) {
+      const hours = Number(parts[0]);
+      const minutes = Number(parts[1]);
+      const seconds = Number(parts[2]);
+      if (!Number.isFinite(hours) || !Number.isFinite(minutes) || !Number.isFinite(seconds) ||
+          minutes < 0 || minutes >= 60 || seconds < 0 || seconds >= 60) return null;
+      return hours * 3600 + minutes * 60 + seconds;
+    }
+    if (parts.length === 2) {
+      const minutes = Number(parts[0]);
+      const seconds = Number(parts[1]);
+      if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || seconds < 0 || seconds >= 60) return null;
+      return minutes * 60 + seconds;
+    }
+    return null;
   }
   const seconds = Number(value);
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
