@@ -1549,57 +1549,62 @@ void runAudioCaptureLoop(Player *p) {
         bool paused = flagProperty(p, "pause", true);
         
         // Compute real PCM-derived audio energy from MPV's astats filter
-        // The astats lavfi filter computes RMS levels from actual decoded audio samples
-        double energy = 0.0;
-        if (!paused && currentVolume > 0.01) {
-            if (!playerAlive(p) || !p->mpv) {
-                energy = 0.0;
-            } else {
-                // Query RMS level from astats filter metadata
-                // lavfi.astats.Overall.RMS_level is in dB (typically -60 to 0 dB)
-                char *rmsStr = nullptr;
-                int rmsResult = mpv_get_property(p->mpv, "metadata/by-key/lavfi.astats.Overall.RMS_level",
-                                                 MPV_FORMAT_STRING, &rmsStr);
-                
-                double rmsDb = -96.0; // Default to very quiet if no data
-                if (rmsResult >= 0 && rmsStr) {
-                    rmsDb = std::atof(rmsStr);
-                    mpv_free(rmsStr);
-                }
-                
-                // Query peak level as backup
-                char *peakStr = nullptr;
-                int peakResult = mpv_get_property(p->mpv, "metadata/by-key/lavfi.astats.Overall.Peak_level",
-                                                  MPV_FORMAT_STRING, &peakStr);
-                
+        double energy = -1.0; // Default to failure
+        
+        if (!paused && playerAlive(p) && p->mpv) {
+            // Read af-metadata/nuvio_astats node (where labeled filter outputs metadata)
+            mpv_node metadataNode;
+            int nodeResult = mpv_get_property(p->mpv, "af-metadata/nuvio_astats", MPV_FORMAT_NODE, &metadataNode);
+            
+            if (nodeResult >= 0 && metadataNode.format == MPV_FORMAT_NODE_MAP) {
+                // Extract RMS and Peak levels from the node map
+                double rmsDb = -96.0;
                 double peakDb = -96.0;
-                if (peakResult >= 0 && peakStr) {
-                    peakDb = std::atof(peakStr);
-                    mpv_free(peakStr);
+                bool foundRms = false;
+                bool foundPeak = false;
+                
+                for (int i = 0; i < metadataNode.u.list->num; i++) {
+                    const char *key = metadataNode.u.list->keys[i];
+                    mpv_node *value = &metadataNode.u.list->values[i];
+                    
+                    if (std::strcmp(key, "lavfi.astats.Overall.RMS_level") == 0 && value->format == MPV_FORMAT_STRING) {
+                        rmsDb = std::atof(value->u.string);
+                        foundRms = true;
+                    } else if (std::strcmp(key, "lavfi.astats.Overall.Peak_level") == 0 && value->format == MPV_FORMAT_STRING) {
+                        peakDb = std::atof(value->u.string);
+                        foundPeak = true;
+                    }
                 }
                 
-                // Convert dB to linear energy (0-1 range)
-                // Typical dialogue: -30 to -10 dB
-                // Silence/background: -60 to -40 dB
-                double useDb = (rmsDb > -96.0) ? rmsDb : peakDb;
+                mpv_free_node_contents(&metadataNode);
                 
-                // Convert dB to linear scale
-                // Map -60 dB (silence) to 0.0 and -10 dB (loud) to 1.0
-                double linearEnergy = 0.0;
-                if (useDb > -60.0) {
-                    // Normalize: -60 dB = 0.0, -10 dB = 1.0
-                    linearEnergy = (useDb + 60.0) / 50.0;
-                    linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
+                if (foundRms || foundPeak) {
+                    // Use RMS as primary, peak as fallback
+                    double useDb = foundRms ? rmsDb : peakDb;
+                    
+                    // Convert dB to linear energy (0-1 range)
+                    // Typical dialogue: -30 to -10 dB
+                    // Silence: -60 to -40 dB
+                    double linearEnergy = 0.0;
+                    if (useDb > -60.0) {
+                        // Normalize: -60 dB = 0.0, -10 dB = 1.0
+                        linearEnergy = (useDb + 60.0) / 50.0;
+                        linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
+                    }
+                    
+                    // Optional light volume scaling (don't hide real silence)
+                    energy = linearEnergy;
+                    if (currentVolume < 0.5) {
+                        energy *= (0.5 + currentVolume);
+                    }
+                    energy = std::min(energy, 1.0);
                 }
-                
-                // Apply volume scaling
-                energy = linearEnergy * std::min(currentVolume * 1.2, 1.0);
-                energy = std::min(energy, 1.0);
             }
         }
         
-        {
-            std::lock_guard<std::mutex> lock(p->audioCaptureNutex);
+        // Only store sample if we got valid energy (-1.0 = filter metadata unavailable)
+        if (energy >= 0.0) {
+            std::lock_guard<std::mutex> lock(p->audioCaptureMutex);
             if (p->isCapturingAudio.load() && currentPosMs >= p->audioCaptureStartMs) {
                 Player::AudioEnergySample sample;
                 sample.timestampMs = currentPosMs;
@@ -1775,9 +1780,9 @@ JNIEXPORT jlong JNICALL NP(create)(
         mpv_set_option_string(m, "target-colorspace-hint", "yes");
         mpv_set_option_string(m, "target-colorspace-hint-mode", "source");
         
-        // Audio statistics filter for real PCM-derived energy measurement
-        // astats provides RMS/peak levels computed from actual decoded audio samples
-        mpv_set_option_string(m, "af", "lavfi=[astats=metadata=1:reset=1]");
+        // Audio statistics filter for real PCM-derived energy measurement  
+        // Label as @nuvio_astats so we can read from af-metadata/nuvio_astats
+        mpv_set_option_string(m, "af", "@nuvio_astats:lavfi=[astats=metadata=1:reset=1]");
 
         if (!headerFields.empty()) {
             mpv_set_option_string(m, "http-header-fields", headerFields.c_str());

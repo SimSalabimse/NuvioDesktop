@@ -908,7 +908,7 @@ public:
 
         // Stop audio capture if running
         {
-            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
             isCapturingAudio = false;
         }
         if (audioCaptureThread.joinable()) {
@@ -1285,7 +1285,7 @@ public:
 
     void startAudioEnergyCapture(int64_t startTimeMs) {
         {
-            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
             if (isCapturingAudio && audioCaptureThread.joinable()) {
                 isCapturingAudio = false;
             }
@@ -1296,7 +1296,7 @@ public:
         }
         
         {
-            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
             audioCaptureSamples.clear();
             audioCaptureStartMs = startTimeMs;
             isCapturingAudio = true;
@@ -1311,7 +1311,7 @@ public:
 
     std::string stopAudioEnergyCapture() {
         {
-            std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
             isCapturingAudio = false;
         }
         
@@ -1319,7 +1319,7 @@ public:
             audioCaptureThread.join();
         }
         
-        std::lock_guard<std::mutex> lock(audioCaptureNutex);
+        std::lock_guard<std::mutex> lock(audioCaptureMutex);
         std::ostringstream json;
         json << "[";
         for (size_t i = 0; i < audioCaptureSamples.size(); ++i) {
@@ -1333,7 +1333,7 @@ public:
     }
 
     int64_t getAudioCaptureDuration() {
-        std::lock_guard<std::mutex> lock(audioCaptureNutex);
+        std::lock_guard<std::mutex> lock(audioCaptureMutex);
         if (!isCapturingAudio || audioCaptureSamples.empty()) {
             return 0;
         }
@@ -1351,7 +1351,7 @@ public:
         while (true) {
             bool shouldContinue = false;
             {
-                std::lock_guard<std::mutex> lock(audioCaptureNutex);
+                std::lock_guard<std::mutex> lock(audioCaptureMutex);
                 shouldContinue = isCapturingAudio;
             }
             
@@ -1363,11 +1363,12 @@ public:
             double currentVolume = volume();
             bool paused = isPaused();
             
-            // Compute real energy based on MPV audio state
+            // Compute real energy from MPV astats filter
             double energy = computeRealAudioEnergy(currentPosMs, currentVolume, paused);
             
-            {
-                std::lock_guard<std::mutex> lock(audioCaptureNutex);
+            // Only store sample if we got valid energy (-1.0 = filter metadata unavailable)
+            if (energy >= 0.0) {
+                std::lock_guard<std::mutex> lock(audioCaptureMutex);
                 if (isCapturingAudio && currentPosMs >= audioCaptureStartMs) {
                     AudioEnergySample sample;
                     sample.timestampMs = currentPosMs;
@@ -1383,48 +1384,57 @@ public:
     double computeRealAudioEnergy(int64_t positionMs, double volumeLevel, bool paused) {
         // Real PCM-derived audio energy from MPV's astats filter
         // The astats lavfi filter computes RMS levels from actual decoded audio samples
-        // This provides genuine audio analysis that varies with dialogue vs silence
         
-        if (paused || volumeLevel < 0.01) {
+        if (paused) {
             return 0.0;
         }
         
         std::lock_guard<std::mutex> lock(mpvMutex);
         if (!mpv) {
-            return 0.0;
+            return -1.0; // Signal no MPV handle
         }
         
-        // Query RMS level from astats filter metadata
-        // lavfi.astats.Overall.RMS_level is in dB (typically -60 to 0 dB)
-        char *rmsStr = nullptr;
-        int rmsResult = mpvApi().getProperty(mpv, "metadata/by-key/lavfi.astats.Overall.RMS_level", 
-                                             MPV_FORMAT_STRING, &rmsStr);
+        // Read af-metadata/nuvio_astats node (where labeled filter outputs metadata)
+        mpv_node metadataNode;
+        int nodeResult = mpvApi().getProperty(mpv, "af-metadata/nuvio_astats", MPV_FORMAT_NODE, &metadataNode);
         
-        double rmsDb = -96.0; // Default to very quiet if no data
-        if (rmsResult >= 0 && rmsStr) {
-            rmsDb = std::atof(rmsStr);
-            mpvApi().freeValue(rmsStr);
+        if (nodeResult < 0 || metadataNode.format != MPV_FORMAT_NODE_MAP) {
+            // No filter metadata available - honest failure
+            return -1.0;
         }
         
-        // Query peak level as backup
-        char *peakStr = nullptr;
-        int peakResult = mpvApi().getProperty(mpv, "metadata/by-key/lavfi.astats.Overall.Peak_level",
-                                              MPV_FORMAT_STRING, &peakStr);
-        
+        // Extract RMS and Peak levels from the node map
+        double rmsDb = -96.0;
         double peakDb = -96.0;
-        if (peakResult >= 0 && peakStr) {
-            peakDb = std::atof(peakStr);
-            mpvApi().freeValue(peakStr);
+        bool foundRms = false;
+        bool foundPeak = false;
+        
+        for (int i = 0; i < metadataNode.u.list->num; i++) {
+            const char *key = metadataNode.u.list->keys[i];
+            mpv_node *value = &metadataNode.u.list->values[i];
+            
+            if (std::strcmp(key, "lavfi.astats.Overall.RMS_level") == 0 && value->format == MPV_FORMAT_STRING) {
+                rmsDb = std::atof(value->u.string);
+                foundRms = true;
+            } else if (std::strcmp(key, "lavfi.astats.Overall.Peak_level") == 0 && value->format == MPV_FORMAT_STRING) {
+                peakDb = std::atof(value->u.string);
+                foundPeak = true;
+            }
         }
+        
+        mpvApi().freeValue(&metadataNode);
+        
+        if (!foundRms && !foundPeak) {
+            // No audio statistics available - honest failure
+            return -1.0;
+        }
+        
+        // Use RMS as primary, peak as fallback
+        double useDb = foundRms ? rmsDb : peakDb;
         
         // Convert dB to linear energy (0-1 range)
         // Typical dialogue: -30 to -10 dB
         // Silence/background: -60 to -40 dB
-        // Use RMS as primary, peak as fallback
-        double useDb = (rmsDb > -96.0) ? rmsDb : peakDb;
-        
-        // Convert dB to linear scale
-        // Map -60 dB (silence) to 0.0 and -10 dB (loud) to 1.0
         double linearEnergy = 0.0;
         if (useDb > -60.0) {
             // Normalize: -60 dB = 0.0, -10 dB = 1.0
@@ -1432,8 +1442,14 @@ public:
             linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
         }
         
-        // Apply volume scaling (user volume affects perceived energy)
-        double scaledEnergy = linearEnergy * std::min(volumeLevel * 1.2, 1.0);
+        // Optional: scale by user volume (but don't hide real silence)
+        // User volume affects output amplitude but astats sees pre-volume samples
+        // Only apply light scaling to avoid inventing energy
+        double scaledEnergy = linearEnergy;
+        if (volumeLevel < 0.5) {
+            // Very low user volume - might indicate they want quiet
+            scaledEnergy *= (0.5 + volumeLevel);
+        }
         
         return std::min(scaledEnergy, 1.0);
     }
@@ -1487,7 +1503,7 @@ private:
         double energy;
     };
 
-    std::mutex audioCaptureNutex;
+    std::mutex audioCaptureMutex;
     std::vector<AudioEnergySample> audioCaptureSamples;
     int64_t audioCaptureStartMs = 0;
     bool isCapturingAudio = false;
@@ -1840,8 +1856,8 @@ private:
             setMpvOptionStringLocked("hr-seek", "no");
             
             // Audio statistics filter for real PCM-derived energy measurement
-            // astats provides RMS/peak levels computed from actual decoded audio samples
-            setMpvOptionStringLocked("af", "lavfi=[astats=metadata=1:reset=1]");
+            // Label as @nuvio_astats so we can read from af-metadata/nuvio_astats
+            setMpvOptionStringLocked("af", "@nuvio_astats:lavfi=[astats=metadata=1:reset=1]");
 
             int64_t wid = (int64_t)(intptr_t)containerHwnd;
             int widResult = api.setOption(mpv, "wid", MPV_FORMAT_INT64, &wid);
