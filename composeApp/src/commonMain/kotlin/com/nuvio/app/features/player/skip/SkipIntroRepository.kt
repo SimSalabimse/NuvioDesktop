@@ -197,6 +197,7 @@ object SkipIntroRepository {
         "intro", "op", "mixed-op" -> "opening"
         "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
         "recap" -> "recap"
+        "preview" -> "preview"
         else -> null
     }
 
@@ -208,6 +209,7 @@ object SkipIntroRepository {
                 data.intro.toSkipIntervalOrNull("intro"),
                 data.recap.toSkipIntervalOrNull("recap"),
                 data.outro.toSkipIntervalOrNull("outro"),
+                data.preview.toSkipIntervalOrNull("preview"),
             )
         } catch (_: Exception) {
             emptyList()
