@@ -128,6 +128,7 @@ data class PlayerControlsState(
     val submitIntroSegmentIntroLabel: String = "Intro",
     val submitIntroSegmentRecapLabel: String = "Recap",
     val submitIntroSegmentOutroLabel: String = "Outro",
+    val submitIntroSegmentPreviewLabel: String = "Preview",
     val submitIntroStartTimeLabel: String = "START TIME (MM:SS)",
     val submitIntroEndTimeLabel: String = "END TIME (MM:SS)",
     val submitIntroCaptureLabel: String = "Capture",

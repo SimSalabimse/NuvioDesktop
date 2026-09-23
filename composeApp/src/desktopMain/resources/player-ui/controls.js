@@ -148,6 +148,7 @@ const segmentTypeLabel = document.getElementById("segmentTypeLabel");
 const segmentIntroButton = document.getElementById("segmentIntroButton");
 const segmentRecapButton = document.getElementById("segmentRecapButton");
 const segmentOutroButton = document.getElementById("segmentOutroButton");
+const segmentPreviewButton = document.getElementById("segmentPreviewButton");
 const startTimeLabel = document.getElementById("startTimeLabel");
 const endTimeLabel = document.getElementById("endTimeLabel");
 const submitIntroStartInput = document.getElementById("submitIntroStartInput");
@@ -214,6 +215,7 @@ let state = {
   submitIntroSegmentIntroLabel: "Intro",
   submitIntroSegmentRecapLabel: "Recap",
   submitIntroSegmentOutroLabel: "Outro",
+  submitIntroSegmentPreviewLabel: "Preview",
   submitIntroStartTimeLabel: "START TIME (MM:SS)",
   submitIntroEndTimeLabel: "END TIME (MM:SS)",
   submitIntroCaptureLabel: "Capture",
@@ -1892,6 +1894,7 @@ const renderSubmitIntroModal = () => {
   segmentIntroButton.textContent = state.submitIntroSegmentIntroLabel || "Intro";
   segmentRecapButton.textContent = state.submitIntroSegmentRecapLabel || "Recap";
   segmentOutroButton.textContent = state.submitIntroSegmentOutroLabel || "Outro";
+  segmentPreviewButton.textContent = state.submitIntroSegmentPreviewLabel || "Preview";
   startTimeLabel.textContent = state.submitIntroStartTimeLabel || "START TIME (MM:SS)";
   endTimeLabel.textContent = state.submitIntroEndTimeLabel || "END TIME (MM:SS)";
   captureStartButton.textContent = state.submitIntroCaptureLabel || "Capture";
@@ -1902,7 +1905,7 @@ const renderSubmitIntroModal = () => {
     : (state.submitIntroSubmitLabel || "Submit");
   submitIntroSubmitButton.disabled = Boolean(state.isSubmitIntroSubmitting);
 
-  [segmentIntroButton, segmentRecapButton, segmentOutroButton].forEach(button => {
+  [segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton].forEach(button => {
     button.classList.toggle("selected", button.dataset.segment === submitIntroDraft.segmentType);
   });
   setInputValue(submitIntroStartInput, submitIntroDraft.startTime);
@@ -2823,7 +2826,7 @@ const updateSubmitSegment = segment => {
   renderSubmitIntroModal();
 };
 
-[segmentIntroButton, segmentRecapButton, segmentOutroButton].forEach(button => {
+[segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton].forEach(button => {
   button.addEventListener("click", event => {
     event.stopPropagation();
     updateSubmitSegment(button.dataset.segment || "intro");
@@ -2889,7 +2892,7 @@ submitIntroSubmitButton.addEventListener("click", event => {
     renderSubmitIntroModal();
     return;
   }
-  const segmentIndex = submitIntroDraft.segmentType === "recap" ? 1 : (submitIntroDraft.segmentType === "outro" ? 2 : 0);
+  const segmentIndex = submitIntroDraft.segmentType === "recap" ? 1 : (submitIntroDraft.segmentType === "credits" ? 2 : (submitIntroDraft.segmentType === "preview" ? 3 : 0));
   submitIntroDraft.status = "";
   send("submitIntroSegment", segmentIndex);
   send("submitIntroStart", start);

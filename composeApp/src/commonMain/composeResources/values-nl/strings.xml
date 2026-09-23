@@ -2032,6 +2032,7 @@
     <string name="submit_intro_segment_intro">Intro</string>
     <string name="submit_intro_segment_recap">Samenvatting</string>
     <string name="submit_intro_segment_outro">Outro</string>
+    <string name="submit_intro_segment_preview">Voorbeeld</string>
     <string name="submit_intro_start_time">STARTTIJD (MM:SS)</string>
     <string name="submit_intro_end_time">EINDTIJD (MM:SS)</string>
     <string name="submit_intro_submit">Indienen</string>

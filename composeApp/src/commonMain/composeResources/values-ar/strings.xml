@@ -1905,6 +1905,7 @@
     <string name="submit_intro_segment_intro">المقدمة</string>
     <string name="submit_intro_segment_recap">الملخص</string>
     <string name="submit_intro_segment_outro">النهاية</string>
+    <string name="submit_intro_segment_preview">معاينة</string>
     <string name="submit_intro_start_time">وقت البداية (MM:SS)</string>
     <string name="submit_intro_end_time">وقت النهاية (MM:SS)</string>
     <string name="submit_intro_submit">إرسال</string>

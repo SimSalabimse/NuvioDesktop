@@ -298,6 +298,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroSegmentIntroLabel = stringResource(Res.string.submit_intro_segment_intro),
         submitIntroSegmentRecapLabel = stringResource(Res.string.submit_intro_segment_recap),
         submitIntroSegmentOutroLabel = stringResource(Res.string.submit_intro_segment_outro),
+        submitIntroSegmentPreviewLabel = stringResource(Res.string.submit_intro_segment_preview),
         submitIntroStartTimeLabel = stringResource(Res.string.submit_intro_start_time_label),
         submitIntroEndTimeLabel = stringResource(Res.string.submit_intro_end_time_label),
         submitIntroCaptureLabel = stringResource(Res.string.submit_intro_capture_button),
@@ -924,7 +925,8 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
         "submitIntroSegment" -> {
             submitIntroSegmentType = when (value.toInt()) {
                 1 -> "recap"
-                2 -> "outro"
+                2 -> "credits"
+                3 -> "preview"
                 else -> "intro"
             }
             submitIntroStatusMessage = null
