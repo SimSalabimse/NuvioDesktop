@@ -30,8 +30,10 @@ import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.SkipIntroRepository
+import com.nuvio.app.features.player.skip.TheIntroDb
 import com.nuvio.app.features.streams.AddonStreamGroup
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
+import com.nuvio.app.features.tmdb.TmdbService
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.isSelectableForPlayback
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
@@ -1173,16 +1175,55 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
     isSubmitIntroSubmitting = true
     submitIntroStatusMessage = null
     scope.launch {
-        val result = SkipIntroRepository.submitIntro(
-            imdbId = imdbId,
-            season = season,
-            episode = episode,
-            startSec = start,
-            endSec = end,
-            segmentType = submitIntroSegmentType,
-        )
+        val settings = PlayerSettingsRepository.uiState.value
+        val introDbAppKey = settings.introDbApiKey.trim()
+        val theIntroDbKey = settings.theIntroDbApiKey.trim()
+        val fallbackTheIntroKey = introDbAppKey.takeIf { it.isNotBlank() && !it.startsWith("idb_", ignoreCase = true) }.orEmpty()
+        val resolvedTheIntroKey = theIntroDbKey.ifBlank { fallbackTheIntroKey }
+        
+        var submitted = false
+        
+        if (introDbAppKey.startsWith("idb_", ignoreCase = true) && !isMoviePlayback && imdbId.startsWith("tt")) {
+            submitted = SkipIntroRepository.submitIntro(
+                imdbId = imdbId,
+                season = season,
+                episode = episode,
+                startSec = start,
+                endSec = end,
+                segmentType = submitIntroSegmentType,
+            ) || submitted
+        }
+        
+        if (resolvedTheIntroKey.isNotBlank()) {
+            val mediaType = when {
+                isMoviePlayback -> "movie"
+                parentMetaType.equals("movie", ignoreCase = true) -> "movie"
+                else -> "tv"
+            }
+            val resolvedTmdb = TmdbService.ensureTmdbId(
+                videoId = activeVideoId?.takeIf { it.isNotBlank() } ?: imdbId,
+                mediaType = mediaType,
+                fallbackImdbId = imdbId.takeIf { it.startsWith("tt", ignoreCase = true) },
+            )?.toIntOrNull()
+            
+            if (resolvedTmdb != null && resolvedTmdb > 0) {
+                submitted = TheIntroDb.submitTimestamp(
+                    apiKey = resolvedTheIntroKey,
+                    tmdbId = resolvedTmdb,
+                    imdbId = imdbId.takeIf { it.startsWith("tt", ignoreCase = true) },
+                    type = mediaType,
+                    segment = submitIntroSegmentType,
+                    season = season.takeIf { mediaType == "tv" && season > 0 },
+                    episode = episode.takeIf { mediaType == "tv" && episode > 0 },
+                    startSec = start,
+                    endSec = end,
+                    videoDurationMs = playbackSnapshot.durationMs.takeIf { it > 0L },
+                ) || submitted
+            }
+        }
+        
         isSubmitIntroSubmitting = false
-        if (result) {
+        if (submitted) {
             submitIntroStartTimeSec = 0.0
             submitIntroEndTimeSec = 0.0
             submitIntroStartTimeStr = "00:00"
@@ -1192,7 +1233,7 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
             playerControlsCloseModalsToken += 1
             playerControlsSubmitIntroSuccessToken += 1
         } else {
-            submitIntroStatusMessage = "Unable to submit timestamps."
+            submitIntroStatusMessage = "Submit failed. Enable Submit in Playback settings and paste your theintrodb.org API key (or an introdb.app idb_ key)."
         }
     }
 }
