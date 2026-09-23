@@ -2143,6 +2143,13 @@ button:disabled {
   background: var(--theme-accent-strong);
 }
 
+.segment-button:disabled,
+.segment-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .filter-chip.selected,
 .filter-chip.selected:hover:not(:disabled) {
   background: #ffffff !important;

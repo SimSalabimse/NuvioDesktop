@@ -235,6 +235,7 @@ data class PlayerControlsState(
     val submitIntroEndTime: String = "00:00",
     val isSubmitIntroSubmitting: Boolean = false,
     val submitIntroStatusMessage: String = "",
+    val existingSegmentTypes: List<String> = emptyList(),
     val showP2pConsent: Boolean = false,
     val subtitleActiveTab: String = "BuiltIn",
     val subtitleLanguageItems: List<PlayerControlSubtitleLanguageItem> = emptyList(),

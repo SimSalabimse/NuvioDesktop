@@ -488,6 +488,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         activeSkipInterval = null
         skipIntervalDismissed = false
         autoSkippedIntervalKeys.clear()
+        submittedSegmentTypesInSession.clear()
         playerNotificationMessage = ""
         showNextEpisodeCard = false
         nextEpisodeCardDismissed = false

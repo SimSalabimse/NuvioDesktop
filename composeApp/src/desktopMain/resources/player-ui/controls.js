@@ -322,6 +322,7 @@ let state = {
   submitIntroEndTime: "00:00",
   isSubmitIntroSubmitting: false,
   submitIntroStatusMessage: "",
+  existingSegmentTypes: [],
   showP2pConsent: false,
   subtitleActiveTab: "BuiltIn",
   subtitleLanguageItems: [],
@@ -1915,9 +1916,26 @@ const renderSubmitIntroModal = () => {
     : (state.submitIntroSubmitLabel || "Submit");
   submitIntroSubmitButton.disabled = Boolean(state.isSubmitIntroSubmitting);
 
-  [segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton].forEach(button => {
-    button.classList.toggle("selected", button.dataset.segment === submitIntroDraft.segmentType);
+  const existingTypes = Array.isArray(state.existingSegmentTypes) ? state.existingSegmentTypes : [];
+  const buttons = [segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton];
+  
+  buttons.forEach(button => {
+    const segmentType = button.dataset.segment;
+    const isExisting = existingTypes.includes(segmentType);
+    button.disabled = isExisting;
+    button.classList.toggle("disabled", isExisting);
+    button.classList.toggle("selected", segmentType === submitIntroDraft.segmentType);
   });
+  
+  // If the currently selected type is now disabled, switch to the first available type
+  if (existingTypes.includes(submitIntroDraft.segmentType)) {
+    const firstAvailable = buttons.find(btn => !btn.disabled);
+    if (firstAvailable) {
+      submitIntroDraft.segmentType = firstAvailable.dataset.segment;
+      submitIntroDraft.status = "";
+    }
+  }
+  
   setInputValue(submitIntroStartInput, submitIntroDraft.startTime);
   setInputValue(submitIntroEndInput, submitIntroDraft.endTime);
   submitIntroStatus.textContent = submitIntroDraft.status || state.submitIntroStatusMessage || "";
@@ -2839,6 +2857,7 @@ const updateSubmitSegment = segment => {
 [segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton].forEach(button => {
   button.addEventListener("click", event => {
     event.stopPropagation();
+    if (button.disabled) return;
     updateSubmitSegment(button.dataset.segment || "intro");
   });
 });
