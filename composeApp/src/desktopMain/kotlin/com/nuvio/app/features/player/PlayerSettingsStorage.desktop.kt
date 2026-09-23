@@ -70,6 +70,7 @@ internal actual object PlayerSettingsStorage {
     private const val animeSkipEnabledKey = "animeskip_enabled"
     private const val animeSkipClientIdKey = "animeskip_client_id"
     private const val introDbApiKeyKey = "introdb_api_key"
+    private const val theIntroDbApiKeyKey = "the_introdb_api_key"
     private const val introSubmitEnabledKey = "intro_submit_enabled"
     private const val streamAutoPlayNextEpisodeEnabledKey = "stream_auto_play_next_episode_enabled"
     private const val streamAutoPlayNextEpisodeFallbackEnabledKey = "stream_auto_play_next_episode_fallback_enabled"
@@ -282,6 +283,8 @@ internal actual object PlayerSettingsStorage {
     actual fun saveAnimeSkipClientId(clientId: String) = saveString(animeSkipClientIdKey, clientId)
     actual fun loadIntroDbApiKey(): String? = loadString(introDbApiKeyKey)
     actual fun saveIntroDbApiKey(apiKey: String) = saveString(introDbApiKeyKey, apiKey)
+    actual fun loadTheIntroDbApiKey(): String? = loadString(theIntroDbApiKeyKey)
+    actual fun saveTheIntroDbApiKey(apiKey: String) = saveString(theIntroDbApiKeyKey, apiKey)
     actual fun loadIntroSubmitEnabled(): Boolean? = loadBoolean(introSubmitEnabledKey)
     actual fun saveIntroSubmitEnabled(enabled: Boolean) = saveBoolean(introSubmitEnabledKey, enabled)
     actual fun loadStreamAutoPlayNextEpisodeEnabled(): Boolean? = loadBoolean(streamAutoPlayNextEpisodeEnabledKey)
@@ -485,6 +488,7 @@ internal actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(animeSkipEnabledKey)?.let(::saveAnimeSkipEnabled)
         payload.decodeSyncString(animeSkipClientIdKey)?.let(::saveAnimeSkipClientId)
         payload.decodeSyncString(introDbApiKeyKey)?.let(::saveIntroDbApiKey)
+        payload.decodeSyncString(theIntroDbApiKeyKey)?.let(::saveTheIntroDbApiKey)
         payload.decodeSyncBoolean(introSubmitEnabledKey)?.let(::saveIntroSubmitEnabled)
         payload.decodeSyncBoolean(streamAutoPlayNextEpisodeEnabledKey)?.let(::saveStreamAutoPlayNextEpisodeEnabled)
         payload.decodeSyncBoolean(streamAutoPlayNextEpisodeFallbackEnabledKey)

@@ -71,6 +71,7 @@ actual object PlayerSettingsStorage {
     private const val animeSkipEnabledKey = "animeskip_enabled"
     private const val animeSkipClientIdKey = "animeskip_client_id"
     private const val introDbApiKeyKey = "introdb_api_key"
+    private const val theIntroDbApiKeyKey = "the_introdb_api_key"
     private const val introSubmitEnabledKey = "intro_submit_enabled"
     private const val streamAutoPlayNextEpisodeEnabledKey = "stream_auto_play_next_episode_enabled"
     private const val streamAutoPlayNextEpisodeFallbackEnabledKey = "stream_auto_play_next_episode_fallback_enabled"
@@ -935,6 +936,16 @@ actual object PlayerSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadTheIntroDbApiKey(): String? =
+        preferences?.getString(ProfileScopedKey.of(theIntroDbApiKeyKey), null)
+
+    actual fun saveTheIntroDbApiKey(apiKey: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(theIntroDbApiKeyKey), apiKey)
+            ?.apply()
+    }
+
     actual fun loadIntroSubmitEnabled(): Boolean? =
         preferences?.let { sharedPreferences ->
             val key = ProfileScopedKey.of(introSubmitEnabledKey)
@@ -1363,6 +1374,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(animeSkipEnabledKey)?.let(::saveAnimeSkipEnabled)
         payload.decodeSyncString(animeSkipClientIdKey)?.let(::saveAnimeSkipClientId)
         payload.decodeSyncString(introDbApiKeyKey)?.let(::saveIntroDbApiKey)
+        payload.decodeSyncString(theIntroDbApiKeyKey)?.let(::saveTheIntroDbApiKey)
         payload.decodeSyncBoolean(introSubmitEnabledKey)?.let(::saveIntroSubmitEnabled)
         payload.decodeSyncBoolean(streamAutoPlayNextEpisodeEnabledKey)?.let(::saveStreamAutoPlayNextEpisodeEnabled)
         payload.decodeSyncBoolean(streamAutoPlayNextEpisodeFallbackEnabledKey)?.let(::saveStreamAutoPlayNextEpisodeFallbackEnabled)
