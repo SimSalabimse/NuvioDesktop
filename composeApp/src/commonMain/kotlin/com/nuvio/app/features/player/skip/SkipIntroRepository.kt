@@ -17,6 +17,7 @@ object SkipIntroRepository {
     suspend fun getMovieSkipIntervals(
         contentId: String?,
         videoId: String?,
+        durationMs: Long? = null,
         requireSkipIntroEnabled: Boolean = true,
     ): List<SkipInterval> {
         if (!introDbConfigured ||
@@ -29,7 +30,7 @@ object SkipIntroRepository {
         ) ?: return emptyList()
         val cacheKey = "movie:$imdbId"
         cache[cacheKey]?.let { return it }
-        val data = SkipIntroApi.getIntroDbMovieSegments(imdbId) ?: return emptyList()
+        val data = SkipIntroApi.getIntroDbMedia(imdbId = imdbId, durationMs = durationMs) ?: return emptyList()
         return data.movieSkipIntervals().also { cache[cacheKey] = it }
     }
 
@@ -37,6 +38,7 @@ object SkipIntroRepository {
         imdbId: String?,
         season: Int,
         episode: Int,
+        durationMs: Long? = null,
         requireSkipIntroEnabled: Boolean = true,
     ): List<SkipInterval> = coroutineScope {
         if (imdbId == null) return@coroutineScope emptyList()
@@ -47,7 +49,7 @@ object SkipIntroRepository {
         cache[cacheKey]?.let { return@coroutineScope it }
 
         val introDbDeferred = async {
-            if (introDbConfigured) fetchFromIntroDb(imdbId, season, episode) else emptyList()
+            if (introDbConfigured) fetchFromIntroDb(imdbId, season, episode, durationMs) else emptyList()
         }
         // Resolve IMDB -> season-specific MAL/AniList via Simkl full_anime_seasons
         val simklIdsDeferred = async { SimklIdResolver.resolveIdsForImdbEpisode(imdbId, season, episode) }
@@ -195,20 +197,25 @@ object SkipIntroRepository {
 
     private fun segmentCategory(type: String): String? = when (type.lowercase()) {
         "intro", "op", "mixed-op" -> "opening"
-        "outro", "ed", "mixed-ed", "credits", "ending" -> "ending"
+        "credits", "outro", "ed", "mixed-ed", "ending" -> "ending"
         "recap" -> "recap"
         "preview" -> "preview"
         else -> null
     }
 
-    private suspend fun fetchFromIntroDb(imdbId: String, season: Int, episode: Int): List<SkipInterval> {
+    private suspend fun fetchFromIntroDb(imdbId: String, season: Int, episode: Int, durationMs: Long? = null): List<SkipInterval> {
         return try {
-            val data = SkipIntroApi.getIntroDbSegments(imdbId, season, episode)
+            val data = SkipIntroApi.getIntroDbMedia(
+                imdbId = imdbId,
+                season = season,
+                episode = episode,
+                durationMs = durationMs
+            )
             if (data == null) return emptyList()
             listOfNotNull(
                 data.intro.toSkipIntervalOrNull("intro"),
                 data.recap.toSkipIntervalOrNull("recap"),
-                data.outro.toSkipIntervalOrNull("outro"),
+                data.credits.toSkipIntervalOrNull("credits"),
                 data.preview.toSkipIntervalOrNull("preview"),
             )
         } catch (_: Exception) {

@@ -174,8 +174,8 @@ fun SubmitIntroDialog(
                             SegmentTypeButton(
                                 label = stringResource(Res.string.submit_intro_segment_outro),
                                 icon = Icons.Rounded.StopCircle,
-                                selected = segmentType == "outro",
-                                onClick = { onSegmentTypeChange("outro") },
+                                selected = segmentType == "credits",
+                                onClick = { onSegmentTypeChange("credits") },
                                 modifier = Modifier.weight(1f)
                             )
                             SegmentTypeButton(

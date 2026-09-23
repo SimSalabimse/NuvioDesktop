@@ -12,14 +12,34 @@ internal object SkipIntroApi {
     private const val ANISKIP_BASE = "https://api.aniskip.com/v2/"
     private const val ANIMESKIP_BASE = "https://api.anime-skip.com/"
 
-    // --- IntroDb ---
+    // --- IntroDb v3 API ---
 
-    suspend fun getIntroDbMovieSegments(imdbId: String): IntroDbSegmentsResponse? {
+    suspend fun getIntroDbMedia(
+        tmdbId: Int? = null,
+        imdbId: String? = null,
+        tvdbId: Int? = null,
+        season: Int? = null,
+        episode: Int? = null,
+        durationMs: Long? = null,
+    ): IntroDbMediaResponse? {
         val baseUrl = IntroDbConfig.URL.trimEnd('/')
         if (baseUrl.isBlank()) return null
+        
+        val params = buildList {
+            tmdbId?.let { add("tmdb_id=$it") }
+            imdbId?.let { add("imdb_id=$it") }
+            tvdbId?.let { add("tvdb_id=$it") }
+            season?.let { add("season=$it") }
+            episode?.let { add("episode=$it") }
+            durationMs?.let { add("duration_ms=$it") }
+        }.joinToString("&")
+        
+        if (params.isEmpty()) return null
+        
+        val url = "$baseUrl/v3/media?$params"
         return try {
-            val text = httpGetText(introDbMovieSegmentsUrl(baseUrl, imdbId))
-            json.decodeFromString<IntroDbSegmentsResponse>(text)
+            val text = httpGetText(url)
+            json.decodeFromString<IntroDbMediaResponse>(text)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -27,20 +47,18 @@ internal object SkipIntroApi {
         }
     }
 
+    @Deprecated("Use getIntroDbMedia with v3 API", ReplaceWith("getIntroDbMedia(imdbId = imdbId)"))
+    suspend fun getIntroDbMovieSegments(imdbId: String): IntroDbMediaResponse? {
+        return getIntroDbMedia(imdbId = imdbId)
+    }
+
+    @Deprecated("Use getIntroDbMedia with v3 API", ReplaceWith("getIntroDbMedia(imdbId = imdbId, season = season, episode = episode)"))
     suspend fun getIntroDbSegments(
         imdbId: String,
         season: Int,
         episode: Int,
-    ): IntroDbSegmentsResponse? {
-        val baseUrl = IntroDbConfig.URL.trimEnd('/')
-        if (baseUrl.isBlank()) return null
-        val url = "$baseUrl/segments?imdb_id=$imdbId&season=$season&episode=$episode"
-        return try {
-            val text = httpGetText(url)
-            json.decodeFromString<IntroDbSegmentsResponse>(text)
-        } catch (_: Exception) {
-            null
-        }
+    ): IntroDbMediaResponse? {
+        return getIntroDbMedia(imdbId = imdbId, season = season, episode = episode)
     }
 
     suspend fun submitIntro(
