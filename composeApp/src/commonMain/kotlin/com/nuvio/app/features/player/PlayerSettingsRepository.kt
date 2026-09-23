@@ -72,7 +72,7 @@ data class PlayerSettingsUiState(
     val animeSkipClientId: String = "",
     val introDbApiKey: String = "",
     val theIntroDbApiKey: String = "",
-    val introSubmitEnabled: Boolean = false,
+    val introSubmitEnabled: Boolean = true,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroup: Boolean = true,
@@ -99,6 +99,15 @@ data class PlayerSettingsUiState(
     val iosGamma: Int = 0,
     val nvidiaRtxSuperResolutionEnabled: Boolean = false,
 )
+
+fun PlayerSettingsUiState.canSubmitIntroSegments(): Boolean {
+    if (!introSubmitEnabled) return false
+    val introDbAppKey = introDbApiKey.trim()
+    val theIntroDbKey = theIntroDbApiKey.trim()
+    val fallbackTheIntroKey = introDbAppKey.takeIf { it.isNotBlank() && !it.startsWith("idb_", ignoreCase = true) }.orEmpty()
+    val resolvedTheIntroKey = theIntroDbKey.ifBlank { fallbackTheIntroKey }
+    return introDbAppKey.isNotBlank() || resolvedTheIntroKey.isNotBlank()
+}
 
 object PlayerSettingsRepository {
     private val _uiState = MutableStateFlow(PlayerSettingsUiState())
@@ -144,7 +153,7 @@ object PlayerSettingsRepository {
     private var animeSkipClientId = ""
     private var introDbApiKey = ""
     private var theIntroDbApiKey = ""
-    private var introSubmitEnabled = false
+    private var introSubmitEnabled = true
     private var streamAutoPlayNextEpisodeEnabled = false
     private var streamAutoPlayNextEpisodeFallbackEnabled = true
     private var streamAutoPlayPreferBingeGroup = true
@@ -220,7 +229,7 @@ object PlayerSettingsRepository {
         animeSkipEnabled = false
         animeSkipClientId = ""
         introDbApiKey = ""
-        introSubmitEnabled = false
+        introSubmitEnabled = true
         streamAutoPlayNextEpisodeEnabled = false
         streamAutoPlayNextEpisodeFallbackEnabled = true
         streamAutoPlayPreferBingeGroup = true
@@ -360,7 +369,7 @@ object PlayerSettingsRepository {
         animeSkipClientId = PlayerSettingsStorage.loadAnimeSkipClientId() ?: ""
         introDbApiKey = PlayerSettingsStorage.loadIntroDbApiKey() ?: ""
         theIntroDbApiKey = PlayerSettingsStorage.loadTheIntroDbApiKey() ?: ""
-        introSubmitEnabled = PlayerSettingsStorage.loadIntroSubmitEnabled() ?: false
+        introSubmitEnabled = PlayerSettingsStorage.loadIntroSubmitEnabled() ?: true
         streamAutoPlayNextEpisodeEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeEnabled() ?: false
         streamAutoPlayNextEpisodeFallbackEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeFallbackEnabled() ?: true
         streamAutoPlayPreferBingeGroup = PlayerSettingsStorage.loadStreamAutoPlayPreferBingeGroup() ?: true
