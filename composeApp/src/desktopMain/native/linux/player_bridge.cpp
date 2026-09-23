@@ -1548,32 +1548,54 @@ void runAudioCaptureLoop(Player *p) {
         double currentVolume = doubleProperty(p, "volume", 0.0) / 100.0;
         bool paused = flagProperty(p, "pause", true);
         
-        // Compute real energy based on MPV audio state
+        // Compute real PCM-derived audio energy from MPV's astats filter
+        // The astats lavfi filter computes RMS levels from actual decoded audio samples
         double energy = 0.0;
         if (!paused && currentVolume > 0.01) {
-            // Get audio bitrate as a proxy for audio activity
-            double bitrate = doubleProperty(p, "audio-bitrate", 0.0);
-            
-            // Compute energy based on real MPV audio state
-            double baseEnergy = 0.0;
-            if (bitrate > 0.0) {
-                // Normalize bitrate to 0-1 range (typical audio bitrates: 64-320 kbps)
-                double normalizedBitrate = std::min(bitrate / 320000.0, 1.0);
-                baseEnergy = 0.3 + (normalizedBitrate * 0.6);
+            if (!playerAlive(p) || !p->mpv) {
+                energy = 0.0;
             } else {
-                // Use moderate energy if bitrate unavailable
-                baseEnergy = 0.5;
+                // Query RMS level from astats filter metadata
+                // lavfi.astats.Overall.RMS_level is in dB (typically -60 to 0 dB)
+                char *rmsStr = nullptr;
+                int rmsResult = mpv_get_property(p->mpv, "metadata/by-key/lavfi.astats.Overall.RMS_level",
+                                                 MPV_FORMAT_STRING, &rmsStr);
+                
+                double rmsDb = -96.0; // Default to very quiet if no data
+                if (rmsResult >= 0 && rmsStr) {
+                    rmsDb = std::atof(rmsStr);
+                    mpv_free(rmsStr);
+                }
+                
+                // Query peak level as backup
+                char *peakStr = nullptr;
+                int peakResult = mpv_get_property(p->mpv, "metadata/by-key/lavfi.astats.Overall.Peak_level",
+                                                  MPV_FORMAT_STRING, &peakStr);
+                
+                double peakDb = -96.0;
+                if (peakResult >= 0 && peakStr) {
+                    peakDb = std::atof(peakStr);
+                    mpv_free(peakStr);
+                }
+                
+                // Convert dB to linear energy (0-1 range)
+                // Typical dialogue: -30 to -10 dB
+                // Silence/background: -60 to -40 dB
+                double useDb = (rmsDb > -96.0) ? rmsDb : peakDb;
+                
+                // Convert dB to linear scale
+                // Map -60 dB (silence) to 0.0 and -10 dB (loud) to 1.0
+                double linearEnergy = 0.0;
+                if (useDb > -60.0) {
+                    // Normalize: -60 dB = 0.0, -10 dB = 1.0
+                    linearEnergy = (useDb + 60.0) / 50.0;
+                    linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
+                }
+                
+                // Apply volume scaling
+                energy = linearEnergy * std::min(currentVolume * 1.2, 1.0);
+                energy = std::min(energy, 1.0);
             }
-            
-            // Apply volume scaling
-            double scaledEnergy = baseEnergy * std::min(currentVolume * 1.2, 1.0);
-            
-            // Add small temporal variation based on position
-            uint64_t seed = static_cast<uint64_t>(currentPosMs / 100);
-            seed = (seed * 214013 + 2531011);
-            double variation = (double)(seed % 100) / 500.0;
-            
-            energy = std::min(scaledEnergy + variation * scaledEnergy, 1.0);
         }
         
         {
@@ -1752,6 +1774,10 @@ JNIEXPORT jlong JNICALL NP(create)(
         mpv_set_option_string(m, "vd-lavc-threads", "0");
         mpv_set_option_string(m, "target-colorspace-hint", "yes");
         mpv_set_option_string(m, "target-colorspace-hint-mode", "source");
+        
+        // Audio statistics filter for real PCM-derived energy measurement
+        // astats provides RMS/peak levels computed from actual decoded audio samples
+        mpv_set_option_string(m, "af", "lavfi=[astats=metadata=1:reset=1]");
 
         if (!headerFields.empty()) {
             mpv_set_option_string(m, "http-header-fields", headerFields.c_str());

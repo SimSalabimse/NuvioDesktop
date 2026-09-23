@@ -1381,58 +1381,59 @@ public:
     }
 
     double computeRealAudioEnergy(int64_t positionMs, double volumeLevel, bool paused) {
-        // Real MPV-based energy computation
-        // This uses actual MPV state instead of synthesized random data
+        // Real PCM-derived audio energy from MPV's astats filter
+        // The astats lavfi filter computes RMS levels from actual decoded audio samples
+        // This provides genuine audio analysis that varies with dialogue vs silence
         
         if (paused || volumeLevel < 0.01) {
             return 0.0;
         }
         
-        // Query MPV for audio-related properties
         std::lock_guard<std::mutex> lock(mpvMutex);
         if (!mpv) {
             return 0.0;
         }
         
-        // Get audio bitrate as a proxy for audio activity
-        char *bitrateStr = nullptr;
-        int bitrateResult = mpvApi().getProperty(mpv, "audio-bitrate", MPV_FORMAT_STRING, &bitrateStr);
-        double bitrate = 0.0;
-        if (bitrateResult >= 0 && bitrateStr) {
-            bitrate = std::atof(bitrateStr);
-            mpvApi().freeValue(bitrateStr);
+        // Query RMS level from astats filter metadata
+        // lavfi.astats.Overall.RMS_level is in dB (typically -60 to 0 dB)
+        char *rmsStr = nullptr;
+        int rmsResult = mpvApi().getProperty(mpv, "metadata/by-key/lavfi.astats.Overall.RMS_level", 
+                                             MPV_FORMAT_STRING, &rmsStr);
+        
+        double rmsDb = -96.0; // Default to very quiet if no data
+        if (rmsResult >= 0 && rmsStr) {
+            rmsDb = std::atof(rmsStr);
+            mpvApi().freeValue(rmsStr);
         }
         
-        // Get demuxer cache state (indicates buffering/activity)
-        char *cacheStr = nullptr;
-        int cacheResult = mpvApi().getProperty(mpv, "demuxer-cache-state", MPV_FORMAT_STRING, &cacheStr);
-        bool hasCache = (cacheResult >= 0 && cacheStr != nullptr);
-        if (cacheStr) {
-            mpvApi().freeValue(cacheStr);
+        // Query peak level as backup
+        char *peakStr = nullptr;
+        int peakResult = mpvApi().getProperty(mpv, "metadata/by-key/lavfi.astats.Overall.Peak_level",
+                                              MPV_FORMAT_STRING, &peakStr);
+        
+        double peakDb = -96.0;
+        if (peakResult >= 0 && peakStr) {
+            peakDb = std::atof(peakStr);
+            mpvApi().freeValue(peakStr);
         }
         
-        // Compute energy based on real MPV audio state
-        double baseEnergy = 0.0;
+        // Convert dB to linear energy (0-1 range)
+        // Typical dialogue: -30 to -10 dB
+        // Silence/background: -60 to -40 dB
+        // Use RMS as primary, peak as fallback
+        double useDb = (rmsDb > -96.0) ? rmsDb : peakDb;
         
-        if (bitrate > 0.0) {
-            // Normalize bitrate to 0-1 range (typical audio bitrates: 64-320 kbps)
-            double normalizedBitrate = std::min(bitrate / 320000.0, 1.0);
-            baseEnergy = 0.3 + (normalizedBitrate * 0.6);
-        } else if (hasCache) {
-            // If bitrate unavailable but we have cache, use moderate energy
-            baseEnergy = 0.5;
+        // Convert dB to linear scale
+        // Map -60 dB (silence) to 0.0 and -10 dB (loud) to 1.0
+        double linearEnergy = 0.0;
+        if (useDb > -60.0) {
+            // Normalize: -60 dB = 0.0, -10 dB = 1.0
+            linearEnergy = (useDb + 60.0) / 50.0;
+            linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
         }
         
-        // Apply volume scaling
-        double scaledEnergy = baseEnergy * std::min(volumeLevel * 1.2, 1.0);
-        
-        // Add small temporal variation based on position to simulate real audio dynamics
-        // (More sophisticated than random, uses position to create deterministic but varied pattern)
-        uint64_t seed = static_cast<uint64_t>(positionMs / 100);
-        seed = (seed * 214013 + 2531011);
-        double variation = (double)(seed % 100) / 500.0; // 0.0 to 0.2 variation
-        
-        scaledEnergy += variation * scaledEnergy;
+        // Apply volume scaling (user volume affects perceived energy)
+        double scaledEnergy = linearEnergy * std::min(volumeLevel * 1.2, 1.0);
         
         return std::min(scaledEnergy, 1.0);
     }
@@ -1837,6 +1838,10 @@ private:
             setMpvOptionStringLocked("demuxer-seekable-cache", "yes");
             setMpvOptionStringLocked("cache-secs", "36000");
             setMpvOptionStringLocked("hr-seek", "no");
+            
+            // Audio statistics filter for real PCM-derived energy measurement
+            // astats provides RMS/peak levels computed from actual decoded audio samples
+            setMpvOptionStringLocked("af", "lavfi=[astats=metadata=1:reset=1]");
 
             int64_t wid = (int64_t)(intptr_t)containerHwnd;
             int widResult = api.setOption(mpv, "wid", MPV_FORMAT_INT64, &wid);
