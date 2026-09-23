@@ -89,6 +89,7 @@ internal fun PlayerScreenModalHosts(
     onSubmitIntroStartTimeChanged: (String) -> Unit,
     submitIntroEndTimeStr: String,
     onSubmitIntroEndTimeChanged: (String) -> Unit,
+    existingSegmentTypes: List<String>,
     onSubmitIntroDismissed: () -> Unit,
     onSubmitIntroSuccess: () -> Unit,
 ) {
@@ -219,6 +220,7 @@ internal fun PlayerScreenModalHosts(
             onStartTimeChange = onSubmitIntroStartTimeChanged,
             endTimeStr = submitIntroEndTimeStr,
             onEndTimeChange = onSubmitIntroEndTimeChanged,
+            existingSegmentTypes = existingSegmentTypes,
             onDismiss = onSubmitIntroDismissed,
             onSuccess = onSubmitIntroSuccess,
         )

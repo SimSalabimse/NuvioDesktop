@@ -82,12 +82,20 @@ fun SubmitIntroDialog(
     onStartTimeChange: (String) -> Unit,
     endTimeStr: String,
     onEndTimeChange: (String) -> Unit,
+    existingSegmentTypes: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onSuccess: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     var isSubmitting by remember { mutableStateOf(false) }
+    
+    // If the currently selected type is disabled, switch to first available type
+    val availableTypes = listOf("intro", "recap", "credits", "preview")
+    val enabledTypes = availableTypes.filter { it !in existingSegmentTypes }
+    if (segmentType in existingSegmentTypes && enabledTypes.isNotEmpty()) {
+        onSegmentTypeChange(enabledTypes.first())
+    }
 
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
@@ -156,6 +164,7 @@ fun SubmitIntroDialog(
                                 label = stringResource(Res.string.submit_intro_segment_intro),
                                 icon = Icons.Rounded.PlayCircleOutline,
                                 selected = segmentType == "intro",
+                                enabled = "intro" !in existingSegmentTypes,
                                 onClick = { onSegmentTypeChange("intro") },
                                 modifier = Modifier.weight(1f)
                             )
@@ -163,6 +172,7 @@ fun SubmitIntroDialog(
                                 label = stringResource(Res.string.submit_intro_segment_recap),
                                 icon = Icons.Rounded.Replay,
                                 selected = segmentType == "recap",
+                                enabled = "recap" !in existingSegmentTypes,
                                 onClick = { onSegmentTypeChange("recap") },
                                 modifier = Modifier.weight(1f)
                             )
@@ -175,6 +185,7 @@ fun SubmitIntroDialog(
                                 label = stringResource(Res.string.submit_intro_segment_outro),
                                 icon = Icons.Rounded.StopCircle,
                                 selected = segmentType == "credits",
+                                enabled = "credits" !in existingSegmentTypes,
                                 onClick = { onSegmentTypeChange("credits") },
                                 modifier = Modifier.weight(1f)
                             )
@@ -182,6 +193,7 @@ fun SubmitIntroDialog(
                                 label = stringResource(Res.string.submit_intro_segment_preview),
                                 icon = Icons.Rounded.Visibility,
                                 selected = segmentType == "preview",
+                                enabled = "preview" !in existingSegmentTypes,
                                 onClick = { onSegmentTypeChange("preview") },
                                 modifier = Modifier.weight(1f)
                             )
@@ -286,14 +298,21 @@ private fun SegmentTypeButton(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     selected: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
+            .background(
+                when {
+                    !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    selected -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
+            )
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -304,12 +323,20 @@ private fun SegmentTypeButton(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = when {
+                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    selected -> MaterialTheme.colorScheme.onPrimary
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 modifier = Modifier.size(18.dp)
             )
             Text(
                 text = label,
-                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = when {
+                    !enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    selected -> MaterialTheme.colorScheme.onPrimary
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                },
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold
             )

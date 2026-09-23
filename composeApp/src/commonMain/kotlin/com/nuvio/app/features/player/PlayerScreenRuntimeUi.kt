@@ -1908,8 +1908,10 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onSubmitIntroStartTimeChanged = { submitIntroStartTimeStr = it },
         submitIntroEndTimeStr = submitIntroEndTimeStr,
         onSubmitIntroEndTimeChanged = { submitIntroEndTimeStr = it },
+        existingSegmentTypes = calculateExistingSegmentTypes(skipIntervals, submittedSegmentTypesInSession),
         onSubmitIntroDismissed = { showSubmitIntroModal = false },
         onSubmitIntroSuccess = {
+            submittedSegmentTypesInSession.add(submitIntroSegmentType)
             submitIntroStartTimeSec = 0.0
             submitIntroEndTimeSec = 0.0
             submitIntroStatusMessage = null
