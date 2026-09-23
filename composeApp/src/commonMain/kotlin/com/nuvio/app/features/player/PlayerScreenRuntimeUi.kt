@@ -395,6 +395,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroEndTime = submitIntroEndTimeStr,
         isSubmitIntroSubmitting = isSubmitIntroSubmitting,
         submitIntroStatusMessage = submitIntroStatusMessage.orEmpty(),
+        existingSegmentTypes = calculateExistingSegmentTypes(skipIntervals, submittedSegmentTypesInSession),
         showP2pConsent = playerControlsPendingP2pSwitch != null,
         subtitleActiveTab = activeSubtitleTab.name,
         subtitleLanguageItems = playerControlSubtitleSelection.languages,
@@ -1223,6 +1224,7 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         
         isSubmitIntroSubmitting = false
         if (submitted) {
+            submittedSegmentTypesInSession.add(submitIntroSegmentType)
             submitIntroStartTimeSec = 0.0
             submitIntroEndTimeSec = 0.0
             submitIntroStartTimeStr = "00:00"
@@ -1917,4 +1919,31 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             showSubmitIntroModal = false
         },
     )
+}
+
+private fun calculateExistingSegmentTypes(skipIntervals: List<SkipInterval>, submittedInSession: Set<String>): List<String> {
+    val existing = mutableSetOf<String>()
+    
+    // Add segment types from loaded skip intervals
+    for (interval in skipIntervals) {
+        val normalized = normalizeSegmentTypeForSubmit(interval.type)
+        if (normalized != null) {
+            existing.add(normalized)
+        }
+    }
+    
+    // Add segment types submitted in this session
+    existing.addAll(submittedInSession)
+    
+    return existing.toList()
+}
+
+private fun normalizeSegmentTypeForSubmit(type: String): String? {
+    return when (type.lowercase()) {
+        "intro", "op", "mixed-op" -> "intro"
+        "credits", "outro", "ed", "mixed-ed", "ending", "movie-credits" -> "credits"
+        "recap" -> "recap"
+        "preview" -> "preview"
+        else -> null
+    }
 }

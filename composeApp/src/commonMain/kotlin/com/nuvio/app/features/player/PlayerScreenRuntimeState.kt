@@ -210,6 +210,7 @@ internal class PlayerScreenRuntime(
     var submitIntroEndTimeSec by mutableStateOf<Double?>(0.0)
     var isSubmitIntroSubmitting by mutableStateOf(false)
     var submitIntroStatusMessage by mutableStateOf<String?>(null)
+    var submittedSegmentTypesInSession = mutableSetOf<String>()
     var playerControlsPendingP2pSwitch by mutableStateOf<PendingPlayerP2pSwitch?>(null)
     var playerControlsCloseModalsToken by mutableStateOf(0L)
     var playerControlsSubmitIntroSuccessToken by mutableStateOf(0L)
