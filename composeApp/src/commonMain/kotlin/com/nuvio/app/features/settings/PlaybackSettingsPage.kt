@@ -1137,7 +1137,7 @@ private fun PlaybackSettingsSection(
                     val notSetLabel = stringResource(Res.string.settings_playback_not_set)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_introdb_api_key),
-                        description = autoPlayPlayerSettings.introDbApiKey.ifBlank { notSetLabel },
+                        description = maskIntroDbApiKey(autoPlayPlayerSettings.introDbApiKey, notSetLabel),
                         isTablet = isTablet,
                         onClick = { showIntroDbApiKeyDialog = true },
                     )
@@ -1155,7 +1155,7 @@ private fun PlaybackSettingsSection(
                     var showTheIntroDbApiKeyDialog by remember { mutableStateOf(false) }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_theintrodb_api_key),
-                        description = autoPlayPlayerSettings.theIntroDbApiKey.ifBlank { notSetLabel },
+                        description = maskIntroDbApiKey(autoPlayPlayerSettings.theIntroDbApiKey, notSetLabel),
                         isTablet = isTablet,
                         onClick = { showTheIntroDbApiKeyDialog = true },
                     )
@@ -3565,3 +3565,9 @@ private fun libassRenderTypeRes(renderType: String): StringResource = when (rend
 
 @Composable
 private fun libassRenderTypeLabel(renderType: String): String = stringResource(libassRenderTypeRes(renderType))
+
+private fun maskIntroDbApiKey(key: String, notSetLabel: String): String {
+    val trimmed = key.trim()
+    if (trimmed.isBlank()) return notSetLabel
+    return if (trimmed.length <= 4) "****" else "******${trimmed.takeLast(4)}"
+}
