@@ -100,6 +100,15 @@ data class PlayerSettingsUiState(
     val nvidiaRtxSuperResolutionEnabled: Boolean = false,
 )
 
+fun PlayerSettingsUiState.canSubmitIntroSegments(): Boolean {
+    if (!introSubmitEnabled) return false
+    val introDbAppKey = introDbApiKey.trim()
+    val theIntroDbKey = theIntroDbApiKey.trim()
+    val fallbackTheIntroKey = introDbAppKey.takeIf { it.isNotBlank() && !it.startsWith("idb_", ignoreCase = true) }.orEmpty()
+    val resolvedTheIntroKey = theIntroDbKey.ifBlank { fallbackTheIntroKey }
+    return introDbAppKey.isNotBlank() || resolvedTheIntroKey.isNotBlank()
+}
+
 object PlayerSettingsRepository {
     private val _uiState = MutableStateFlow(PlayerSettingsUiState())
     val uiState: StateFlow<PlayerSettingsUiState> = _uiState.asStateFlow()

@@ -367,8 +367,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         parentalWarnings = parentalWarnings,
         showParentalGuide = showParentalGuide,
         showSubmitIntro = isSeries &&
-            playerSettingsUiState.introSubmitEnabled &&
-            playerSettingsUiState.introDbApiKey.isNotBlank() &&
+            playerSettingsUiState.canSubmitIntroSegments() &&
             !activeSubmitIntroImdbId().isNullOrBlank(),
         showVideoSettings = isIos,
         showSources = activeVideoId != null,
@@ -694,8 +693,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             },
             onSubmitIntroClick = if (
                 isSeries &&
-                playerSettingsUiState.introSubmitEnabled &&
-                playerSettingsUiState.introDbApiKey.isNotBlank()
+                playerSettingsUiState.canSubmitIntroSegments()
             ) {
                 { showSubmitIntroModal = true }
             } else {
