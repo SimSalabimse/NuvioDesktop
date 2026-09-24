@@ -13,9 +13,12 @@
 #include <mpv/render_gl.h>
 
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <dlfcn.h>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifndef NX_SUBTYPE_AUX_CONTROL_BUTTONS
