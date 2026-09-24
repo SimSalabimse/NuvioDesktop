@@ -6,7 +6,23 @@ import kotlin.test.assertEquals
 
 class DesktopAppFullscreenTest {
     @Test
-    fun `native fullscreen exit lets the window listener restore placement`() {
+    fun `native fullscreen exit to Floating updates state immediately`() {
+        val updates = mutableListOf<String>()
+
+        applyMacosComposeFullscreenExit(
+            restorePlacement = WindowPlacement.Floating,
+            requestNativeFullscreenExit = {
+                updates += "native"
+                true
+            },
+            setStatePlacement = { updates += "state:$it" },
+        )
+
+        assertEquals(listOf("native", "state:Floating"), updates)
+    }
+
+    @Test
+    fun `native fullscreen exit to Maximized sets Floating first then Maximized async`() {
         val updates = mutableListOf<String>()
 
         applyMacosComposeFullscreenExit(
@@ -15,50 +31,43 @@ class DesktopAppFullscreenTest {
                 updates += "native"
                 true
             },
-            clearComposeFullscreen = { updates += "compose" },
-            setStatePlacement = { updates += "state:$it" },
+            setStatePlacement = { placement ->
+                updates += "state:$placement"
+            },
         )
 
-        assertEquals(listOf("native"), updates)
+        assertEquals(listOf("native", "state:Floating"), updates)
     }
 
     @Test
-    fun `compose fallback clears fullscreen before restoring maximized placement`() {
-        val updates = mutableListOf<Pair<String, WindowPlacement>>()
+    fun `native request failure still updates WindowState to target placement`() {
+        val updates = mutableListOf<String>()
 
         applyMacosComposeFullscreenExit(
             restorePlacement = WindowPlacement.Maximized,
-            requestNativeFullscreenExit = { false },
-            clearComposeFullscreen = { updates += "compose" to WindowPlacement.Floating },
-            setStatePlacement = { updates += "state" to it },
+            requestNativeFullscreenExit = {
+                updates += "native"
+                false
+            },
+            setStatePlacement = { updates += "state:$it" },
         )
 
-        assertEquals(
-            listOf(
-                "compose" to WindowPlacement.Floating,
-                "state" to WindowPlacement.Maximized,
-            ),
-            updates,
-        )
+        assertEquals(listOf("native", "state:Maximized"), updates)
     }
 
     @Test
     fun `fullscreen cannot be restored as its own exit placement`() {
-        val updates = mutableListOf<Pair<String, WindowPlacement>>()
+        val updates = mutableListOf<String>()
 
         applyMacosComposeFullscreenExit(
             restorePlacement = WindowPlacement.Fullscreen,
-            requestNativeFullscreenExit = { false },
-            clearComposeFullscreen = { updates += "compose" to WindowPlacement.Floating },
-            setStatePlacement = { updates += "state" to it },
+            requestNativeFullscreenExit = {
+                updates += "native"
+                false
+            },
+            setStatePlacement = { updates += "state:$it" },
         )
 
-        assertEquals(
-            listOf(
-                "compose" to WindowPlacement.Floating,
-                "state" to WindowPlacement.Floating,
-            ),
-            updates,
-        )
+        assertEquals(listOf("native", "state:Floating"), updates)
     }
 }
