@@ -24,6 +24,11 @@
 #import <AudioToolbox/AudioToolbox.h>
 #import <CoreAudio/CoreAudio.h>
 
+// For process-specific audio tap (macOS 13+)
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
+#import <CoreAudio/AudioHardwareTapping.h>
+#endif
+
 #ifndef NX_SUBTYPE_AUX_CONTROL_BUTTONS
 #define NX_SUBTYPE_AUX_CONTROL_BUTTONS 8
 #endif
@@ -1099,7 +1104,8 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     std::atomic_bool _isCapturingAudio;
     std::chrono::steady_clock::time_point _audioCaptureStartTime;
     std::thread _audioCaptureThread;
-    AudioUnit _audioCaptureUnit;
+    AudioDeviceIOProcID _audioTapIOProcID;
+    AudioObjectID _audioTapID;
     std::atomic<double> _latestAudioEnergy;
 }
 
@@ -1564,7 +1570,8 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     // Initialize audio capture state
     _audioCaptureStartMs = 0;
     _isCapturingAudio.store(false);
-    _audioCaptureUnit = nullptr;
+    _audioTapIOProcID = nullptr;
+    _audioTapID = kAudioObjectUnknown;
     _latestAudioEnergy.store(-1.0);
     
     [self startMpvEventDrain];
@@ -1874,12 +1881,17 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
         _audioCaptureThread.join();
     }
     
-    // Tear down CoreAudio tap
-    if (_audioCaptureUnit) {
-        AudioOutputUnitStop(_audioCaptureUnit);
-        AudioUnitUninitialize(_audioCaptureUnit);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
+    // Tear down process tap
+    if (_audioTapIOProcID && _audioTapID != kAudioObjectUnknown) {
+        AudioDeviceStop(_audioTapID, _audioTapIOProcID);
+        AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
+        if (@available(macOS 13.0, *)) {
+            AudioHardwareDestroyProcessTap(_audioTapID);
+        }
+#endif
+        _audioTapIOProcID = nullptr;
+        _audioTapID = kAudioObjectUnknown;
     }
     
     if (_mpvEventQueue) {
@@ -2681,66 +2693,49 @@ static void nuvioMpvWakeup(void *ctx) {
     }
 }
 
-// CoreAudio input callback - captures loopback audio and computes RMS
-static OSStatus audioCaptureRenderCallback(
-    void *inRefCon,
-    AudioUnitRenderActionFlags *ioActionFlags,
-    const AudioTimeStamp *inTimeStamp,
-    UInt32 inBusNumber,
-    UInt32 inNumberFrames,
-    AudioBufferList *ioData
+// Process tap IOProc - receives audio from this process's output and computes RMS
+static OSStatus audioTapIOProc(
+    AudioObjectID inDevice,
+    const AudioTimeStamp *inNow,
+    const AudioBufferList *inInputData,
+    const AudioTimeStamp *inInputTime,
+    AudioBufferList *outOutputData,
+    const AudioTimeStamp *inOutputTime,
+    void *inClientData
 ) {
-    MpvWebPlayer *self = (__bridge MpvWebPlayer *)inRefCon;
+    MpvWebPlayer *self = (__bridge MpvWebPlayer *)inClientData;
     
-    if (!self->_isCapturingAudio.load()) {
+    if (!self || !self->_isCapturingAudio.load() || !inInputData) {
         return noErr;
     }
     
-    // Allocate buffer list for the audio data
-    AudioBufferList bufferList;
-    bufferList.mNumberBuffers = 1;
-    bufferList.mBuffers[0].mNumberChannels = 2;  // Stereo
-    bufferList.mBuffers[0].mDataByteSize = inNumberFrames * 2 * sizeof(float);
-    bufferList.mBuffers[0].mData = malloc(bufferList.mBuffers[0].mDataByteSize);
+    // Compute RMS from all channels in the tapped audio
+    double sumSquares = 0.0;
+    UInt32 totalSamples = 0;
     
-    if (!bufferList.mBuffers[0].mData) {
-        return noErr;  // Allocation failed, skip this frame
-    }
-    
-    // Render the input audio (loopback from output device)
-    OSStatus status = AudioUnitRender(
-        self->_audioCaptureUnit,
-        ioActionFlags,
-        inTimeStamp,
-        1,  // input element
-        inNumberFrames,
-        &bufferList
-    );
-    
-    if (status == noErr) {
-        // Compute RMS from the captured audio
-        double sumSquares = 0.0;
-        UInt32 totalSamples = bufferList.mBuffers[0].mDataByteSize / sizeof(float);
-        float *samples = (float *)bufferList.mBuffers[0].mData;
+    for (UInt32 i = 0; i < inInputData->mNumberBuffers; i++) {
+        const AudioBuffer &buffer = inInputData->mBuffers[i];
+        const float *samples = (const float *)buffer.mData;
+        UInt32 numSamples = buffer.mDataByteSize / sizeof(float);
         
-        for (UInt32 i = 0; i < totalSamples; i++) {
-            float sample = samples[i];
+        for (UInt32 j = 0; j < numSamples; j++) {
+            float sample = samples[j];
             sumSquares += sample * sample;
         }
-        
-        if (totalSamples > 0) {
-            double rms = sqrt(sumSquares / totalSamples);
-            // Normalize to 0-1 range (typical dialogue: 0.01-0.3 RMS → 0.4-1.0 energy)
-            double energy = std::min(rms * 3.0, 1.0);
-            self->_latestAudioEnergy.store(energy);
-        }
+        totalSamples += numSamples;
     }
     
-    free(bufferList.mBuffers[0].mData);
+    if (totalSamples > 0) {
+        double rms = sqrt(sumSquares / totalSamples);
+        // Normalize to 0-1 range (dialogue typically 0.01-0.3 RMS → 0.4-1.0 energy)
+        double energy = std::min(rms * 3.0, 1.0);
+        self->_latestAudioEnergy.store(energy);
+    }
+    
     return noErr;
 }
 
-// Audio energy capture for subtitle Auto Sync (CoreAudio tap)
+// Audio energy capture for subtitle Auto Sync (CoreAudio process tap)
 - (void)startAudioEnergyCapture:(int64_t)startTimeMs {
     // Stop any existing capture
     {
@@ -2754,38 +2749,17 @@ static OSStatus audioCaptureRenderCallback(
         _audioCaptureThread.join();
     }
     
-    // Tear down existing AudioUnit if any
-    if (_audioCaptureUnit) {
-        AudioOutputUnitStop(_audioCaptureUnit);
-        AudioUnitUninitialize(_audioCaptureUnit);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
-    }
-    
-    // Set up CoreAudio loopback capture using HAL Output with input enabled
-    // This taps the default output device to capture what's being played
-    AudioComponentDescription desc = {
-        .componentType = kAudioUnitType_Output,
-        .componentSubType = kAudioUnitSubType_HALOutput,
-        .componentManufacturer = kAudioUnitManufacturer_Apple,
-        .componentFlags = 0,
-        .componentFlagsMask = 0
-    };
-    
-    AudioComponent component = AudioComponentFindNext(nullptr, &desc);
-    if (!component) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to find HAL output component for audio tap");
-        return;
-    }
-    
-    OSStatus status = AudioComponentInstanceNew(component, &_audioCaptureUnit);
-    if (status != noErr || !_audioCaptureUnit) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to create AudioUnit for tap: %d", (int)status);
-        return;
+    // Tear down existing tap if any
+    if (_audioTapIOProcID) {
+        if (_audioTapID != kAudioObjectUnknown) {
+            AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
+        }
+        _audioTapIOProcID = nullptr;
+        _audioTapID = kAudioObjectUnknown;
     }
     
     // Get the default output device
-    AudioDeviceID outputDevice;
+    AudioDeviceID outputDevice = kAudioObjectUnknown;
     UInt32 propertySize = sizeof(outputDevice);
     AudioObjectPropertyAddress propertyAddress = {
         .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
@@ -2793,7 +2767,7 @@ static OSStatus audioCaptureRenderCallback(
         .mElement = kAudioObjectPropertyElementMain
     };
     
-    status = AudioObjectGetPropertyData(
+    OSStatus status = AudioObjectGetPropertyData(
         kAudioObjectSystemObject,
         &propertyAddress,
         0,
@@ -2802,114 +2776,69 @@ static OSStatus audioCaptureRenderCallback(
         &outputDevice
     );
     
-    if (status != noErr) {
+    if (status != noErr || outputDevice == kAudioObjectUnknown) {
         NSLog(@"[Nuvio] CoreAudio: Failed to get default output device: %d", (int)status);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
         return;
     }
     
-    // Set the AudioUnit to use this device
-    status = AudioUnitSetProperty(
-        _audioCaptureUnit,
-        kAudioOutputUnitProperty_CurrentDevice,
-        kAudioUnitScope_Global,
-        0,
-        &outputDevice,
-        sizeof(outputDevice)
-    );
-    
-    if (status != noErr) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to set output device: %d", (int)status);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
-        return;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
+    // Try process tap (macOS 13+) - taps this process's audio output only
+    if (@available(macOS 13.0, *)) {
+        // Create tap description for this process
+        CATapDescription tapDesc = {
+            .mMuteBehavior = kCATapMuteBehaviorPostTap,  // Don't mute our output
+            .mUUID = {},  // Empty UUID = this process
+            .mStreamType = kCATapStreamTypeProcessOutput  // Process output stream
+        };
+        
+        status = AudioHardwareCreateProcessTap(outputDevice, &tapDesc, &_audioTapID);
+        if (status == noErr && _audioTapID != kAudioObjectUnknown) {
+            // Set up IOProc to receive tapped audio
+            status = AudioDeviceCreateIOProcID(
+                _audioTapID,
+                audioTapIOProc,
+                (__bridge void *)self,
+                &_audioTapIOProcID
+            );
+            
+            if (status == noErr) {
+                status = AudioDeviceStart(_audioTapID, _audioTapIOProcID);
+                if (status == noErr) {
+                    NSLog(@"[Nuvio] CoreAudio: Process tap created successfully");
+                    
+                    // Start capture thread
+                    {
+                        std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+                        _audioCaptureSamples.clear();
+                        _audioCaptureStartMs = startTimeMs;
+                        _isCapturingAudio.store(true);
+                        _audioCaptureStartTime = std::chrono::steady_clock::now();
+                        _latestAudioEnergy.store(-1.0);
+                    }
+                    
+                    _audioCaptureThread = std::thread([self]() {
+                        [self runAudioCaptureLoop];
+                    });
+                    return;
+                } else {
+                    NSLog(@"[Nuvio] CoreAudio: Failed to start process tap: %d", (int)status);
+                    AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
+                    AudioHardwareDestroyProcessTap(_audioTapID);
+                }
+            } else {
+                NSLog(@"[Nuvio] CoreAudio: Failed to create IOProcID for tap: %d", (int)status);
+                AudioHardwareDestroyProcessTap(_audioTapID);
+            }
+        } else {
+            NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: %d", (int)status);
+        }
     }
+#endif
     
-    // Enable input (loopback/monitoring mode)
-    UInt32 enableIO = 1;
-    status = AudioUnitSetProperty(
-        _audioCaptureUnit,
-        kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Input,
-        1,  // input element (loopback)
-        &enableIO,
-        sizeof(enableIO)
-    );
-    
-    if (status != noErr) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to enable loopback IO: %d", (int)status);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
-        return;
-    }
-    
-    // Disable output (we're only capturing, not playing)
-    UInt32 disableIO = 0;
-    status = AudioUnitSetProperty(
-        _audioCaptureUnit,
-        kAudioOutputUnitProperty_EnableIO,
-        kAudioUnitScope_Output,
-        0,  // output element
-        &disableIO,
-        sizeof(disableIO)
-    );
-    
-    // Set up input callback to receive loopback audio
-    AURenderCallbackStruct callbackStruct = {
-        .inputProc = audioCaptureRenderCallback,
-        .inputProcRefCon = (__bridge void *)self
-    };
-    
-    status = AudioUnitSetProperty(
-        _audioCaptureUnit,
-        kAudioOutputUnitProperty_SetInputCallback,
-        kAudioUnitScope_Global,
-        0,
-        &callbackStruct,
-        sizeof(callbackStruct)
-    );
-    
-    if (status != noErr) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to set input callback: %d", (int)status);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
-        return;
-    }
-    
-    // Initialize and start
-    status = AudioUnitInitialize(_audioCaptureUnit);
-    if (status != noErr) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to initialize tap AudioUnit: %d", (int)status);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
-        return;
-    }
-    
-    status = AudioOutputUnitStart(_audioCaptureUnit);
-    if (status != noErr) {
-        NSLog(@"[Nuvio] CoreAudio: Failed to start tap AudioUnit: %d", (int)status);
-        AudioUnitUninitialize(_audioCaptureUnit);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
-        return;
-    }
-    
-    NSLog(@"[Nuvio] CoreAudio: Successfully set up audio tap for energy capture");
-    
-    // Start capture thread
-    {
-        std::lock_guard<std::mutex> lock(_audioCaptureMutex);
-        _audioCaptureSamples.clear();
-        _audioCaptureStartMs = startTimeMs;
-        _isCapturingAudio.store(true);
-        _audioCaptureStartTime = std::chrono::steady_clock::now();
-        _latestAudioEnergy.store(-1.0);
-    }
-    
-    _audioCaptureThread = std::thread([self]() {
-        [self runAudioCaptureLoop];
-    });
+    // If we get here, process tap failed or isn't available
+    NSLog(@"[Nuvio] CoreAudio: Audio capture not available (process tap failed)");
+    _audioTapIOProcID = nullptr;
+    _audioTapID = kAudioObjectUnknown;
 }
 
 - (NSString *)stopAudioEnergyCapture {
@@ -2923,12 +2852,17 @@ static OSStatus audioCaptureRenderCallback(
         _audioCaptureThread.join();
     }
     
-    // Tear down AudioUnit
-    if (_audioCaptureUnit) {
-        AudioOutputUnitStop(_audioCaptureUnit);
-        AudioUnitUninitialize(_audioCaptureUnit);
-        AudioComponentInstanceDispose(_audioCaptureUnit);
-        _audioCaptureUnit = nullptr;
+    // Tear down process tap
+    if (_audioTapIOProcID && _audioTapID != kAudioObjectUnknown) {
+        AudioDeviceStop(_audioTapID, _audioTapIOProcID);
+        AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
+        if (@available(macOS 13.0, *)) {
+            AudioHardwareDestroyProcessTap(_audioTapID);
+        }
+#endif
+        _audioTapIOProcID = nullptr;
+        _audioTapID = kAudioObjectUnknown;
     }
     
     // Return captured samples
