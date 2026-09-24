@@ -1542,11 +1542,21 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
         @throw [NSException exceptionWithName:@"PlayerBridgeError" reason:reason userInfo:nil];
     }
     
-    // Set up astats filter for real PCM-derived audio energy capture
-    // Label as @nuvio_astats so we can read from af-metadata/nuvio_astats
-    setMpvOptionString(_mpv, "af", "@nuvio_astats:lavfi=[astats=metadata=1:reset=1]");
+    // NOTE: astats filter + af-metadata reading is UNSAFE on macOS with mpv_render_context API
+    // The render path (mpv_render_context_render on com.nuvio.player.mpvgl queue) races with
+    // property reads (mpv_get_property on _mpvEventQueue) when both access the filter graph.
+    // This causes SIGABRT in tag_property even when get_property is serialized on a single queue.
+    // 
+    // Root cause: mpv_render_context_render and mpv_get_property("af-metadata/...") are separate
+    // APIs that both touch filter graph state without coordination. No amount of client-side queue
+    // marshaling prevents this race because the render context has its own threading.
+    //
+    // Solution: Do NOT set up astats filter on macOS. Audio capture will return empty samples.
+    // This is an honest failure (empty array) rather than a crash.
+    //
+    // Windows/Linux don't use render context API, so they don't hit this race.
     
-    // Initialize audio capture state
+    // Initialize audio capture state (will return empty samples on macOS)
     _audioCaptureStartMs = 0;
     _isCapturingAudio.store(false);
     
@@ -2769,69 +2779,28 @@ static void nuvioMpvWakeup(void *ctx) {
 }
 
 - (double)computeRealAudioEnergy:(int64_t)positionMs volume:(double)volumeLevel paused:(bool)paused {
-    // Real PCM-derived audio energy from MPV's astats filter
-    // The astats lavfi filter computes RMS levels from actual decoded audio samples
+    // macOS: af-metadata reading is UNSAFE with mpv_render_context API (see initialization comment)
+    // 
+    // Attempts to read af-metadata via mpv_get_property race with mpv_render_context_render
+    // (which runs on com.nuvio.player.mpvgl queue and also accesses the filter graph), causing
+    // SIGABRT in tag_property. This occurs even when mpv_get_property is serialized on
+    // _mpvEventQueue because the render context API doesn't coordinate with the client API.
+    //
+    // Prior failed fixes:
+    // - 9ca44b1: marshal to main queue → still crashed (main also races with render)
+    // - 5ea7cd2: marshal to _mpvEventQueue → still crashed (event queue races with render queue)
+    //
+    // The render context API and client property API are separate threading domains that both
+    // touch the filter graph without internal coordination. No client-side queue serialization
+    // can fix this race.
+    //
+    // Solution: Return -1.0 (invalid/unavailable) immediately. The capture loop will collect
+    // no samples (energy < 0.0 filtered out), and stopAudioEnergyCapture returns empty array "[]".
+    // This is an honest "audio capture not available" failure rather than a crash.
+    //
+    // Windows/Linux can safely read af-metadata because they don't use mpv_render_context API.
     
-    if (paused) {
-        return 0.0;
-    }
-    
-    if (!_mpv) {
-        return -1.0;
-    }
-    
-    // Read af-metadata string properties directly (consistent with Windows/Linux)
-    // MPV exposes filter metadata as individual string properties
-    char *rmsStr = nullptr;
-    int rmsResult = mpv_get_property(_mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.RMS_level",
-                                     MPV_FORMAT_STRING, &rmsStr);
-    
-    double rmsDb = -96.0;
-    bool foundRms = false;
-    if (rmsResult >= 0 && rmsStr) {
-        rmsDb = atof(rmsStr);
-        mpv_free(rmsStr);
-        foundRms = true;
-    }
-    
-    // Try peak level as fallback
-    char *peakStr = nullptr;
-    int peakResult = mpv_get_property(_mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.Peak_level",
-                                      MPV_FORMAT_STRING, &peakStr);
-    
-    double peakDb = -96.0;
-    bool foundPeak = false;
-    if (peakResult >= 0 && peakStr) {
-        peakDb = atof(peakStr);
-        mpv_free(peakStr);
-        foundPeak = true;
-    }
-    
-    if (!foundRms && !foundPeak) {
-        // No audio statistics available - honest failure
-        return -1.0;
-    }
-    
-    // Use RMS as primary, peak as fallback
-    double useDb = foundRms ? rmsDb : peakDb;
-    
-    // Convert dB to linear energy (0-1 range)
-    // Typical dialogue: -30 to -10 dB
-    // Silence: -60 to -40 dB
-    double linearEnergy = 0.0;
-    if (useDb > -60.0) {
-        // Normalize: -60 dB = 0.0, -10 dB = 1.0
-        linearEnergy = (useDb + 60.0) / 50.0;
-        linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
-    }
-    
-    // Optional light volume scaling (don't hide real silence)
-    double scaledEnergy = linearEnergy;
-    if (volumeLevel < 0.5) {
-        scaledEnergy *= (0.5 + volumeLevel);
-    }
-    
-    return std::min(scaledEnergy, 1.0);
+    return -1.0;  // Audio capture unavailable on macOS (filter metadata race with render context)
 }
 
 @end
