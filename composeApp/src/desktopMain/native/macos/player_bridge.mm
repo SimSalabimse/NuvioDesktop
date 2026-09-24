@@ -2684,7 +2684,7 @@ static void nuvioMpvWakeup(void *ctx) {
 // CoreAudio input callback - captures loopback audio and computes RMS
 static OSStatus audioCaptureRenderCallback(
     void *inRefCon,
-    AudioUnitRenderFlags *ioActionFlags,
+    AudioUnitRenderActionFlags *ioActionFlags,
     const AudioTimeStamp *inTimeStamp,
     UInt32 inBusNumber,
     UInt32 inNumberFrames,
