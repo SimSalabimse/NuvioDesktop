@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.window.WindowPlacement
@@ -138,6 +139,19 @@ fun main(args: Array<String>) {
                 window.contentPane.background = NuvioDesktopNativeBackground
                 (window.contentPane as? JComponent)?.isOpaque = true
             }
+
+            // Windows: Request frames continuously to prevent idle FPS drops / flickering.
+            // On Windows, Compose Desktop only redraws when input events occur unless
+            // an active animation explicitly requests frames. This ensures the UI stays
+            // smooth at vsync rate (~60 Hz) even when idle, without burning CPU.
+            if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        withFrameNanos { }
+                    }
+                }
+            }
+
             LaunchedEffect(window, appIconState.selected) {
                 val backgroundSuffix = "-transparent"
                 val iconPath = "icons/app-icon-${appIconState.selected.key}$backgroundSuffix.png"
