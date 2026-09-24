@@ -21,6 +21,9 @@
 #include <thread>
 #include <vector>
 
+#import <AudioToolbox/AudioToolbox.h>
+#import <CoreAudio/CoreAudio.h>
+
 #ifndef NX_SUBTYPE_AUX_CONTROL_BUTTONS
 #define NX_SUBTYPE_AUX_CONTROL_BUTTONS 8
 #endif
@@ -1085,7 +1088,7 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     int64_t _appliedSubtitlePosition;
     BOOL _appliedSubtitleStripSdh;
     
-    // Audio energy capture for subtitle Auto Sync
+    // Audio energy capture for subtitle Auto Sync (CoreAudio tap, not MPV filter)
     struct AudioEnergySample {
         int64_t timestampMs;
         double energy;
@@ -1096,6 +1099,8 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     std::atomic_bool _isCapturingAudio;
     std::chrono::steady_clock::time_point _audioCaptureStartTime;
     std::thread _audioCaptureThread;
+    AudioUnit _audioCaptureUnit;
+    std::atomic<double> _latestAudioEnergy;
 }
 
 - (instancetype)initWithHostView:(NSView *)hostView
@@ -1551,14 +1556,16 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     // APIs that both touch filter graph state without coordination. No amount of client-side queue
     // marshaling prevents this race because the render context has its own threading.
     //
-    // Solution: Do NOT set up astats filter on macOS. Audio capture will return empty samples.
-    // This is an honest failure (empty array) rather than a crash.
+    // Solution for macOS: Use CoreAudio tap to capture system audio output and compute RMS directly.
+    // This completely bypasses MPV's filter graph and avoids the render context API race.
     //
-    // Windows/Linux don't use render context API, so they don't hit this race.
+    // Windows/Linux can still use astats filter since they don't use render context API.
     
-    // Initialize audio capture state (will return empty samples on macOS)
+    // Initialize audio capture state
     _audioCaptureStartMs = 0;
     _isCapturingAudio.store(false);
+    _audioCaptureUnit = nullptr;
+    _latestAudioEnergy.store(-1.0);
     
     [self startMpvEventDrain];
 
@@ -1865,6 +1872,14 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     }
     if (_audioCaptureThread.joinable()) {
         _audioCaptureThread.join();
+    }
+    
+    // Tear down CoreAudio tap
+    if (_audioCaptureUnit) {
+        AudioOutputUnitStop(_audioCaptureUnit);
+        AudioUnitUninitialize(_audioCaptureUnit);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
     }
     
     if (_mpvEventQueue) {
@@ -2666,8 +2681,68 @@ static void nuvioMpvWakeup(void *ctx) {
     }
 }
 
-// Audio energy capture for subtitle Auto Sync
+// CoreAudio input callback - captures loopback audio and computes RMS
+static OSStatus audioCaptureRenderCallback(
+    void *inRefCon,
+    AudioUnitRenderFlags *ioActionFlags,
+    const AudioTimeStamp *inTimeStamp,
+    UInt32 inBusNumber,
+    UInt32 inNumberFrames,
+    AudioBufferList *ioData
+) {
+    MpvWebPlayer *self = (__bridge MpvWebPlayer *)inRefCon;
+    
+    if (!self->_isCapturingAudio.load()) {
+        return noErr;
+    }
+    
+    // Allocate buffer list for the audio data
+    AudioBufferList bufferList;
+    bufferList.mNumberBuffers = 1;
+    bufferList.mBuffers[0].mNumberChannels = 2;  // Stereo
+    bufferList.mBuffers[0].mDataByteSize = inNumberFrames * 2 * sizeof(float);
+    bufferList.mBuffers[0].mData = malloc(bufferList.mBuffers[0].mDataByteSize);
+    
+    if (!bufferList.mBuffers[0].mData) {
+        return noErr;  // Allocation failed, skip this frame
+    }
+    
+    // Render the input audio (loopback from output device)
+    OSStatus status = AudioUnitRender(
+        self->_audioCaptureUnit,
+        ioActionFlags,
+        inTimeStamp,
+        1,  // input element
+        inNumberFrames,
+        &bufferList
+    );
+    
+    if (status == noErr) {
+        // Compute RMS from the captured audio
+        double sumSquares = 0.0;
+        UInt32 totalSamples = bufferList.mBuffers[0].mDataByteSize / sizeof(float);
+        float *samples = (float *)bufferList.mBuffers[0].mData;
+        
+        for (UInt32 i = 0; i < totalSamples; i++) {
+            float sample = samples[i];
+            sumSquares += sample * sample;
+        }
+        
+        if (totalSamples > 0) {
+            double rms = sqrt(sumSquares / totalSamples);
+            // Normalize to 0-1 range (typical dialogue: 0.01-0.3 RMS → 0.4-1.0 energy)
+            double energy = std::min(rms * 3.0, 1.0);
+            self->_latestAudioEnergy.store(energy);
+        }
+    }
+    
+    free(bufferList.mBuffers[0].mData);
+    return noErr;
+}
+
+// Audio energy capture for subtitle Auto Sync (CoreAudio tap)
 - (void)startAudioEnergyCapture:(int64_t)startTimeMs {
+    // Stop any existing capture
     {
         std::lock_guard<std::mutex> lock(_audioCaptureMutex);
         if (_isCapturingAudio.load() && _audioCaptureThread.joinable()) {
@@ -2679,12 +2754,157 @@ static void nuvioMpvWakeup(void *ctx) {
         _audioCaptureThread.join();
     }
     
+    // Tear down existing AudioUnit if any
+    if (_audioCaptureUnit) {
+        AudioOutputUnitStop(_audioCaptureUnit);
+        AudioUnitUninitialize(_audioCaptureUnit);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+    }
+    
+    // Set up CoreAudio loopback capture using HAL Output with input enabled
+    // This taps the default output device to capture what's being played
+    AudioComponentDescription desc = {
+        .componentType = kAudioUnitType_Output,
+        .componentSubType = kAudioUnitSubType_HALOutput,
+        .componentManufacturer = kAudioUnitManufacturer_Apple,
+        .componentFlags = 0,
+        .componentFlagsMask = 0
+    };
+    
+    AudioComponent component = AudioComponentFindNext(nullptr, &desc);
+    if (!component) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to find HAL output component for audio tap");
+        return;
+    }
+    
+    OSStatus status = AudioComponentInstanceNew(component, &_audioCaptureUnit);
+    if (status != noErr || !_audioCaptureUnit) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to create AudioUnit for tap: %d", (int)status);
+        return;
+    }
+    
+    // Get the default output device
+    AudioDeviceID outputDevice;
+    UInt32 propertySize = sizeof(outputDevice);
+    AudioObjectPropertyAddress propertyAddress = {
+        .mSelector = kAudioHardwarePropertyDefaultOutputDevice,
+        .mScope = kAudioObjectPropertyScopeGlobal,
+        .mElement = kAudioObjectPropertyElementMain
+    };
+    
+    status = AudioObjectGetPropertyData(
+        kAudioObjectSystemObject,
+        &propertyAddress,
+        0,
+        nullptr,
+        &propertySize,
+        &outputDevice
+    );
+    
+    if (status != noErr) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to get default output device: %d", (int)status);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+        return;
+    }
+    
+    // Set the AudioUnit to use this device
+    status = AudioUnitSetProperty(
+        _audioCaptureUnit,
+        kAudioOutputUnitProperty_CurrentDevice,
+        kAudioUnitScope_Global,
+        0,
+        &outputDevice,
+        sizeof(outputDevice)
+    );
+    
+    if (status != noErr) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to set output device: %d", (int)status);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+        return;
+    }
+    
+    // Enable input (loopback/monitoring mode)
+    UInt32 enableIO = 1;
+    status = AudioUnitSetProperty(
+        _audioCaptureUnit,
+        kAudioOutputUnitProperty_EnableIO,
+        kAudioUnitScope_Input,
+        1,  // input element (loopback)
+        &enableIO,
+        sizeof(enableIO)
+    );
+    
+    if (status != noErr) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to enable loopback IO: %d", (int)status);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+        return;
+    }
+    
+    // Disable output (we're only capturing, not playing)
+    UInt32 disableIO = 0;
+    status = AudioUnitSetProperty(
+        _audioCaptureUnit,
+        kAudioOutputUnitProperty_EnableIO,
+        kAudioUnitScope_Output,
+        0,  // output element
+        &disableIO,
+        sizeof(disableIO)
+    );
+    
+    // Set up input callback to receive loopback audio
+    AURenderCallbackStruct callbackStruct = {
+        .inputProc = audioCaptureRenderCallback,
+        .inputProcRefCon = (__bridge void *)self
+    };
+    
+    status = AudioUnitSetProperty(
+        _audioCaptureUnit,
+        kAudioOutputUnitProperty_SetInputCallback,
+        kAudioUnitScope_Global,
+        0,
+        &callbackStruct,
+        sizeof(callbackStruct)
+    );
+    
+    if (status != noErr) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to set input callback: %d", (int)status);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+        return;
+    }
+    
+    // Initialize and start
+    status = AudioUnitInitialize(_audioCaptureUnit);
+    if (status != noErr) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to initialize tap AudioUnit: %d", (int)status);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+        return;
+    }
+    
+    status = AudioOutputUnitStart(_audioCaptureUnit);
+    if (status != noErr) {
+        NSLog(@"[Nuvio] CoreAudio: Failed to start tap AudioUnit: %d", (int)status);
+        AudioUnitUninitialize(_audioCaptureUnit);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+        return;
+    }
+    
+    NSLog(@"[Nuvio] CoreAudio: Successfully set up audio tap for energy capture");
+    
+    // Start capture thread
     {
         std::lock_guard<std::mutex> lock(_audioCaptureMutex);
         _audioCaptureSamples.clear();
         _audioCaptureStartMs = startTimeMs;
         _isCapturingAudio.store(true);
         _audioCaptureStartTime = std::chrono::steady_clock::now();
+        _latestAudioEnergy.store(-1.0);
     }
     
     _audioCaptureThread = std::thread([self]() {
@@ -2693,6 +2913,7 @@ static void nuvioMpvWakeup(void *ctx) {
 }
 
 - (NSString *)stopAudioEnergyCapture {
+    // Stop capture thread
     {
         std::lock_guard<std::mutex> lock(_audioCaptureMutex);
         _isCapturingAudio.store(false);
@@ -2702,6 +2923,15 @@ static void nuvioMpvWakeup(void *ctx) {
         _audioCaptureThread.join();
     }
     
+    // Tear down AudioUnit
+    if (_audioCaptureUnit) {
+        AudioOutputUnitStop(_audioCaptureUnit);
+        AudioUnitUninitialize(_audioCaptureUnit);
+        AudioComponentInstanceDispose(_audioCaptureUnit);
+        _audioCaptureUnit = nullptr;
+    }
+    
+    // Return captured samples
     std::lock_guard<std::mutex> lock(_audioCaptureMutex);
     NSMutableString *json = [NSMutableString stringWithString:@"["];
     for (size_t i = 0; i < _audioCaptureSamples.size(); ++i) {
@@ -2741,12 +2971,10 @@ static void nuvioMpvWakeup(void *ctx) {
             break;
         }
         
-        // Marshal ALL MPV operations to _mpvEventQueue (libmpv client API must be serialized)
-        // syncControls and all other MPV property reads use _mpvEventQueue, not main queue
+        // Get current playback position (read-only property, safe to access)
+        // We still need position to timestamp our samples, but we don't call af-metadata
         __block int64_t currentPosMs = 0;
-        __block double currentVolume = 0.0;
-        __block bool paused = true;
-        __block double energy = -1.0;
+        __block bool paused = false;
         
         dispatch_queue_t queue = _mpvEventQueue;
         if (queue) {
@@ -2755,16 +2983,15 @@ static void nuvioMpvWakeup(void *ctx) {
                     return;
                 }
                 currentPosMs = [self positionMs];
-                currentVolume = [self volume];
                 paused = [self isPaused];
-                
-                // Compute real energy from MPV astats filter (on MPV event queue)
-                energy = [self computeRealAudioEnergy:currentPosMs volume:currentVolume paused:paused];
             });
         }
         
-        // Only store sample if we got valid energy (-1.0 = filter metadata unavailable)
-        if (energy >= 0.0) {
+        // Read energy from CoreAudio tap (atomic, set by render callback)
+        double energy = _latestAudioEnergy.load();
+        
+        // Store sample if we got valid energy and playback is active
+        if (energy >= 0.0 && !paused) {
             std::lock_guard<std::mutex> lock(_audioCaptureMutex);
             if (_isCapturingAudio.load() && currentPosMs >= _audioCaptureStartMs) {
                 AudioEnergySample sample;
@@ -2779,28 +3006,22 @@ static void nuvioMpvWakeup(void *ctx) {
 }
 
 - (double)computeRealAudioEnergy:(int64_t)positionMs volume:(double)volumeLevel paused:(bool)paused {
-    // macOS: af-metadata reading is UNSAFE with mpv_render_context API (see initialization comment)
-    // 
-    // Attempts to read af-metadata via mpv_get_property race with mpv_render_context_render
-    // (which runs on com.nuvio.player.mpvgl queue and also accesses the filter graph), causing
-    // SIGABRT in tag_property. This occurs even when mpv_get_property is serialized on
-    // _mpvEventQueue because the render context API doesn't coordinate with the client API.
+    // NOTE: This method is NO LONGER USED on macOS.
     //
-    // Prior failed fixes:
-    // - 9ca44b1: marshal to main queue → still crashed (main also races with render)
-    // - 5ea7cd2: marshal to _mpvEventQueue → still crashed (event queue races with render queue)
+    // macOS now uses CoreAudio tap (AudioUnit with kAudioUnitSubType_HALOutput) to capture
+    // system audio output directly. The audioCaptureRenderCallback computes RMS from PCM samples
+    // and stores it in _latestAudioEnergy. The capture loop reads that atomic value instead of
+    // calling this method.
     //
-    // The render context API and client property API are separate threading domains that both
-    // touch the filter graph without internal coordination. No client-side queue serialization
-    // can fix this race.
+    // Why CoreAudio tap instead of af-metadata:
+    // - af-metadata reading via mpv_get_property races with mpv_render_context_render
+    // - Both APIs access the filter graph without coordination → SIGABRT in tag_property
+    // - Queue marshaling (main, _mpvEventQueue) doesn't fix the race (verified via 3 crashes)
+    // - CoreAudio tap bypasses MPV entirely, capturing actual audible output
     //
-    // Solution: Return -1.0 (invalid/unavailable) immediately. The capture loop will collect
-    // no samples (energy < 0.0 filtered out), and stopAudioEnergyCapture returns empty array "[]".
-    // This is an honest "audio capture not available" failure rather than a crash.
-    //
-    // Windows/Linux can safely read af-metadata because they don't use mpv_render_context API.
+    // This method remains for Windows/Linux compatibility (they use af-metadata safely).
     
-    return -1.0;  // Audio capture unavailable on macOS (filter metadata race with render context)
+    return -1.0;  // Not used on macOS (CoreAudio tap replaces af-metadata)
 }
 
 @end
