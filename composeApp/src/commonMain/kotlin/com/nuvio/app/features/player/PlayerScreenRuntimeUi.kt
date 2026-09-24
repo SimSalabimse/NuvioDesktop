@@ -1924,20 +1924,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
 }
 
 private fun calculateExistingSegmentTypes(skipIntervals: List<SkipInterval>, submittedInSession: Set<String>): List<String> {
-    val existing = mutableSetOf<String>()
-    
-    // Add segment types from loaded skip intervals
-    for (interval in skipIntervals) {
-        val normalized = normalizeSegmentTypeForSubmit(interval.type)
-        if (normalized != null) {
-            existing.add(normalized)
-        }
-    }
-    
-    // Add segment types submitted in this session
-    existing.addAll(submittedInSession)
-    
-    return existing.toList()
+    return submittedInSession.toList()
 }
 
 private fun normalizeSegmentTypeForSubmit(type: String): String? {
