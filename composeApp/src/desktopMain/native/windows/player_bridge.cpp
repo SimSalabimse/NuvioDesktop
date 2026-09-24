@@ -1427,35 +1427,32 @@ public:
             return -1.0; // Signal no MPV handle
         }
         
-        // Read af-metadata/nuvio_astats node (where labeled filter outputs metadata)
-        mpv_node metadataNode;
-        int nodeResult = mpvApi().getProperty(mpv, "af-metadata/nuvio_astats", MPV_FORMAT_NODE, &metadataNode);
+        // Read af-metadata string properties directly (no mpv_node needed)
+        // MPV exposes filter metadata as individual string properties
+        char *rmsStr = nullptr;
+        int rmsResult = mpvApi().getProperty(mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.RMS_level", 
+                                             MPV_FORMAT_STRING, &rmsStr);
         
-        if (nodeResult < 0 || metadataNode.format != MPV_FORMAT_NODE_MAP) {
-            // No filter metadata available - honest failure
-            return -1.0;
-        }
-        
-        // Extract RMS and Peak levels from the node map
         double rmsDb = -96.0;
-        double peakDb = -96.0;
         bool foundRms = false;
-        bool foundPeak = false;
-        
-        for (int i = 0; i < metadataNode.u.list->num; i++) {
-            const char *key = metadataNode.u.list->keys[i];
-            mpv_node *value = &metadataNode.u.list->values[i];
-            
-            if (std::strcmp(key, "lavfi.astats.Overall.RMS_level") == 0 && value->format == MPV_FORMAT_STRING) {
-                rmsDb = std::atof(value->u.string);
-                foundRms = true;
-            } else if (std::strcmp(key, "lavfi.astats.Overall.Peak_level") == 0 && value->format == MPV_FORMAT_STRING) {
-                peakDb = std::atof(value->u.string);
-                foundPeak = true;
-            }
+        if (rmsResult >= 0 && rmsStr) {
+            rmsDb = std::atof(rmsStr);
+            mpvApi().freeValue(rmsStr);
+            foundRms = true;
         }
         
-        mpvApi().freeNodeContents(&metadataNode);
+        // Try peak level as fallback
+        char *peakStr = nullptr;
+        int peakResult = mpvApi().getProperty(mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.Peak_level",
+                                              MPV_FORMAT_STRING, &peakStr);
+        
+        double peakDb = -96.0;
+        bool foundPeak = false;
+        if (peakResult >= 0 && peakStr) {
+            peakDb = std::atof(peakStr);
+            mpvApi().freeValue(peakStr);
+            foundPeak = true;
+        }
         
         if (!foundRms && !foundPeak) {
             // No audio statistics available - honest failure
@@ -1476,11 +1473,8 @@ public:
         }
         
         // Optional: scale by user volume (but don't hide real silence)
-        // User volume affects output amplitude but astats sees pre-volume samples
-        // Only apply light scaling to avoid inventing energy
         double scaledEnergy = linearEnergy;
         if (volumeLevel < 0.5) {
-            // Very low user volume - might indicate they want quiet
             scaledEnergy *= (0.5 + volumeLevel);
         }
         

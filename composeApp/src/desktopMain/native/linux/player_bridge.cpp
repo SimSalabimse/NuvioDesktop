@@ -1552,53 +1552,53 @@ void runAudioCaptureLoop(Player *p) {
         double energy = -1.0; // Default to failure
         
         if (!paused && playerAlive(p) && p->mpv) {
-            // Read af-metadata/nuvio_astats node (where labeled filter outputs metadata)
-            mpv_node metadataNode;
-            int nodeResult = mpv_get_property(p->mpv, "af-metadata/nuvio_astats", MPV_FORMAT_NODE, &metadataNode);
+            // Read af-metadata string properties directly (consistent with Windows)
+            // MPV exposes filter metadata as individual string properties
+            char *rmsStr = nullptr;
+            int rmsResult = mpv_get_property(p->mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.RMS_level",
+                                             MPV_FORMAT_STRING, &rmsStr);
             
-            if (nodeResult >= 0 && metadataNode.format == MPV_FORMAT_NODE_MAP) {
-                // Extract RMS and Peak levels from the node map
-                double rmsDb = -96.0;
-                double peakDb = -96.0;
-                bool foundRms = false;
-                bool foundPeak = false;
+            double rmsDb = -96.0;
+            bool foundRms = false;
+            if (rmsResult >= 0 && rmsStr) {
+                rmsDb = std::atof(rmsStr);
+                mpv_free(rmsStr);
+                foundRms = true;
+            }
+            
+            // Try peak level as fallback
+            char *peakStr = nullptr;
+            int peakResult = mpv_get_property(p->mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.Peak_level",
+                                              MPV_FORMAT_STRING, &peakStr);
+            
+            double peakDb = -96.0;
+            bool foundPeak = false;
+            if (peakResult >= 0 && peakStr) {
+                peakDb = std::atof(peakStr);
+                mpv_free(peakStr);
+                foundPeak = true;
+            }
+            
+            if (foundRms || foundPeak) {
+                // Use RMS as primary, peak as fallback
+                double useDb = foundRms ? rmsDb : peakDb;
                 
-                for (int i = 0; i < metadataNode.u.list->num; i++) {
-                    const char *key = metadataNode.u.list->keys[i];
-                    mpv_node *value = &metadataNode.u.list->values[i];
-                    
-                    if (std::strcmp(key, "lavfi.astats.Overall.RMS_level") == 0 && value->format == MPV_FORMAT_STRING) {
-                        rmsDb = std::atof(value->u.string);
-                        foundRms = true;
-                    } else if (std::strcmp(key, "lavfi.astats.Overall.Peak_level") == 0 && value->format == MPV_FORMAT_STRING) {
-                        peakDb = std::atof(value->u.string);
-                        foundPeak = true;
-                    }
+                // Convert dB to linear energy (0-1 range)
+                // Typical dialogue: -30 to -10 dB
+                // Silence: -60 to -40 dB
+                double linearEnergy = 0.0;
+                if (useDb > -60.0) {
+                    // Normalize: -60 dB = 0.0, -10 dB = 1.0
+                    linearEnergy = (useDb + 60.0) / 50.0;
+                    linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
                 }
                 
-                mpv_free_node_contents(&metadataNode);
-                
-                if (foundRms || foundPeak) {
-                    // Use RMS as primary, peak as fallback
-                    double useDb = foundRms ? rmsDb : peakDb;
-                    
-                    // Convert dB to linear energy (0-1 range)
-                    // Typical dialogue: -30 to -10 dB
-                    // Silence: -60 to -40 dB
-                    double linearEnergy = 0.0;
-                    if (useDb > -60.0) {
-                        // Normalize: -60 dB = 0.0, -10 dB = 1.0
-                        linearEnergy = (useDb + 60.0) / 50.0;
-                        linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
-                    }
-                    
-                    // Optional light volume scaling (don't hide real silence)
-                    energy = linearEnergy;
-                    if (currentVolume < 0.5) {
-                        energy *= (0.5 + currentVolume);
-                    }
-                    energy = std::min(energy, 1.0);
+                // Optional light volume scaling (don't hide real silence)
+                energy = linearEnergy;
+                if (currentVolume < 0.5) {
+                    energy *= (0.5 + currentVolume);
                 }
+                energy = std::min(energy, 1.0);
             }
         }
         
