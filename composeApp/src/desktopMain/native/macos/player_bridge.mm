@@ -27,6 +27,7 @@
 // For process-specific audio tap (macOS 14.2+)
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140200
 #import <CoreAudio/AudioHardwareTapping.h>
+#import <CoreAudio/CATapDescription.h>
 #endif
 
 #ifndef NX_SUBTYPE_AUX_CONTROL_BUTTONS
@@ -2808,21 +2809,52 @@ static OSStatus audioTapIOProc(
     if (@available(macOS 14.2, *)) {
         NSLog(@"[Nuvio] CoreAudio: Attempting process tap (macOS 14.2+ API)");
         
-        // Get this process's PID
+        // Get this process's PID and translate to AudioObjectID
         pid_t pid = getpid();
         NSLog(@"[Nuvio] CoreAudio: Current process PID=%d", pid);
         
-        // Create tap description for this process's output
-        // Use initStereoMixdownOfProcesses: with our PID
-        CATapDescription *tapDesc = [[CATapDescription alloc] initStereoMixdownOfProcesses:@[@(pid)]
-                                                                                 andDeviceUID:nil];
-        if (!tapDesc) {
-            NSLog(@"[Nuvio] CoreAudio: Failed to create CATapDescription for PID %d", pid);
+        // Translate PID to process AudioObjectID
+        AudioObjectPropertyAddress propertyAddress = {
+            .mSelector = kAudioHardwarePropertyTranslatePIDToProcessObject,
+            .mScope = kAudioObjectPropertyScopeGlobal,
+            .mElement = kAudioObjectPropertyElementMain
+        };
+        
+        AudioObjectID processObjectID = kAudioObjectUnknown;
+        UInt32 processObjectIDSize = sizeof(processObjectID);
+        AudioValueTranslation translation = {
+            .mInputData = &pid,
+            .mInputDataSize = sizeof(pid),
+            .mOutputData = &processObjectID,
+            .mOutputDataSize = sizeof(processObjectID)
+        };
+        UInt32 translationSize = sizeof(translation);
+        
+        status = AudioObjectGetPropertyData(
+            kAudioObjectSystemObject,
+            &propertyAddress,
+            0,
+            nullptr,
+            &translationSize,
+            &translation
+        );
+        
+        if (status != noErr || processObjectID == kAudioObjectUnknown) {
+            NSLog(@"[Nuvio] CoreAudio: Failed to translate PID %d to AudioObjectID: %d", pid, (int)status);
         } else {
-            // Set to unmuted (we want to hear the audio)
-            tapDesc.muteBehavior = CATapUnmuted;
+            NSLog(@"[Nuvio] CoreAudio: Translated PID %d to AudioObjectID %u", pid, (unsigned)processObjectID);
             
-            NSLog(@"[Nuvio] CoreAudio: Created CATapDescription for PID %d, calling AudioHardwareCreateProcessTap", pid);
+            // Create tap description for this process's audio object
+            CATapDescription *tapDesc = [[CATapDescription alloc] 
+                initStereoMixdownOfProcesses:@[@(processObjectID)]];
+            
+            if (!tapDesc) {
+                NSLog(@"[Nuvio] CoreAudio: Failed to create CATapDescription for AudioObjectID %u", (unsigned)processObjectID);
+            } else {
+                // Set to unmuted (we want to hear the audio)
+                tapDesc.muteBehavior = CATapUnmuted;
+                
+                NSLog(@"[Nuvio] CoreAudio: Created CATapDescription for AudioObjectID %u, calling AudioHardwareCreateProcessTap", (unsigned)processObjectID);
             
             // Create the process tap (note: no device parameter in macOS 14.2+ API)
             status = AudioHardwareCreateProcessTap(tapDesc, &_audioTapID);
@@ -2875,6 +2907,7 @@ static OSStatus audioTapIOProc(
             } else {
                 NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: status=%d tapID=%u", (int)status, (unsigned)_audioTapID);
             }
+        }
         }
     } else {
         NSLog(@"[Nuvio] CoreAudio: macOS 14.2+ required for process tap (current version too old)");
