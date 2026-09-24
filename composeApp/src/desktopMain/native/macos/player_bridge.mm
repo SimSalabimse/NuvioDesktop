@@ -2728,12 +2728,23 @@ static void nuvioMpvWakeup(void *ctx) {
             break;
         }
         
-        int64_t currentPosMs = [self positionMs];
-        double currentVolume = [self volume];
-        bool paused = [self isPaused];
+        // Marshal ALL property reads to main thread (libmpv is not thread-safe)
+        __block int64_t currentPosMs = 0;
+        __block double currentVolume = 0.0;
+        __block bool paused = true;
+        __block double energy = -1.0;
         
-        // Compute real energy from MPV astats filter
-        double energy = [self computeRealAudioEnergy:currentPosMs volume:currentVolume paused:paused];
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            if (!self->_mpv) {
+                return;
+            }
+            currentPosMs = [self positionMs];
+            currentVolume = [self volume];
+            paused = [self isPaused];
+            
+            // Compute real energy from MPV astats filter (on main thread)
+            energy = [self computeRealAudioEnergy:currentPosMs volume:currentVolume paused:paused];
+        });
         
         // Only store sample if we got valid energy (-1.0 = filter metadata unavailable)
         if (energy >= 0.0) {
