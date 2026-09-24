@@ -145,9 +145,6 @@ internal class DesktopAppFullscreenController {
                 applyMacosComposeFullscreenExit(
                     restorePlacement = restoreWindowPlacement,
                     requestNativeFullscreenExit = { requestNativeComposeFullscreenExit(window) },
-                    clearComposeFullscreen = {
-                        (window as? ComposeWindow)?.placement = WindowPlacement.Floating
-                    },
                     setStatePlacement = { placement ->
                         windowState.placement = placement
                     },
@@ -245,25 +242,33 @@ internal class DesktopAppFullscreenController {
 }
 
 /**
- * ComposeWindow does not clear its fullscreen flag when placement is changed directly from
- * Fullscreen to Maximized on macOS. Let AppKit complete its asynchronous fullscreen exit and let
- * Compose's native window listener restore WindowState; writing Maximized during that transition
- * can alter the frame AppKit is restoring. The Compose fallback is only used if the native macOS
- * request cannot be made.
+ * Exits fullscreen on macOS by requesting native AppKit fullscreen exit.
+ * Always updates WindowState.placement to ensure state consistency, even when
+ * relying on AppKit's asynchronous transition. Setting placement to Floating first
+ * is safest: changing directly from Fullscreen to Maximized during AppKit's transition
+ * can interfere with the frame AppKit is restoring.
  */
 internal fun applyMacosComposeFullscreenExit(
     restorePlacement: WindowPlacement,
     requestNativeFullscreenExit: () -> Boolean,
-    clearComposeFullscreen: () -> Unit,
     setStatePlacement: (WindowPlacement) -> Unit,
 ) {
-    if (requestNativeFullscreenExit()) return
-
     val targetPlacement = restorePlacement
         .takeUnless { it == WindowPlacement.Fullscreen }
         ?: WindowPlacement.Floating
-    clearComposeFullscreen()
-    setStatePlacement(targetPlacement)
+
+    val nativeRequestSucceeded = requestNativeFullscreenExit()
+    
+    if (targetPlacement == WindowPlacement.Floating || !nativeRequestSucceeded) {
+        setStatePlacement(targetPlacement)
+    } else {
+        setStatePlacement(WindowPlacement.Floating)
+        if (nativeRequestSucceeded) {
+            SwingUtilities.invokeLater {
+                setStatePlacement(targetPlacement)
+            }
+        }
+    }
 }
 
 internal fun installDesktopAppFullscreenShortcuts(window: Window): () -> Unit {
