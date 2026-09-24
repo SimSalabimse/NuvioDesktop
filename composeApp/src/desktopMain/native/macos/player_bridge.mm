@@ -2813,7 +2813,7 @@ static OSStatus audioTapIOProc(
         pid_t pid = getpid();
         NSLog(@"[Nuvio] CoreAudio: Current process PID=%d", pid);
         
-        // Translate PID to process AudioObjectID
+        // Translate PID to process AudioObjectID using qualifier-based property
         AudioObjectPropertyAddress propertyAddress = {
             .mSelector = kAudioHardwarePropertyTranslatePIDToProcessObject,
             .mScope = kAudioObjectPropertyScopeGlobal,
@@ -2822,21 +2822,14 @@ static OSStatus audioTapIOProc(
         
         AudioObjectID processObjectID = kAudioObjectUnknown;
         UInt32 processObjectIDSize = sizeof(processObjectID);
-        AudioValueTranslation translation = {
-            .mInputData = &pid,
-            .mInputDataSize = sizeof(pid),
-            .mOutputData = &processObjectID,
-            .mOutputDataSize = sizeof(processObjectID)
-        };
-        UInt32 translationSize = sizeof(translation);
         
         status = AudioObjectGetPropertyData(
             kAudioObjectSystemObject,
             &propertyAddress,
-            0,
-            nullptr,
-            &translationSize,
-            &translation
+            sizeof(pid),           // qualifier size (PID passed as qualifier)
+            &pid,                  // qualifier data (pid_t)
+            &processObjectIDSize,  // property data size (in/out)
+            &processObjectID       // property data (AudioObjectID output)
         );
         
         if (status != noErr || processObjectID == kAudioObjectUnknown) {
