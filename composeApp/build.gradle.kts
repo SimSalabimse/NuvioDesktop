@@ -722,6 +722,8 @@ val macosPlayerBridgeCommand = if (missingMacosPlayerBridgeInputs.isNotEmpty()) 
           -L"${'$'}{SWIFT_LIB}" \
           -L/usr/lib/swift \
           -framework AppKit \
+          -framework AudioToolbox \
+          -framework CoreAudio \
           -framework IOKit \
           -framework OpenGL \
           -framework QuartzCore \
