@@ -9,7 +9,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -140,15 +142,29 @@ fun main(args: Array<String>) {
                 (window.contentPane as? JComponent)?.isOpaque = true
             }
 
-            // Windows: Request frames continuously to prevent idle FPS drops / flickering.
+            // Windows: Drive continuous rendering to prevent idle FPS drops and scroll stutter.
             // On Windows, Compose Desktop only redraws when input events occur unless
-            // an active animation explicitly requests frames. This ensures the UI stays
-            // smooth at vsync rate (~60 Hz) even when idle, without burning CPU.
+            // an active animation explicitly requests frames. This frame driver:
+            // 1. Requests frames at vsync rate to prevent idle flicker
+            // 2. Triggers recomposition by updating state to prevent periodic hitches
+            // 3. Invalidates the window to ensure smooth LazyColumn scrolling
             if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
+                var frameCount by remember { mutableLongStateOf(0L) }
                 LaunchedEffect(Unit) {
                     while (true) {
-                        withFrameNanos { }
+                        withFrameNanos { nanos ->
+                            // Update state to drive recomposition and snapshot application.
+                            // This ensures Compose's snapshot system applies changes on every
+                            // frame rather than batching them, which prevents periodic hitches.
+                            frameCount = nanos
+                        }
                     }
+                }
+                // Consume the frame count and invalidate the window content pane to ensure
+                // all UI updates (especially LazyColumn scroll) render immediately on Windows.
+                SideEffect {
+                    frameCount  // Force state observation to drive recomposition
+                    window.contentPane.repaint()  // Ensure AWT/Swing layer repaints
                 }
             }
 
