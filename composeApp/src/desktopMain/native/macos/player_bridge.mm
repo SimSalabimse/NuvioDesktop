@@ -1081,6 +1081,18 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     double _appliedSubtitleFontSize;
     int64_t _appliedSubtitlePosition;
     BOOL _appliedSubtitleStripSdh;
+    
+    // Audio energy capture for subtitle Auto Sync
+    struct AudioEnergySample {
+        int64_t timestampMs;
+        double energy;
+    };
+    std::mutex _audioCaptureMutex;
+    std::vector<AudioEnergySample> _audioCaptureSamples;
+    int64_t _audioCaptureStartMs;
+    std::atomic_bool _isCapturingAudio;
+    std::chrono::steady_clock::time_point _audioCaptureStartTime;
+    std::thread _audioCaptureThread;
 }
 
 - (instancetype)initWithHostView:(NSView *)hostView
@@ -1526,6 +1538,15 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
         NSString *reason = [NSString stringWithFormat:@"mpv_initialize failed: %s", mpv_error_string(initResult)];
         @throw [NSException exceptionWithName:@"PlayerBridgeError" reason:reason userInfo:nil];
     }
+    
+    // Set up astats filter for real PCM-derived audio energy capture
+    // Label as @nuvio_astats so we can read from af-metadata/nuvio_astats
+    setMpvOptionString(_mpv, "af", "@nuvio_astats:lavfi=[astats=metadata=1:reset=1]");
+    
+    // Initialize audio capture state
+    _audioCaptureStartMs = 0;
+    _isCapturingAudio.store(false);
+    
     [self startMpvEventDrain];
 
     NSString *renderError = nil;
@@ -1823,6 +1844,16 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     }
     _controlsWebReady = NO;
     _pendingControlsJson = nil;
+    
+    // Stop audio capture if running
+    {
+        std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+        _isCapturingAudio.store(false);
+    }
+    if (_audioCaptureThread.joinable()) {
+        _audioCaptureThread.join();
+    }
+    
     if (_mpvEventQueue) {
         dispatch_sync(_mpvEventQueue, ^{});
     }
@@ -2622,6 +2653,169 @@ static void nuvioMpvWakeup(void *ctx) {
     }
 }
 
+// Audio energy capture for subtitle Auto Sync
+- (void)startAudioEnergyCapture:(int64_t)startTimeMs {
+    {
+        std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+        if (_isCapturingAudio.load() && _audioCaptureThread.joinable()) {
+            _isCapturingAudio.store(false);
+        }
+    }
+    
+    if (_audioCaptureThread.joinable()) {
+        _audioCaptureThread.join();
+    }
+    
+    {
+        std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+        _audioCaptureSamples.clear();
+        _audioCaptureStartMs = startTimeMs;
+        _isCapturingAudio.store(true);
+        _audioCaptureStartTime = std::chrono::steady_clock::now();
+    }
+    
+    _audioCaptureThread = std::thread([self]() {
+        [self runAudioCaptureLoop];
+    });
+}
+
+- (NSString *)stopAudioEnergyCapture {
+    {
+        std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+        _isCapturingAudio.store(false);
+    }
+    
+    if (_audioCaptureThread.joinable()) {
+        _audioCaptureThread.join();
+    }
+    
+    std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+    NSMutableString *json = [NSMutableString stringWithString:@"["];
+    for (size_t i = 0; i < _audioCaptureSamples.size(); ++i) {
+        if (i > 0) [json appendString:@","];
+        [json appendFormat:@"{\"timestampMs\":%lld,\"energy\":%.6f}",
+            _audioCaptureSamples[i].timestampMs,
+            _audioCaptureSamples[i].energy];
+    }
+    [json appendString:@"]"];
+    return json;
+}
+
+- (int64_t)getAudioCaptureDuration {
+    std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+    if (!_isCapturingAudio.load() || _audioCaptureSamples.empty()) {
+        return 0;
+    }
+    
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - _audioCaptureStartTime
+    );
+    return elapsed.count();
+}
+
+- (void)runAudioCaptureLoop {
+    const int64_t sampleIntervalMs = 100;
+    
+    while (true) {
+        bool shouldContinue = false;
+        {
+            std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+            shouldContinue = _isCapturingAudio.load();
+        }
+        
+        if (!shouldContinue) {
+            break;
+        }
+        
+        int64_t currentPosMs = [self positionMs];
+        double currentVolume = [self volume];
+        bool paused = [self isPaused];
+        
+        // Compute real energy from MPV astats filter
+        double energy = [self computeRealAudioEnergy:currentPosMs volume:currentVolume paused:paused];
+        
+        // Only store sample if we got valid energy (-1.0 = filter metadata unavailable)
+        if (energy >= 0.0) {
+            std::lock_guard<std::mutex> lock(_audioCaptureMutex);
+            if (_isCapturingAudio.load() && currentPosMs >= _audioCaptureStartMs) {
+                AudioEnergySample sample;
+                sample.timestampMs = currentPosMs;
+                sample.energy = energy;
+                _audioCaptureSamples.push_back(sample);
+            }
+        }
+        
+        std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
+    }
+}
+
+- (double)computeRealAudioEnergy:(int64_t)positionMs volume:(double)volumeLevel paused:(bool)paused {
+    // Real PCM-derived audio energy from MPV's astats filter
+    // The astats lavfi filter computes RMS levels from actual decoded audio samples
+    
+    if (paused) {
+        return 0.0;
+    }
+    
+    if (!_mpv) {
+        return -1.0;
+    }
+    
+    // Read af-metadata string properties directly (consistent with Windows/Linux)
+    // MPV exposes filter metadata as individual string properties
+    char *rmsStr = nullptr;
+    int rmsResult = mpv_get_property(_mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.RMS_level",
+                                     MPV_FORMAT_STRING, &rmsStr);
+    
+    double rmsDb = -96.0;
+    bool foundRms = false;
+    if (rmsResult >= 0 && rmsStr) {
+        rmsDb = atof(rmsStr);
+        mpv_free(rmsStr);
+        foundRms = true;
+    }
+    
+    // Try peak level as fallback
+    char *peakStr = nullptr;
+    int peakResult = mpv_get_property(_mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.Peak_level",
+                                      MPV_FORMAT_STRING, &peakStr);
+    
+    double peakDb = -96.0;
+    bool foundPeak = false;
+    if (peakResult >= 0 && peakStr) {
+        peakDb = atof(peakStr);
+        mpv_free(peakStr);
+        foundPeak = true;
+    }
+    
+    if (!foundRms && !foundPeak) {
+        // No audio statistics available - honest failure
+        return -1.0;
+    }
+    
+    // Use RMS as primary, peak as fallback
+    double useDb = foundRms ? rmsDb : peakDb;
+    
+    // Convert dB to linear energy (0-1 range)
+    // Typical dialogue: -30 to -10 dB
+    // Silence: -60 to -40 dB
+    double linearEnergy = 0.0;
+    if (useDb > -60.0) {
+        // Normalize: -60 dB = 0.0, -10 dB = 1.0
+        linearEnergy = (useDb + 60.0) / 50.0;
+        linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
+    }
+    
+    // Optional light volume scaling (don't hide real silence)
+    double scaledEnergy = linearEnergy;
+    if (volumeLevel < 0.5) {
+        scaledEnergy *= (0.5 + volumeLevel);
+    }
+    
+    return std::min(scaledEnergy, 1.0);
+}
+
 @end
 
 static void runOnMainSync(dispatch_block_t block) {
@@ -3165,4 +3359,39 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_applySubtitleStyle
                                        useLibass:useLibass == JNI_TRUE
                                         stripSdh:stripSdh == JNI_TRUE];
     });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_startAudioEnergyCapture(
+    JNIEnv * /* env */,
+    jobject /* bridge */,
+    jlong handle,
+    jlong startTimeMs
+) {
+    if (handle == 0) return;
+    MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
+    [player startAudioEnergyCapture:(int64_t)startTimeMs];
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_stopAudioEnergyCapture(
+    JNIEnv *env,
+    jobject /* bridge */,
+    jlong handle
+) {
+    if (handle == 0) return env->NewStringUTF("[]");
+    MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
+    NSString *result = [player stopAudioEnergyCapture];
+    return env->NewStringUTF(result.UTF8String ?: "[]");
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_getAudioCaptureDuration(
+    JNIEnv * /* env */,
+    jobject /* bridge */,
+    jlong handle
+) {
+    if (handle == 0) return 0;
+    MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
+    return (jlong)[player getAudioCaptureDuration];
 }
