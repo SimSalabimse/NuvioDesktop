@@ -947,7 +947,9 @@ val buildWindowsPlayerBridge = tasks.register<Exec>("buildWindowsPlayerBridge") 
     outputs.file(windowsPlayerBridgeOutput)
     outputs.file(windowsPlayerBridgeImportLib)
     outputs.file(windowsPlayerBridgePdb)
-    onlyIf { !windowsPlayerBridgeOutput.get().asFile.exists() }
+    // Rebuild whenever player_bridge.cpp (or WebView2 inputs) change. The previous
+    // onlyIf { !dll.exists() } left a stale DLL in MSI/JAR after JNI additions
+    // (e.g. startAudioEnergyCapture), causing UnsatisfiedLinkError on Windows.
     commandLine(windowsPlayerBridgeCommand)
 }
 
