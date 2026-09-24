@@ -15,6 +15,8 @@
 #include <condition_variable>
 #include <cctype>
 #include <cstdint>
+#include <cstring>
+#include <cstdlib>
 #include <cstdio>
 #include <cwctype>
 #include <deque>
@@ -41,7 +43,35 @@ typedef enum mpv_format {
     MPV_FORMAT_FLAG = 3,
     MPV_FORMAT_INT64 = 4,
     MPV_FORMAT_DOUBLE = 5,
+    MPV_FORMAT_NODE = 6,
+    MPV_FORMAT_NODE_ARRAY = 7,
+    MPV_FORMAT_NODE_MAP = 8,
+    MPV_FORMAT_BYTE_ARRAY = 9,
 } mpv_format;
+
+// Minimal subset of mpv/client.h node types for dynamic libmpv loading.
+// Layout must match libmpv ABI (see Linux bridge via <mpv/client.h>).
+typedef struct mpv_node mpv_node;
+typedef struct mpv_node_list {
+    int num;
+    mpv_node *values;
+    char **keys;
+} mpv_node_list;
+typedef struct mpv_byte_array {
+    void *data;
+    size_t size;
+} mpv_byte_array;
+struct mpv_node {
+    union {
+        char *string;
+        int flag;
+        int64_t int64;
+        double double_;
+        mpv_node_list *list;
+        mpv_byte_array *ba;
+    } u;
+    mpv_format format;
+};
 
 typedef enum mpv_event_id {
     MPV_EVENT_NONE = 0,
@@ -495,6 +525,7 @@ struct MpvApi {
     using mpv_command_fn = int (*)(mpv_handle *, const char **);
     using mpv_error_string_fn = const char *(*)(int);
     using mpv_free_fn = void (*)(void *);
+    using mpv_free_node_contents_fn = void (*)(mpv_node *);
     using mpv_wait_event_fn = mpv_event *(*)(mpv_handle *, double);
     using mpv_wakeup_fn = void (*)(mpv_handle *);
 
@@ -513,6 +544,7 @@ struct MpvApi {
     mpv_command_fn command = nullptr;
     mpv_error_string_fn errorString = nullptr;
     mpv_free_fn freeValue = nullptr;
+    mpv_free_node_contents_fn freeNodeContents = nullptr;
     mpv_wait_event_fn waitEvent = nullptr;
     mpv_wakeup_fn wakeup = nullptr;
 
@@ -572,6 +604,7 @@ struct MpvApi {
         command = loadSymbol<mpv_command_fn>("mpv_command");
         errorString = loadSymbol<mpv_error_string_fn>("mpv_error_string");
         freeValue = loadSymbol<mpv_free_fn>("mpv_free");
+        freeNodeContents = loadSymbol<mpv_free_node_contents_fn>("mpv_free_node_contents");
         waitEvent = loadSymbol<mpv_wait_event_fn>("mpv_wait_event");
         wakeup = loadSymbol<mpv_wakeup_fn>("mpv_wakeup");
     }
@@ -1422,7 +1455,7 @@ public:
             }
         }
         
-        mpvApi().freeValue(&metadataNode);
+        mpvApi().freeNodeContents(&metadataNode);
         
         if (!foundRms && !foundPeak) {
             // No audio statistics available - honest failure
