@@ -2705,7 +2705,16 @@ static OSStatus audioTapIOProc(
 ) {
     MpvWebPlayer *self = (__bridge MpvWebPlayer *)inClientData;
     
-    if (!self || !self->_isCapturingAudio.load() || !inInputData) {
+    if (!self || !self->_isCapturingAudio.load()) {
+        return noErr;
+    }
+    
+    if (!inInputData || inInputData->mNumberBuffers == 0) {
+        static int noDataLogCount = 0;
+        if (noDataLogCount < 3) {
+            NSLog(@"[Nuvio] CoreAudio IOProc: Called but no input data");
+            noDataLogCount++;
+        }
         return noErr;
     }
     
@@ -2715,6 +2724,10 @@ static OSStatus audioTapIOProc(
     
     for (UInt32 i = 0; i < inInputData->mNumberBuffers; i++) {
         const AudioBuffer &buffer = inInputData->mBuffers[i];
+        if (!buffer.mData || buffer.mDataByteSize == 0) {
+            continue;
+        }
+        
         const float *samples = (const float *)buffer.mData;
         UInt32 numSamples = buffer.mDataByteSize / sizeof(float);
         
@@ -2729,7 +2742,16 @@ static OSStatus audioTapIOProc(
         double rms = sqrt(sumSquares / totalSamples);
         // Normalize to 0-1 range (dialogue typically 0.01-0.3 RMS → 0.4-1.0 energy)
         double energy = std::min(rms * 3.0, 1.0);
+        double oldEnergy = self->_latestAudioEnergy.load();
         self->_latestAudioEnergy.store(energy);
+        
+        // Log first few successful captures
+        static int successLogCount = 0;
+        if (successLogCount < 3) {
+            NSLog(@"[Nuvio] CoreAudio IOProc: Captured audio - RMS=%.4f energy=%.4f (was %.4f) samples=%u", 
+                  rms, energy, oldEnergy, (unsigned)totalSamples);
+            successLogCount++;
+        }
     }
     
     return noErr;
@@ -2784,6 +2806,8 @@ static OSStatus audioTapIOProc(
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 130000
     // Try process tap (macOS 13+) - taps this process's audio output only
     if (@available(macOS 13.0, *)) {
+        NSLog(@"[Nuvio] CoreAudio: Attempting process tap on device %u", (unsigned)outputDevice);
+        
         // Create tap description for this process
         CATapDescription tapDesc = {
             .mMuteBehavior = kCATapMuteBehaviorPostTap,  // Don't mute our output
@@ -2792,6 +2816,8 @@ static OSStatus audioTapIOProc(
         };
         
         status = AudioHardwareCreateProcessTap(outputDevice, &tapDesc, &_audioTapID);
+        NSLog(@"[Nuvio] CoreAudio: AudioHardwareCreateProcessTap returned %d, tapID=%u", (int)status, (unsigned)_audioTapID);
+        
         if (status == noErr && _audioTapID != kAudioObjectUnknown) {
             // Set up IOProc to receive tapped audio
             status = AudioDeviceCreateIOProcID(
@@ -2800,11 +2826,14 @@ static OSStatus audioTapIOProc(
                 (__bridge void *)self,
                 &_audioTapIOProcID
             );
+            NSLog(@"[Nuvio] CoreAudio: AudioDeviceCreateIOProcID returned %d", (int)status);
             
             if (status == noErr) {
                 status = AudioDeviceStart(_audioTapID, _audioTapIOProcID);
+                NSLog(@"[Nuvio] CoreAudio: AudioDeviceStart returned %d", (int)status);
+                
                 if (status == noErr) {
-                    NSLog(@"[Nuvio] CoreAudio: Process tap created successfully");
+                    NSLog(@"[Nuvio] CoreAudio: Process tap started successfully - waiting for audio data");
                     
                     // Start capture thread
                     {
@@ -2830,13 +2859,17 @@ static OSStatus audioTapIOProc(
                 AudioHardwareDestroyProcessTap(_audioTapID);
             }
         } else {
-            NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: %d", (int)status);
+            NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: status=%d tapID=%u", (int)status, (unsigned)_audioTapID);
         }
+    } else {
+        NSLog(@"[Nuvio] CoreAudio: macOS 13+ required for process tap (current version too old)");
     }
+#else
+    NSLog(@"[Nuvio] CoreAudio: Compiled without AudioHardwareTapping support");
 #endif
     
     // If we get here, process tap failed or isn't available
-    NSLog(@"[Nuvio] CoreAudio: Audio capture not available (process tap failed)");
+    NSLog(@"[Nuvio] CoreAudio: Audio capture not available - process tap setup failed");
     _audioTapIOProcID = nullptr;
     _audioTapID = kAudioObjectUnknown;
 }
@@ -2893,6 +2926,10 @@ static OSStatus audioTapIOProc(
 
 - (void)runAudioCaptureLoop {
     const int64_t sampleIntervalMs = 100;
+    int loopCount = 0;
+    int validSampleCount = 0;
+    
+    NSLog(@"[Nuvio] Audio capture loop started");
     
     while (true) {
         bool shouldContinue = false;
@@ -2902,11 +2939,12 @@ static OSStatus audioTapIOProc(
         }
         
         if (!shouldContinue) {
+            NSLog(@"[Nuvio] Audio capture loop stopping - collected %d valid samples over %d iterations", 
+                  validSampleCount, loopCount);
             break;
         }
         
         // Get current playback position (read-only property, safe to access)
-        // We still need position to timestamp our samples, but we don't call af-metadata
         __block int64_t currentPosMs = 0;
         __block bool paused = false;
         
@@ -2921,7 +2959,7 @@ static OSStatus audioTapIOProc(
             });
         }
         
-        // Read energy from CoreAudio tap (atomic, set by render callback)
+        // Read energy from CoreAudio tap (atomic, set by IOProc callback)
         double energy = _latestAudioEnergy.load();
         
         // Store sample if we got valid energy and playback is active
@@ -2932,9 +2970,19 @@ static OSStatus audioTapIOProc(
                 sample.timestampMs = currentPosMs;
                 sample.energy = energy;
                 _audioCaptureSamples.push_back(sample);
+                validSampleCount++;
+                
+                if (validSampleCount <= 3) {
+                    NSLog(@"[Nuvio] Stored sample #%d: pos=%lld energy=%.4f", 
+                          validSampleCount, currentPosMs, energy);
+                }
             }
+        } else if (loopCount < 5) {
+            NSLog(@"[Nuvio] Loop #%d: energy=%.4f paused=%d pos=%lld (skipping)", 
+                  loopCount, energy, paused, currentPosMs);
         }
         
+        loopCount++;
         std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
     }
 }
