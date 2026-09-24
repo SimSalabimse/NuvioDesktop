@@ -2863,10 +2863,10 @@ static OSStatus audioTapIOProc(
             NSLog(@"[Nuvio] CoreAudio: AudioHardwareCreateProcessTap returned %d, tapID=%u", (int)status, (unsigned)_audioTapID);
             
             if (status == noErr && _audioTapID != kAudioObjectUnknown) {
-                NSLog(@"[Nuvio] CoreAudio: Process tap created successfully, now creating aggregate device to route audio");
+                NSLog(@"[Nuvio] CoreAudio: Process tap created successfully (ID=%u), now creating aggregate device to route audio", (unsigned)_audioTapID);
                 
-                // Create aggregate device that includes the tap
-                // This is required on modern macOS to actually receive audio from the tap
+                // Create private aggregate device that will consume the tap
+                // Pattern: create minimal aggregate first, then set tap list property after
                 CFMutableDictionaryRef aggregateDescription = CFDictionaryCreateMutable(
                     kCFAllocatorDefault,
                     0,
@@ -2876,25 +2876,55 @@ static OSStatus audioTapIOProc(
                 
                 // Generate unique UID for this aggregate
                 CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
-                CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuid);
+                CFStringRef aggregateUID = CFUUIDCreateString(kCFAllocatorDefault, uuid);
                 CFRelease(uuid);
                 
-                CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceUIDKey), uuidString);
+                CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceUIDKey), aggregateUID);
                 CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceNameKey), CFSTR("Nuvio Auto Sync Tap"));
                 
-                // Set tap list to include our process tap
-                NSArray *tapList = @[@(_audioTapID)];
-                CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDevicePropertyTapList), (__bridge CFArrayRef)tapList);
+                // Mark as private so it doesn't appear in System Settings
+                UInt32 isPrivate = 1;
+                CFNumberRef isPrivateNumber = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &isPrivate);
+                CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceIsPrivateKey), isPrivateNumber);
+                CFRelease(isPrivateNumber);
                 
-                NSLog(@"[Nuvio] CoreAudio: Creating aggregate device with UID=%@ including tap %u", uuidString, (unsigned)_audioTapID);
+                NSLog(@"[Nuvio] CoreAudio: Creating private aggregate device with UID=%@", aggregateUID);
                 
                 status = AudioHardwareCreateAggregateDevice(aggregateDescription, &_audioAggregateDeviceID);
-                CFRelease(uuidString);
                 CFRelease(aggregateDescription);
                 
                 NSLog(@"[Nuvio] CoreAudio: AudioHardwareCreateAggregateDevice returned %d, aggregateID=%u", (int)status, (unsigned)_audioAggregateDeviceID);
                 
                 if (status == noErr && _audioAggregateDeviceID != kAudioObjectUnknown) {
+                    // Now set the tap list property on the aggregate device
+                    // Tap list is an array of tap AudioObjectIDs
+                    AudioObjectPropertyAddress tapListAddress = {
+                        .mSelector = kAudioAggregateDevicePropertyTapList,
+                        .mScope = kAudioObjectPropertyScopeGlobal,
+                        .mElement = kAudioObjectPropertyElementMain
+                    };
+                    
+                    AudioObjectID tapIDs[] = { _audioTapID };
+                    UInt32 tapListSize = sizeof(tapIDs);
+                    
+                    NSLog(@"[Nuvio] CoreAudio: Setting tap list on aggregate %u to include tap %u", (unsigned)_audioAggregateDeviceID, (unsigned)_audioTapID);
+                    
+                    status = AudioObjectSetPropertyData(
+                        _audioAggregateDeviceID,
+                        &tapListAddress,
+                        0,
+                        nullptr,
+                        tapListSize,
+                        tapIDs
+                    );
+                    
+                    NSLog(@"[Nuvio] CoreAudio: AudioObjectSetPropertyData(TapList) returned %d", (int)status);
+                    
+                    if (status != noErr) {
+                        NSLog(@"[Nuvio] CoreAudio: WARNING - Failed to set tap list on aggregate, audio may not route correctly");
+                    }
+                    
+                    CFRelease(aggregateUID);
                     // Set up IOProc on the aggregate device (not the tap directly)
                     status = AudioDeviceCreateIOProcID(
                         _audioAggregateDeviceID,
