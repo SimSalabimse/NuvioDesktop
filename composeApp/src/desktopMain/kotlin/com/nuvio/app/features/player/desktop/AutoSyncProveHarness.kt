@@ -1,14 +1,17 @@
 package com.nuvio.app.features.player.desktop
 
+import java.awt.Canvas
 import java.io.File
+import javax.swing.JFrame
+import javax.swing.SwingUtilities
 import kotlin.system.exitProcess
 
 /**
  * Headless Auto Sync prove harness for automated testing without GUI/Accessibility.
  * 
  * Usage:
- *   NUVIO_AUTOSYNC_PROVE=1 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop
- *   NUVIO_AUTOSYNC_PROVE=/path/to/video.mp4 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop
+ *   NUVIO_AUTOSYNC_PROVE=1 /Applications/Nuvio.app/Contents/MacOS/Nuvio
+ *   NUVIO_AUTOSYNC_PROVE=/path/to/video.mp4 /Applications/Nuvio.app/Contents/MacOS/Nuvio
  * 
  * Tests audio capture (startAudioEnergyCapture → stopAudioEnergyCapture) with real MPV playback.
  * Logs results with unique markers for binary verification.
@@ -17,6 +20,9 @@ object AutoSyncProveHarness {
     private const val DEFAULT_MEDIA = "test-media/autosync/autosync-fixture.mp4"
     private const val CAPTURE_DURATION_MS = 30000L
     private const val AUDIO_START_DELAY_MS = 2000L
+    
+    private var testFrame: JFrame? = null
+    private var testCanvas: Canvas? = null
     
     fun checkAndRun(): Boolean {
         val proveEnv = System.getenv("NUVIO_AUTOSYNC_PROVE") ?: return false
@@ -48,6 +54,74 @@ object AutoSyncProveHarness {
         return true
     }
     
+    private fun createMinimalAwtHost(): Long {
+        println("[AutoSyncProve] Creating minimal AWT host for native playback...")
+        
+        var hostViewPtr: Long = 0L
+        var error: Throwable? = null
+        
+        // Must create AWT components on EDT
+        SwingUtilities.invokeAndWait {
+            try {
+                // Create minimal undecorated frame (hidden from user)
+                val frame = JFrame("Nuvio Auto Sync Prove").apply {
+                    isUndecorated = true
+                    setSize(1, 1)  // Minimal size
+                    setLocation(-1000, -1000)  // Off-screen
+                    defaultCloseOperation = JFrame.DO_NOTHING_ON_CLOSE
+                }
+                
+                // Create Canvas (same as production NativePlayerHost)
+                val canvas = Canvas()
+                frame.add(canvas)
+                
+                // Make visible (required for peer creation)
+                frame.isVisible = true
+                
+                // Wait for peer to be ready
+                var attempts = 0
+                while (!canvas.isDisplayable && attempts < 50) {
+                    Thread.sleep(10)
+                    attempts++
+                }
+                
+                if (!canvas.isDisplayable) {
+                    throw IllegalStateException("Canvas peer not ready after 500ms")
+                }
+                
+                // Resolve native view pointer (same as NativePlayerController)
+                hostViewPtr = AwtNativeViewResolver.resolveNativeViewPointer(canvas)
+                
+                println("[AutoSyncProve] ✅ AWT host created: hostViewPtr=$hostViewPtr")
+                
+                testFrame = frame
+                testCanvas = canvas
+            } catch (e: Exception) {
+                error = e
+            }
+        }
+        
+        error?.let { throw it }
+        
+        if (hostViewPtr == 0L) {
+            throw IllegalStateException("Failed to resolve native view pointer")
+        }
+        
+        return hostViewPtr
+    }
+    
+    private fun tearDownAwtHost() {
+        SwingUtilities.invokeLater {
+            testFrame?.let { frame ->
+                frame.isVisible = false
+                frame.dispose()
+                println("[AutoSyncProve] AWT host torn down")
+            }
+            testFrame = null
+            testCanvas = null
+        }
+    }
+    
     private fun runProveTest(mediaPath: String) {
         println("[AutoSyncProve] Initializing native player bridge...")
         
@@ -60,12 +134,21 @@ object AutoSyncProveHarness {
             e.printStackTrace()
         }
         
+        // Create minimal AWT host (required for Mac native playback)
+        val hostViewPtr = try {
+            createMinimalAwtHost()
+        } catch (e: Exception) {
+            println("[AutoSyncProve] ❌ FATAL: Failed to create AWT host")
+            e.printStackTrace()
+            exitProcess(1)
+        }
+        
         println("[AutoSyncProve] Creating player instance...")
         
-        // Create player with minimal config (no UI host)
+        // Create player with minimal config
         val handle = try {
             NativePlayerBridge.create(
-                hostViewPtr = 0L,  // No host view for headless
+                hostViewPtr = hostViewPtr,  // Real AWT NSView (not 0L)
                 sourceUrl = "file://$mediaPath",
                 headerLines = emptyArray(),
                 playWhenReady = true,
@@ -78,6 +161,7 @@ object AutoSyncProveHarness {
         } catch (e: Exception) {
             println("[AutoSyncProve] ❌ FATAL: Failed to create player")
             e.printStackTrace()
+            tearDownAwtHost()
             exitProcess(1)
         }
         
@@ -164,6 +248,9 @@ object AutoSyncProveHarness {
         // Cleanup
         println("[AutoSyncProve] Cleaning up player...")
         NativePlayerBridge.dispose(handle)
+        
+        println("[AutoSyncProve] Tearing down AWT host...")
+        tearDownAwtHost()
         
         println("[AutoSyncProve] Test complete, exiting.")
         
