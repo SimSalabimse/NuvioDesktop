@@ -3055,12 +3055,16 @@ static OSStatus audioTapIOProc(
                             });
                             return;
                         } else {
-                            NSLog(@"[Nuvio] CoreAudio: Failed to start aggregate device: %d", (int)status);
+                            NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceStart failed with status %d (1852797029='nope' means invalid aggregate config)", (int)status);
+                            NSLog(@"[Nuvio] CoreAudio: This typically means the aggregate device is missing subdevices or has a configuration error");
                             AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
                             AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
                             if (@available(macOS 14.2, *)) {
                                 AudioHardwareDestroyProcessTap(_audioTapID);
                             }
+                            _audioTapIOProcID = nullptr;
+                            _audioAggregateDeviceID = kAudioObjectUnknown;
+                            _audioTapID = kAudioObjectUnknown;
                         }
                     } else {
                         NSLog(@"[Nuvio] CoreAudio: Failed to create IOProcID on aggregate: %d", (int)status);
