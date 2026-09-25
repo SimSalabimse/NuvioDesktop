@@ -2902,7 +2902,92 @@ static OSStatus audioTapIOProc(
                 NSLog(@"[Nuvio] CoreAudio: AudioHardwareCreateAggregateDevice returned %d, aggregateID=%u", (int)status, (unsigned)_audioAggregateDeviceID);
                 
                 if (status == noErr && _audioAggregateDeviceID != kAudioObjectUnknown) {
-                    // Now set the tap list property on the aggregate device
+                    // CRITICAL: Aggregate device needs actual subdevices, not just a tap list!
+                    // Add the output device as a subdevice so the aggregate has audio routing
+                    
+                    // Get the output device UID (needed for both subdevice list and master device)
+                    CFStringRef outputDeviceUID = nullptr;
+                    UInt32 uidSize = sizeof(CFStringRef);
+                    AudioObjectPropertyAddress deviceUIDAddress = {
+                        .mSelector = kAudioDevicePropertyDeviceUID,
+                        .mScope = kAudioObjectPropertyScopeGlobal,
+                        .mElement = kAudioObjectPropertyElementMain
+                    };
+                    
+                    status = AudioObjectGetPropertyData(outputDevice, &deviceUIDAddress, 0, nullptr, &uidSize, &outputDeviceUID);
+                    
+                    if (status != noErr || !outputDeviceUID) {
+                        NSLog(@"[Nuvio] CoreAudio: FATAL - Failed to get output device UID: %d, tearing down", (int)status);
+                        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
+                        if (@available(macOS 14.2, *)) {
+                            AudioHardwareDestroyProcessTap(_audioTapID);
+                        }
+                        _audioAggregateDeviceID = kAudioObjectUnknown;
+                        _audioTapID = kAudioObjectUnknown;
+                    } else {
+                        NSLog(@"[Nuvio] CoreAudio: Output device UID: %@", outputDeviceUID);
+                        
+                        // 1. Set the output device as the aggregate's subdevice list
+                        AudioObjectPropertyAddress subDeviceListAddress = {
+                            .mSelector = kAudioAggregateDevicePropertyFullSubDeviceList,
+                            .mScope = kAudioObjectPropertyScopeGlobal,
+                            .mElement = kAudioObjectPropertyElementMain
+                        };
+                        
+                        CFArrayRef subDeviceArray = CFArrayCreate(kCFAllocatorDefault, (const void **)&outputDeviceUID, 1, &kCFTypeArrayCallBacks);
+                        
+                        NSLog(@"[Nuvio] CoreAudio: Setting subdevice list on aggregate %u to include output device", (unsigned)_audioAggregateDeviceID);
+                        
+                        status = AudioObjectSetPropertyData(
+                            _audioAggregateDeviceID,
+                            &subDeviceListAddress,
+                            0,
+                            nullptr,
+                            sizeof(CFArrayRef),
+                            &subDeviceArray
+                        );
+                        
+                        CFRelease(subDeviceArray);
+                        
+                        NSLog(@"[Nuvio] CoreAudio: AudioObjectSetPropertyData(SubDeviceList) returned %d", (int)status);
+                        
+                        if (status != noErr) {
+                            NSLog(@"[Nuvio] CoreAudio: FATAL - Failed to set subdevice list (status=%d), tearing down", (int)status);
+                            CFRelease(outputDeviceUID);
+                            AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
+                            if (@available(macOS 14.2, *)) {
+                                AudioHardwareDestroyProcessTap(_audioTapID);
+                            }
+                            _audioAggregateDeviceID = kAudioObjectUnknown;
+                            _audioTapID = kAudioObjectUnknown;
+                        } else {
+                            // 2. Set the output device as the master (clock) device
+                            AudioObjectPropertyAddress masterDeviceAddress = {
+                                .mSelector = kAudioAggregateDevicePropertyMainSubDevice,
+                                .mScope = kAudioObjectPropertyScopeGlobal,
+                                .mElement = kAudioObjectPropertyElementMain
+                            };
+                            
+                            NSLog(@"[Nuvio] CoreAudio: Setting master device on aggregate to output device");
+                            
+                            status = AudioObjectSetPropertyData(
+                                _audioAggregateDeviceID,
+                                &masterDeviceAddress,
+                                0,
+                                nullptr,
+                                sizeof(CFStringRef),
+                                &outputDeviceUID
+                            );
+                            
+                            CFRelease(outputDeviceUID);
+                            
+                            NSLog(@"[Nuvio] CoreAudio: AudioObjectSetPropertyData(MasterDevice) returned %d", (int)status);
+                            
+                            if (status != noErr) {
+                                NSLog(@"[Nuvio] CoreAudio: WARNING - Failed to set master device (status=%d), continuing anyway", (int)status);
+                            }
+                            
+                            // 3. Now set the tap list property on the aggregate device
                     // kAudioAggregateDevicePropertyTapList expects a CFArray, not raw AudioObjectID[]
                     AudioObjectPropertyAddress tapListAddress = {
                         .mSelector = kAudioAggregateDevicePropertyTapList,
@@ -2983,6 +3068,8 @@ static OSStatus audioTapIOProc(
                         if (@available(macOS 14.2, *)) {
                             AudioHardwareDestroyProcessTap(_audioTapID);
                         }
+                    }
+                    }
                     }
                     }
                 } else {
