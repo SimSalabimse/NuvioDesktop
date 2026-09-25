@@ -3038,9 +3038,11 @@ static OSStatus audioTapIOProc(
                                 .mElement = kAudioObjectPropertyElementMain
                             };
                             
-                            CFArrayRef tapListArray = CFArrayCreate(kCFAllocatorDefault, (const void **)&tapUUIDString, 1, &kCFTypeArrayCallBacks);
+                            // ARC-safe bridge: NSString -> CFStringRef for CFArrayCreate
+                            CFStringRef tapUUIDCF = (__bridge CFStringRef)tapUUIDString;
+                            CFArrayRef tapListArray = CFArrayCreate(kCFAllocatorDefault, (const void **)&tapUUIDCF, 1, &kCFTypeArrayCallBacks);
                             status = AudioObjectSetPropertyData(_audioAggregateDeviceID, &tapListAddress, 0, nullptr, sizeof(CFArrayRef), &tapListArray);
-                            CFRelease(tapListArray);
+                            CFRelease(tapListArray);  // Release array (not tapUUIDCF - bridged, not retained)
                             NSLog(@"[Nuvio] CoreAudio: Set TapList (UUID): status=%d [v9_TAP_UID]", (int)status);
                             
                             if (status != noErr) {
