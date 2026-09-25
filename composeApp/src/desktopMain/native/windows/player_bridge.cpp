@@ -1380,6 +1380,10 @@ public:
 
     void runAudioCaptureLoop() {
         const int64_t sampleIntervalMs = 100;
+        int validSampleCount = 0;
+        double sumEnergy = 0.0;
+        double minEnergy = 1.0;
+        double maxEnergy = 0.0;
         
         while (true) {
             bool shouldContinue = false;
@@ -1407,10 +1411,38 @@ public:
                     sample.timestampMs = currentPosMs;
                     sample.energy = energy;
                     audioCaptureSamples.push_back(sample);
+                    
+                    // Track statistics for validation
+                    validSampleCount++;
+                    sumEnergy += energy;
+                    minEnergy = std::min(minEnergy, energy);
+                    maxEnergy = std::max(maxEnergy, energy);
+                    
+                    // Log first few and periodic samples for validation
+                    if (validSampleCount <= 3 || validSampleCount % 50 == 0) {
+                        OutputDebugStringA(
+                            (std::string("[Nuvio] Audio capture: sample ") + 
+                             std::to_string(validSampleCount - 1) + 
+                             " @ " + std::to_string(currentPosMs) + 
+                             "ms energy=" + std::to_string(energy) + "\n").c_str()
+                        );
+                    }
                 }
             }
             
             std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
+        }
+        
+        // Log summary statistics for validation
+        if (validSampleCount > 0) {
+            double avgEnergy = sumEnergy / validSampleCount;
+            OutputDebugStringA(
+                (std::string("[Nuvio] Audio capture: collected ") + 
+                 std::to_string(validSampleCount) + 
+                 " samples, avg=" + std::to_string(avgEnergy) + 
+                 " min=" + std::to_string(minEnergy) + 
+                 " max=" + std::to_string(maxEnergy) + "\n").c_str()
+            );
         }
     }
 

@@ -1540,6 +1540,10 @@ JNIEXPORT jboolean JNICALL NP(initGtkEarly)(JNIEnv *, jobject) {
 
 void runAudioCaptureLoop(Player *p) {
     const int64_t sampleIntervalMs = 100;
+    int validSampleCount = 0;
+    double sumEnergy = 0.0;
+    double minEnergy = 1.0;
+    double maxEnergy = 0.0;
     
     while (p->isCapturingAudio.load()) {
         if (!playerAlive(p)) break;
@@ -1610,10 +1614,29 @@ void runAudioCaptureLoop(Player *p) {
                 sample.timestampMs = currentPosMs;
                 sample.energy = energy;
                 p->audioCaptureSamples.push_back(sample);
+                
+                // Track statistics for validation
+                validSampleCount++;
+                sumEnergy += energy;
+                minEnergy = std::min(minEnergy, energy);
+                maxEnergy = std::max(maxEnergy, energy);
+                
+                // Log first few and periodic samples for validation
+                if (validSampleCount <= 3 || validSampleCount % 50 == 0) {
+                    printf("[Nuvio] Audio capture: sample %d @ %lldms energy=%.4f\n",
+                           validSampleCount - 1, (long long)currentPosMs, energy);
+                }
             }
         }
         
         std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
+    }
+    
+    // Log summary statistics for validation
+    if (validSampleCount > 0) {
+        double avgEnergy = sumEnergy / validSampleCount;
+        printf("[Nuvio] Audio capture: collected %d samples, avg=%.4f min=%.4f max=%.4f\n",
+               validSampleCount, avgEnergy, minEnergy, maxEnergy);
     }
 }
 
