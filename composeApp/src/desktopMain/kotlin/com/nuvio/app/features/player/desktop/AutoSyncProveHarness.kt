@@ -28,8 +28,8 @@ object AutoSyncProveHarness {
         val proveEnv = System.getenv("NUVIO_AUTOSYNC_PROVE") ?: return false
         
         println("========================================")
-        println("[AutoSyncProve] HEADLESS AUTO SYNC PROVE HARNESS [v5_DIRECT_TAP_PROVE]")
-        println("[AutoSyncProve] Tip: 3c704252+ (v5 direct tap architecture)")
+        println("[AutoSyncProve] HEADLESS AUTO SYNC PROVE HARNESS [v6_AGGREGATE_PROVE]")
+        println("[AutoSyncProve] Tip: 20da420b+ (v6 aggregate device architecture)")
         println("========================================")
         
         val mediaPath = when {
@@ -176,7 +176,7 @@ object AutoSyncProveHarness {
         Thread.sleep(AUDIO_START_DELAY_MS)
         
         println("[AutoSyncProve] ========================================")
-        println("[AutoSyncProve] STARTING AUDIO ENERGY CAPTURE [v5_DIRECT_TAP_PROVE]")
+        println("[AutoSyncProve] STARTING AUDIO ENERGY CAPTURE [v6_AGGREGATE_PROVE]")
         println("[AutoSyncProve] Duration: ${CAPTURE_DURATION_MS}ms (~${CAPTURE_DURATION_MS / 1000}s)")
         println("[AutoSyncProve] ========================================")
         
@@ -206,7 +206,7 @@ object AutoSyncProveHarness {
         }
         
         println("[AutoSyncProve] ========================================")
-        println("[AutoSyncProve] STOPPING AUDIO ENERGY CAPTURE [v5_DIRECT_TAP_PROVE]")
+        println("[AutoSyncProve] STOPPING AUDIO ENERGY CAPTURE [v6_AGGREGATE_PROVE]")
         println("[AutoSyncProve] ========================================")
         
         // Stop capture and get results (JSON string with samples)
@@ -224,7 +224,7 @@ object AutoSyncProveHarness {
         val sampleCount = extractSampleCount(resultJson)
         
         println("[AutoSyncProve] ========================================")
-        println("[AutoSyncProve] RESULTS [v5_DIRECT_TAP_PROVE]")
+        println("[AutoSyncProve] RESULTS [v6_AGGREGATE_PROVE]")
         println("[AutoSyncProve] ========================================")
         println("[AutoSyncProve] Sample count: $sampleCount")
         println("[AutoSyncProve] Expected: N > 0 (varying energy samples)")

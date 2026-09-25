@@ -3110,24 +3110,38 @@ static OSStatus audioTapIOProc(
                         });
                         return;
                     } else {
-                        NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceStart(tap) failed: %d", (int)status);
-                        AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
+                        NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceStart(aggregate) failed: %d", (int)status);
+                        AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
+                        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
                         if (@available(macOS 14.2, *)) {
                             AudioHardwareDestroyProcessTap(_audioTapID);
                         }
                         _audioTapIOProcID = nullptr;
+                        _audioAggregateDeviceID = kAudioObjectUnknown;
                         _audioTapID = kAudioObjectUnknown;
                     }
                 } else {
-                    NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceCreateIOProcID(tap) failed: %d", (int)status);
+                    NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceCreateIOProcID(aggregate) failed: %d", (int)status);
+                    AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
                     if (@available(macOS 14.2, *)) {
                         AudioHardwareDestroyProcessTap(_audioTapID);
                     }
+                    _audioAggregateDeviceID = kAudioObjectUnknown;
                     _audioTapID = kAudioObjectUnknown;
                 }
-            } else {
-                NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: status=%d tapID=%u", (int)status, (unsigned)_audioTapID);
             }
+        }
+    }
+} else {
+    NSLog(@"[Nuvio] CoreAudio: Failed to create aggregate device: status=%d", (int)status);
+    if (@available(macOS 14.2, *)) {
+        AudioHardwareDestroyProcessTap(_audioTapID);
+    }
+    _audioTapID = kAudioObjectUnknown;
+}
+} else {
+    NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: status=%d tapID=%u", (int)status, (unsigned)_audioTapID);
+}
         }
         }
     } else {
