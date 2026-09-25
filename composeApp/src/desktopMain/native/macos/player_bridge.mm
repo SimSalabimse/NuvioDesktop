@@ -3094,55 +3094,9 @@ static OSStatus audioTapIOProc(
                     _audioTapID = kAudioObjectUnknown;
                 }
             } else {
-                        
-                        // Start capture thread
-                        {
-                            std::lock_guard<std::mutex> lock(_audioCaptureMutex);
-                            _audioCaptureSamples.clear();
-                            _audioCaptureStartMs = startTimeMs;
-                            _isCapturingAudio.store(true);
-                            _audioCaptureStartTime = std::chrono::steady_clock::now();
-                            _latestAudioEnergy.store(-1.0);
-                        }
-                        
-                        _audioCaptureThread = std::thread([self]() {
-                            [self runAudioCaptureLoop];
-                        });
-                        return;
-                    } else {
-                        NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceStart(aggregate) failed: %d", (int)status);
-                        AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
-                        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
-                        if (@available(macOS 14.2, *)) {
-                            AudioHardwareDestroyProcessTap(_audioTapID);
-                        }
-                        _audioTapIOProcID = nullptr;
-                        _audioAggregateDeviceID = kAudioObjectUnknown;
-                        _audioTapID = kAudioObjectUnknown;
-                    }
-                } else {
-                    NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceCreateIOProcID(aggregate) failed: %d", (int)status);
-                    AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
-                    if (@available(macOS 14.2, *)) {
-                        AudioHardwareDestroyProcessTap(_audioTapID);
-                    }
-                    _audioAggregateDeviceID = kAudioObjectUnknown;
-                    _audioTapID = kAudioObjectUnknown;
-                }
+                NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: status=%d tapID=%u", (int)status, (unsigned)_audioTapID);
             }
-        }
-    }
-} else {
-    NSLog(@"[Nuvio] CoreAudio: Failed to create aggregate device: status=%d", (int)status);
-    if (@available(macOS 14.2, *)) {
-        AudioHardwareDestroyProcessTap(_audioTapID);
-    }
-    _audioTapID = kAudioObjectUnknown;
-}
-} else {
-    NSLog(@"[Nuvio] CoreAudio: Failed to create process tap: status=%d tapID=%u", (int)status, (unsigned)_audioTapID);
-}
-        }
+            }
         }
     } else {
         NSLog(@"[Nuvio] CoreAudio: macOS 14.2+ required for process tap (current version too old)");
