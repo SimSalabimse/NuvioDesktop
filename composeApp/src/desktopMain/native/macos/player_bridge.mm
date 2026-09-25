@@ -3096,7 +3096,7 @@ static OSStatus audioTapIOProc(
                                         // CENSUS: Check if default output device changed
                                         AudioObjectID currentOutputDevice = kAudioObjectUnknown;
                                         UInt32 currentOutputSize = sizeof(currentOutputDevice);
-                                        AudioObjectGetPropertyData(kAudioObjectSystemObject, &outputDeviceAddress, 0, nullptr, &currentOutputSize, &currentOutputDevice);
+                                        AudioObjectGetPropertyData(kAudioObjectSystemObject, &propertyAddress, 0, nullptr, &currentOutputSize, &currentOutputDevice);
                                         NSLog(@"[Nuvio] CoreAudio: Default output device NOW: %u (was %u before aggregate) [v7_ROUTING]", 
                                               (unsigned)currentOutputDevice, (unsigned)outputDevice);
                                         if (currentOutputDevice != outputDevice) {
