@@ -95,6 +95,7 @@ const subtitleDelayValue = document.getElementById("subtitleDelayValue");
 const subtitleDelayPlus = document.getElementById("subtitleDelayPlus");
 const subtitleDelayReset = document.getElementById("subtitleDelayReset");
 const autoSyncLabel = document.getElementById("autoSyncLabel");
+const autoSyncAutomatic = document.getElementById("autoSyncAutomatic");
 const autoSyncReload = document.getElementById("autoSyncReload");
 const autoSyncCapture = document.getElementById("autoSyncCapture");
 const autoSyncStatus = document.getElementById("autoSyncStatus");
@@ -1318,6 +1319,7 @@ const renderSwatches = (container, colors, selectedColor, eventType) => {
 
 const renderAutoSyncCues = () => {
   autoSyncCueList.textContent = "";
+  autoSyncAutomatic.disabled = !state.hasSelectedAddonSubtitle;
   autoSyncReload.disabled = !state.hasSelectedAddonSubtitle;
   autoSyncCapture.disabled = !state.hasSelectedAddonSubtitle;
   if (!state.hasSelectedAddonSubtitle) {
@@ -2754,6 +2756,10 @@ subtitleDelayPlus.addEventListener("click", event => {
 subtitleDelayReset.addEventListener("click", event => {
   event.stopPropagation();
   send("subtitleDelayReset", 0);
+});
+autoSyncAutomatic.addEventListener("click", event => {
+  event.stopPropagation();
+  send("subtitleAutoSyncAutomatic", 0);
 });
 autoSyncReload.addEventListener("click", event => {
   event.stopPropagation();
