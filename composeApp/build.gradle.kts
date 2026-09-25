@@ -1373,6 +1373,8 @@ compose.desktop {
                                 </array>
                             </dict>
                         </array>
+                        <key>NSAudioCaptureUsageDescription</key>
+                        <string>Nuvio needs system audio capture for Auto Sync</string>
                     """.trimIndent()
                 }
                 if (macosSigningIdentity != null) {
