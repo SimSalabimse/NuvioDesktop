@@ -51,6 +51,12 @@ private const val MacosDarkAquaAppearance = "NSAppearanceNameDarkAqua"
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
+    // Headless Auto Sync prove harness for automated testing (no GUI/Accessibility needed)
+    // Usage: NUVIO_AUTOSYNC_PROVE=1 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop
+    if (AutoSyncProveHarness.checkAndRun()) {
+        return  // Harness handles test and exits
+    }
+    
     // On Linux, initialize GTK BEFORE AWT/Compose/Skia to prevent GdkDisplayManager
     // type registration conflict (Skiko partially loads GDK without full GTK init).
     if (System.getProperty("os.name", "").lowercase().contains("linux")) {
