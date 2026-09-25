@@ -2741,7 +2741,7 @@ static OSStatus audioTapIOProc(
     
     // CENSUS: Log detailed buffer anatomy for first 5 calls
     if (ioProcCallCount <= 5) {
-        NSLog(@"[Nuvio] CoreAudio IOProc: ========== BUFFER CENSUS #%d [v8_OUTPUT_ROUTING] ==========", ioProcCallCount);
+        NSLog(@"[Nuvio] CoreAudio IOProc: ========== BUFFER CENSUS #%d [v9_PUBLIC_ASBD] ==========", ioProcCallCount);
         NSLog(@"[Nuvio] CoreAudio IOProc: Device: %u, mNumberBuffers=%u", (unsigned)inDevice, (unsigned)inInputData->mNumberBuffers);
         
         for (UInt32 i = 0; i < inInputData->mNumberBuffers; i++) {
@@ -2881,7 +2881,7 @@ static OSStatus audioTapIOProc(
     // aggregate device that includes the output device as a subdevice.
     if (@available(macOS 14.2, *)) {
         NSLog(@"[Nuvio] CoreAudio: ========================================");
-        NSLog(@"[Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v8_OUTPUT_ROUTING]");
+        NSLog(@"[Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v9_PUBLIC_ASBD]");
         NSLog(@"[Nuvio] CoreAudio: Using Process Tap API (macOS 14.2+) WITH aggregate routing");
         NSLog(@"[Nuvio] CoreAudio: ========================================");
         
@@ -2955,13 +2955,13 @@ static OSStatus audioTapIOProc(
                 CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceUIDKey), aggregateUID);
                 CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceNameKey), CFSTR("Nuvio Auto Sync Tap"));
                 
-                // Mark as private
-                UInt32 isPrivate = 1;
+                // Mark as NON-private (public) so CoreAudio can route through it
+                UInt32 isPrivate = 0;
                 CFNumberRef isPrivateNumber = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &isPrivate);
                 CFDictionarySetValue(aggregateDescription, CFSTR(kAudioAggregateDeviceIsPrivateKey), isPrivateNumber);
                 CFRelease(isPrivateNumber);
                 
-                NSLog(@"[Nuvio] CoreAudio: Creating aggregate device...");
+                NSLog(@"[Nuvio] CoreAudio: Creating NON-PRIVATE aggregate device [v9_PUBLIC_ASBD]...");
                 status = AudioHardwareCreateAggregateDevice(aggregateDescription, &_audioAggregateDeviceID);
                 CFRelease(aggregateDescription);
                 CFRelease(aggregateUID);
@@ -3052,8 +3052,36 @@ static OSStatus audioTapIOProc(
                             } else {
                                 NSLog(@"[Nuvio] CoreAudio: ✅ Aggregate fully configured [v6_AGGREGATE]");
                                 
+                                // FIX: Configure aggregate INPUT ASBD so tap streams appear
+                                NSLog(@"[Nuvio] CoreAudio: Configuring aggregate INPUT format [v9_PUBLIC_ASBD]...");
+                                AudioStreamBasicDescription inputFormat = {0};
+                                inputFormat.mSampleRate = 48000.0;
+                                inputFormat.mFormatID = kAudioFormatLinearPCM;
+                                inputFormat.mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked;
+                                inputFormat.mBytesPerPacket = 8;  // 2 channels * 4 bytes (float32)
+                                inputFormat.mFramesPerPacket = 1;
+                                inputFormat.mBytesPerFrame = 8;
+                                inputFormat.mChannelsPerFrame = 2;
+                                inputFormat.mBitsPerChannel = 32;
+                                
+                                AudioObjectPropertyAddress inputFormatAddress = {
+                                    .mSelector = kAudioDevicePropertyStreamFormat,
+                                    .mScope = kAudioDevicePropertyScopeInput,
+                                    .mElement = kAudioObjectPropertyElementMain
+                                };
+                                
+                                OSStatus formatSetStatus = AudioObjectSetPropertyData(
+                                    _audioAggregateDeviceID,
+                                    &inputFormatAddress,
+                                    0,
+                                    nullptr,
+                                    sizeof(inputFormat),
+                                    &inputFormat
+                                );
+                                NSLog(@"[Nuvio] CoreAudio: Set aggregate INPUT ASBD: status=%d [v9_PUBLIC_ASBD]", (int)formatSetStatus);
+                                
                                 // CENSUS: Verify aggregate configuration
-                                NSLog(@"[Nuvio] CoreAudio: ========== AGGREGATE CENSUS [v8_OUTPUT_ROUTING] ==========");
+                                NSLog(@"[Nuvio] CoreAudio: ========== AGGREGATE CENSUS [v9_PUBLIC_ASBD] ==========");
                                 NSLog(@"[Nuvio] CoreAudio: Aggregate ID: %u", (unsigned)_audioAggregateDeviceID);
                                 NSLog(@"[Nuvio] CoreAudio: Tap ID in TapList: %u", (unsigned)_audioTapID);
                                 NSLog(@"[Nuvio] CoreAudio: Output device in SubDeviceList: %@", outputDeviceUID);
@@ -3095,7 +3123,7 @@ static OSStatus audioTapIOProc(
                                     NSLog(@"[Nuvio] CoreAudio: AudioDeviceStart(aggregate) returned %d [v6_AGGREGATE]", (int)status);
                                     
                                     if (status == noErr) {
-                                        NSLog(@"[Nuvio] CoreAudio: ✅✅✅ SUCCESS - Aggregate started, IOProc active [BUILD_20260925_v8_OUTPUT_ROUTING]");
+                                        NSLog(@"[Nuvio] CoreAudio: ✅✅✅ SUCCESS - Aggregate started, IOProc active [BUILD_20260925_v9_PUBLIC_ASBD]");
                                         NSLog(@"[Nuvio] CoreAudio: CENSUS: IOProc will now fire on aggregate %u [v8_OUTPUT_ROUTING]", (unsigned)_audioAggregateDeviceID);
                                         
                                         // FIX B_ROUTING_ASYMMETRY: Set aggregate as default output so playback routes through it
