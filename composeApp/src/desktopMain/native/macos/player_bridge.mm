@@ -2741,7 +2741,7 @@ static OSStatus audioTapIOProc(
     
     // CENSUS: Log detailed buffer anatomy for first 5 calls
     if (ioProcCallCount <= 5) {
-        NSLog(@"[Nuvio] CoreAudio IOProc: ========== BUFFER CENSUS #%d [v9_PUBLIC_ASBD] ==========", ioProcCallCount);
+        NSLog(@"[Nuvio] CoreAudio IOProc: ========== BUFFER CENSUS #%d [v9_TAP_UID] ==========", ioProcCallCount);
         NSLog(@"[Nuvio] CoreAudio IOProc: Device: %u, mNumberBuffers=%u", (unsigned)inDevice, (unsigned)inInputData->mNumberBuffers);
         
         for (UInt32 i = 0; i < inInputData->mNumberBuffers; i++) {
@@ -2881,7 +2881,7 @@ static OSStatus audioTapIOProc(
     // aggregate device that includes the output device as a subdevice.
     if (@available(macOS 14.2, *)) {
         NSLog(@"[Nuvio] CoreAudio: ========================================");
-        NSLog(@"[Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v9_PUBLIC_ASBD]");
+        NSLog(@"[Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v9_TAP_UID]");
         NSLog(@"[Nuvio] CoreAudio: Using Process Tap API (macOS 14.2+) WITH aggregate routing");
         NSLog(@"[Nuvio] CoreAudio: ========================================");
         
@@ -2934,6 +2934,10 @@ static OSStatus audioTapIOProc(
             // Create the process tap
             status = AudioHardwareCreateProcessTap(tapDesc, &_audioTapID);
             NSLog(@"[Nuvio] CoreAudio: AudioHardwareCreateProcessTap returned %d, tapID=%u", (int)status, (unsigned)_audioTapID);
+            
+            // FIX: Save tap UUID for TapList (must use UUID string, not AudioObjectID number)
+            NSString *tapUUIDString = tapDesc.UUID.UUIDString;
+            NSLog(@"[Nuvio] CoreAudio: Tap UUID: %@ [v9_TAP_UID]", tapUUIDString);
             
             if (status == noErr && _audioTapID != kAudioObjectUnknown) {
                 NSLog(@"[Nuvio] CoreAudio: ✅ Process tap created successfully (ID=%u) [BUILD_v6_AGGREGATE]", (unsigned)_audioTapID);
@@ -3027,19 +3031,17 @@ static OSStatus audioTapIOProc(
                             status = AudioObjectSetPropertyData(_audioAggregateDeviceID, &masterDeviceAddress, 0, nullptr, sizeof(CFStringRef), &outputDeviceUID);
                             NSLog(@"[Nuvio] CoreAudio: Set MasterDevice: status=%d [v6_AGGREGATE]", (int)status);
                             
-                            // Set TapList
+                            // Set TapList (FIX: use tap UUID string, not AudioObjectID number)
                             AudioObjectPropertyAddress tapListAddress = {
                                 .mSelector = kAudioAggregateDevicePropertyTapList,
                                 .mScope = kAudioObjectPropertyScopeGlobal,
                                 .mElement = kAudioObjectPropertyElementMain
                             };
                             
-                            CFNumberRef tapNumber = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &_audioTapID);
-                            CFArrayRef tapListArray = CFArrayCreate(kCFAllocatorDefault, (const void **)&tapNumber, 1, &kCFTypeArrayCallBacks);
+                            CFArrayRef tapListArray = CFArrayCreate(kCFAllocatorDefault, (const void **)&tapUUIDString, 1, &kCFTypeArrayCallBacks);
                             status = AudioObjectSetPropertyData(_audioAggregateDeviceID, &tapListAddress, 0, nullptr, sizeof(CFArrayRef), &tapListArray);
                             CFRelease(tapListArray);
-                            CFRelease(tapNumber);
-                            NSLog(@"[Nuvio] CoreAudio: Set TapList: status=%d [v6_AGGREGATE]", (int)status);
+                            NSLog(@"[Nuvio] CoreAudio: Set TapList (UUID): status=%d [v9_TAP_UID]", (int)status);
                             
                             if (status != noErr) {
                                 NSLog(@"[Nuvio] CoreAudio: FATAL - TapList failed");
@@ -3081,7 +3083,7 @@ static OSStatus audioTapIOProc(
                                 NSLog(@"[Nuvio] CoreAudio: Set aggregate INPUT ASBD: status=%d [v9_PUBLIC_ASBD]", (int)formatSetStatus);
                                 
                                 // CENSUS: Verify aggregate configuration
-                                NSLog(@"[Nuvio] CoreAudio: ========== AGGREGATE CENSUS [v9_PUBLIC_ASBD] ==========");
+                                NSLog(@"[Nuvio] CoreAudio: ========== AGGREGATE CENSUS [v9_TAP_UID] ==========");
                                 NSLog(@"[Nuvio] CoreAudio: Aggregate ID: %u", (unsigned)_audioAggregateDeviceID);
                                 NSLog(@"[Nuvio] CoreAudio: Tap ID in TapList: %u", (unsigned)_audioTapID);
                                 NSLog(@"[Nuvio] CoreAudio: Output device in SubDeviceList: %@", outputDeviceUID);
@@ -3106,6 +3108,42 @@ static OSStatus audioTapIOProc(
                                 // Release outputDeviceUID after census logging
                                 CFRelease(outputDeviceUID);
                                 
+                                // FIX: Verify aggregate has INPUT streams before IOProc/Start
+                                NSLog(@"[Nuvio] CoreAudio: Checking aggregate INPUT stream configuration [v9_TAP_UID]...");
+                                AudioObjectPropertyAddress streamConfigAddress = {
+                                    .mSelector = kAudioDevicePropertyStreamConfiguration,
+                                    .mScope = kAudioDevicePropertyScopeInput,
+                                    .mElement = kAudioObjectPropertyElementMain
+                                };
+                                UInt32 streamConfigSize;
+                                status = AudioObjectGetPropertyDataSize(_audioAggregateDeviceID, &streamConfigAddress, 0, nullptr, &streamConfigSize);
+                                if (status == noErr && streamConfigSize > 0) {
+                                    AudioBufferList *streamConfig = (AudioBufferList *)malloc(streamConfigSize);
+                                    status = AudioObjectGetPropertyData(_audioAggregateDeviceID, &streamConfigAddress, 0, nullptr, &streamConfigSize, streamConfig);
+                                    if (status == noErr) {
+                                        UInt32 totalChannels = 0;
+                                        for (UInt32 i = 0; i < streamConfig->mNumberBuffers; i++) {
+                                            totalChannels += streamConfig->mBuffers[i].mNumberChannels;
+                                        }
+                                        NSLog(@"[Nuvio] CoreAudio: Aggregate INPUT: %u buffers, %u total channels [v9_TAP_UID]", 
+                                              streamConfig->mNumberBuffers, totalChannels);
+                                        if (totalChannels == 0) {
+                                            NSLog(@"[Nuvio] CoreAudio: ❌ FATAL - Aggregate has ZERO input channels! TapList wiring failed. [v9_TAP_UID]");
+                                            free(streamConfig);
+                                            AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
+                                            if (@available(macOS 14.2, *)) {
+                                                AudioHardwareDestroyProcessTap(_audioTapID);
+                                            }
+                                            _audioAggregateDeviceID = kAudioObjectUnknown;
+                                            _audioTapID = kAudioObjectUnknown;
+                                            return;
+                                        }
+                                    }
+                                    free(streamConfig);
+                                } else {
+                                    NSLog(@"[Nuvio] CoreAudio: ⚠️ WARNING: Failed to query input stream config: %d [v9_TAP_UID]", (int)status);
+                                }
+                                
                                 NSLog(@"[Nuvio] CoreAudio: Creating IOProcID on AGGREGATE device (ID=%u)...", (unsigned)_audioAggregateDeviceID);
                                 
                                 // Create IOProc on AGGREGATE (not tap directly)
@@ -3123,7 +3161,7 @@ static OSStatus audioTapIOProc(
                                     NSLog(@"[Nuvio] CoreAudio: AudioDeviceStart(aggregate) returned %d [v6_AGGREGATE]", (int)status);
                                     
                                     if (status == noErr) {
-                                        NSLog(@"[Nuvio] CoreAudio: ✅✅✅ SUCCESS - Aggregate started, IOProc active [BUILD_20260925_v9_PUBLIC_ASBD]");
+                                        NSLog(@"[Nuvio] CoreAudio: ✅✅✅ SUCCESS - Aggregate started, IOProc active [BUILD_20260925_v9_TAP_UID]");
                                         NSLog(@"[Nuvio] CoreAudio: CENSUS: IOProc will now fire on aggregate %u [v8_OUTPUT_ROUTING]", (unsigned)_audioAggregateDeviceID);
                                         
                                         // FIX B_ROUTING_ASYMMETRY: Set aggregate as default output so playback routes through it
