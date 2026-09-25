@@ -2715,6 +2715,14 @@ static OSStatus audioTapIOProc(
 ) {
     MpvWebPlayer *self = (__bridge MpvWebPlayer *)inClientData;
     
+    static int ioProcCallCount = 0;
+    ioProcCallCount++;
+    
+    if (ioProcCallCount <= 5 || ioProcCallCount % 100 == 0) {
+        NSLog(@"[Nuvio] CoreAudio IOProc: Called #%d (device=%u capturing=%d)", 
+              ioProcCallCount, (unsigned)inDevice, self ? self->_isCapturingAudio.load() : 0);
+    }
+    
     if (!self || !self->_isCapturingAudio.load()) {
         return noErr;
     }
@@ -2722,7 +2730,7 @@ static OSStatus audioTapIOProc(
     if (!inInputData || inInputData->mNumberBuffers == 0) {
         static int noDataLogCount = 0;
         if (noDataLogCount < 3) {
-            NSLog(@"[Nuvio] CoreAudio IOProc: Called but no input data");
+            NSLog(@"[Nuvio] CoreAudio IOProc: Called but no input data (call #%d)", ioProcCallCount);
             noDataLogCount++;
         }
         return noErr;
@@ -2755,12 +2763,18 @@ static OSStatus audioTapIOProc(
         double oldEnergy = self->_latestAudioEnergy.load();
         self->_latestAudioEnergy.store(energy);
         
-        // Log first few successful captures
+        // Log first few successful captures and periodically thereafter
         static int successLogCount = 0;
-        if (successLogCount < 3) {
-            NSLog(@"[Nuvio] CoreAudio IOProc: Captured audio - RMS=%.4f energy=%.4f (was %.4f) samples=%u", 
-                  rms, energy, oldEnergy, (unsigned)totalSamples);
+        if (successLogCount < 5 || successLogCount % 50 == 0) {
+            NSLog(@"[Nuvio] CoreAudio IOProc: Captured audio #%d - RMS=%.4f energy=%.4f (was %.4f) samples=%u buffers=%u", 
+                  successLogCount, rms, energy, oldEnergy, (unsigned)totalSamples, (unsigned)inInputData->mNumberBuffers);
             successLogCount++;
+        }
+    } else {
+        static int zeroSamplesLogCount = 0;
+        if (zeroSamplesLogCount < 3) {
+            NSLog(@"[Nuvio] CoreAudio IOProc: Called but got 0 samples from %u buffers", (unsigned)inInputData->mNumberBuffers);
+            zeroSamplesLogCount++;
         }
     }
     
@@ -3091,8 +3105,10 @@ static OSStatus audioTapIOProc(
     const int64_t sampleIntervalMs = 100;
     int loopCount = 0;
     int validSampleCount = 0;
+    int skippedNoEnergy = 0;
+    int skippedPaused = 0;
     
-    NSLog(@"[Nuvio] Audio capture loop started");
+    NSLog(@"[Nuvio] Audio capture loop started (will sample every %lldms)", sampleIntervalMs);
     
     while (true) {
         bool shouldContinue = false;
@@ -3102,8 +3118,8 @@ static OSStatus audioTapIOProc(
         }
         
         if (!shouldContinue) {
-            NSLog(@"[Nuvio] Audio capture loop stopping - collected %d valid samples over %d iterations", 
-                  validSampleCount, loopCount);
+            NSLog(@"[Nuvio] Audio capture loop stopping - collected %d valid samples over %d iterations (skipped: %d no-energy, %d paused)", 
+                  validSampleCount, loopCount, skippedNoEnergy, skippedPaused);
             break;
         }
         
@@ -3135,18 +3151,31 @@ static OSStatus audioTapIOProc(
                 _audioCaptureSamples.push_back(sample);
                 validSampleCount++;
                 
-                if (validSampleCount <= 3) {
+                if (validSampleCount <= 3 || validSampleCount % 50 == 0) {
                     NSLog(@"[Nuvio] Stored sample #%d: pos=%lld energy=%.4f", 
                           validSampleCount, currentPosMs, energy);
                 }
             }
-        } else if (loopCount < 5) {
-            NSLog(@"[Nuvio] Loop #%d: energy=%.4f paused=%d pos=%lld (skipping)", 
-                  loopCount, energy, paused, currentPosMs);
+        } else {
+            if (paused) {
+                skippedPaused++;
+            } else if (energy < 0.0) {
+                skippedNoEnergy++;
+            }
+            
+            if (loopCount < 10 || (loopCount % 50 == 0 && validSampleCount == 0)) {
+                NSLog(@"[Nuvio] Loop #%d: energy=%.4f paused=%d pos=%lld (skipping sample)", 
+                      loopCount, energy, paused, currentPosMs);
+            }
         }
         
         loopCount++;
         std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
+        
+        // Log progress every 5 seconds if we're not getting samples
+        if (loopCount % 50 == 0 && validSampleCount == 0) {
+            NSLog(@"[Nuvio] WARNING: %d seconds elapsed, still 0 samples captured. IOProc may not be receiving audio.", loopCount / 10);
+        }
     }
 }
 

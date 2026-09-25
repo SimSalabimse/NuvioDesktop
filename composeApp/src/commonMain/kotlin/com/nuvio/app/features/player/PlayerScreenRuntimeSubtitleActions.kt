@@ -23,10 +23,15 @@ internal fun PlayerScreenRuntime.setSubtitleDelay(delayMs: Int) {
     playerController?.setSubtitleDelayMs(clamped)
 }
 
-internal fun PlayerScreenRuntime.loadSubtitleAutoSyncCues(force: Boolean = false) {
+internal fun PlayerScreenRuntime.loadSubtitleAutoSyncCues(
+    force: Boolean = false,
+    preserveLoadingState: Boolean = false,
+) {
     val subtitle = selectedAddonSubtitle ?: return
     if (!force && subtitleAutoSyncState.cues.isNotEmpty()) return
-    subtitleAutoSyncState = subtitleAutoSyncState.copy(isLoading = true, errorMessage = null)
+    if (!preserveLoadingState) {
+        subtitleAutoSyncState = subtitleAutoSyncState.copy(isLoading = true, errorMessage = null)
+    }
     scope.launch {
         val result = runCatching {
             val body = httpGetTextWithHeaders(
@@ -39,13 +44,13 @@ internal fun PlayerScreenRuntime.loadSubtitleAutoSyncCues(force: Boolean = false
             onSuccess = { cues ->
                 subtitleAutoSyncState = subtitleAutoSyncState.copy(
                     cues = cues,
-                    isLoading = false,
+                    isLoading = if (preserveLoadingState) subtitleAutoSyncState.isLoading else false,
                     errorMessage = if (cues.isEmpty()) localizedNoSubtitleLinesFound() else null,
                 )
             },
             onFailure = { error ->
                 subtitleAutoSyncState = subtitleAutoSyncState.copy(
-                    isLoading = false,
+                    isLoading = if (preserveLoadingState) subtitleAutoSyncState.isLoading else false,
                     errorMessage = error.message ?: localizedSubtitleLinesLoadError(),
                 )
             },
@@ -70,13 +75,18 @@ internal fun PlayerScreenRuntime.performAutomaticSubtitleSync() {
         return
     }
     
-    // Start loading subtitle cues if needed
-    if (subtitleAutoSyncState.cues.isEmpty()) {
-        loadSubtitleAutoSyncCues(force = true)
+    // Guard against double-tap: if already loading/syncing, ignore
+    if (subtitleAutoSyncState.isLoading) {
+        return
     }
     
-    // Mark as loading
+    // Mark as loading immediately (before any async operations)
     subtitleAutoSyncState = subtitleAutoSyncState.copy(isLoading = true, errorMessage = null)
+    
+    // Start loading subtitle cues if needed (preserveLoadingState = true keeps isLoading during cue fetch)
+    if (subtitleAutoSyncState.cues.isEmpty()) {
+        loadSubtitleAutoSyncCues(force = true, preserveLoadingState = true)
+    }
     
     scope.launch {
         try {
@@ -95,11 +105,17 @@ internal fun PlayerScreenRuntime.performAutomaticSubtitleSync() {
                 return@launch
             }
             
+            // Update status to show we're capturing audio
+            subtitleAutoSyncState = subtitleAutoSyncState.copy(
+                isLoading = true,
+                errorMessage = "Capturing audio... (this may take up to 30 seconds)",
+            )
+            
             // Start audio capture
             val startPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
             playerController?.startAudioEnergyCapture(startPositionMs)
             
-            // Capture for 30 seconds
+            // Capture for 30 seconds or until we have 20 seconds of audio
             val captureTargetMs = 30_000L
             val startTimeMs = com.nuvio.app.features.streams.epochMs()
             
