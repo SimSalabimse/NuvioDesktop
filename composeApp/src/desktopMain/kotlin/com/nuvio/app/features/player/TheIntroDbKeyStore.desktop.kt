@@ -12,10 +12,14 @@ internal actual object TheIntroDbKeyStore {
     }
 
     actual fun save(apiKey: String) {
-        if (apiKey.isBlank()) {
+        val trimmed = apiKey.trim()
+        if (trimmed.isBlank()) {
             prefs.remove(ProfileScopedKey.of(keyBase))
         } else {
-            prefs.put(ProfileScopedKey.of(keyBase), apiKey)
+            if (trimmed.length < 10 || !trimmed.matches(Regex("[a-zA-Z0-9_-]+"))) {
+                return
+            }
+            prefs.put(ProfileScopedKey.of(keyBase), trimmed)
         }
         prefs.flush()
     }
