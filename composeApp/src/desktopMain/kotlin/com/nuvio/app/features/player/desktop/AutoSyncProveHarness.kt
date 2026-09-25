@@ -1,7 +1,5 @@
-package com.nuvio.app
+package com.nuvio.app.features.player.desktop
 
-import com.nuvio.app.features.player.desktop.NativePlayerBridge
-import com.nuvio.app.features.player.desktop.NativePlayerEventSink
 import java.io.File
 import kotlin.system.exitProcess
 

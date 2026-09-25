@@ -26,6 +26,7 @@ import com.nuvio.app.features.discordrpc.DiscordPresenceManager
 import com.nuvio.app.features.p2p.P2pStreamingEngine
 import com.nuvio.app.features.plugins.configureDesktopQuickJsLibrary
 import com.nuvio.app.features.player.PlatformPlayerSurface
+import com.nuvio.app.features.player.desktop.AutoSyncProveHarness
 import com.nuvio.app.features.player.desktop.DesktopAppFullscreenController
 import com.nuvio.app.features.player.desktop.DesktopHostOs
 import com.nuvio.app.features.player.desktop.DesktopWindowGeometry
