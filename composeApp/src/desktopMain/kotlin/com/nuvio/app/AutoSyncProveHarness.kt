@@ -52,28 +52,29 @@ object AutoSyncProveHarness {
     private fun runProveTest(mediaPath: String) {
         println("[AutoSyncProve] Initializing native player bridge...")
         
-        // Initialize MPV/player bridge
-        val initResult = runCatching {
-            NativePlayerBridge.load()
-        }
-        
-        if (initResult.isFailure) {
-            println("[AutoSyncProve] ❌ FATAL: Failed to load native player bridge")
-            initResult.exceptionOrNull()?.printStackTrace()
-            exitProcess(1)
+        // Preload native library (same as app does in Main.kt)
+        try {
+            NativePlayerBridge.preloadAsync()
+            Thread.sleep(1000)  // Give preload time to complete
+        } catch (e: Exception) {
+            println("[AutoSyncProve] WARNING: preloadAsync threw exception (may already be loaded)")
+            e.printStackTrace()
         }
         
         println("[AutoSyncProve] Creating player instance...")
         
         // Create player with minimal config (no UI host)
         val handle = try {
-            NativePlayerBridge.createPlayer(
+            NativePlayerBridge.create(
+                hostViewPtr = 0L,  // No host view for headless
                 sourceUrl = "file://$mediaPath",
                 headerLines = emptyArray(),
                 playWhenReady = true,
-                initialPositionMs = 0,
-                controlsUrl = "",  // No controls UI needed
-                decoderPriority = 0
+                initialPositionMs = 0L,
+                controlsPageUrl = "",  // No controls UI needed
+                decoderPriority = 0,
+                nvidiaRtxSuperResolutionEnabled = false,
+                eventSink = NativePlayerEventSink { _, _ -> }  // No-op event handler
             )
         } catch (e: Exception) {
             println("[AutoSyncProve] ❌ FATAL: Failed to create player")
@@ -82,7 +83,7 @@ object AutoSyncProveHarness {
         }
         
         if (handle == 0L) {
-            println("[AutoSyncProve] ❌ FATAL: createPlayer returned null handle")
+            println("[AutoSyncProve] ❌ FATAL: create returned null handle")
             exitProcess(1)
         }
         
@@ -105,7 +106,7 @@ object AutoSyncProveHarness {
         } catch (e: Exception) {
             println("[AutoSyncProve] ❌ FATAL: startAudioEnergyCapture threw exception")
             e.printStackTrace()
-            NativePlayerBridge.destroyPlayer(handle)
+            NativePlayerBridge.dispose(handle)
             exitProcess(1)
         }
         
@@ -163,7 +164,7 @@ object AutoSyncProveHarness {
         
         // Cleanup
         println("[AutoSyncProve] Cleaning up player...")
-        NativePlayerBridge.destroyPlayer(handle)
+        NativePlayerBridge.dispose(handle)
         
         println("[AutoSyncProve] Test complete, exiting.")
         

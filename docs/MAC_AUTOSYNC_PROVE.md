@@ -1,12 +1,12 @@
 # Mac Auto Sync Prove Harness
 
-Headless automated testing for Mac Auto Sync audio capture (tip 3c704252+, v5 direct tap architecture).
+Headless automated testing for Mac Auto Sync audio capture (v5 direct tap architecture).
 
 ## Requirements
 
 - Test media file at: `test-media/autosync/autosync-fixture.mp4`
 - Mac with audio output capability
-- Installed NuvioDesktop.app DMG
+- Installed Nuvio.app DMG
 
 ## Usage
 
@@ -14,23 +14,23 @@ Headless automated testing for Mac Auto Sync audio capture (tip 3c704252+, v5 di
 
 ```bash
 cd /path/to/nuvio/workspace
-NUVIO_AUTOSYNC_PROVE=1 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop
+NUVIO_AUTOSYNC_PROVE=1 /Applications/Nuvio.app/Contents/MacOS/Nuvio
 ```
 
 ### Custom Media File
 
 ```bash
-NUVIO_AUTOSYNC_PROVE=/path/to/video.mp4 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop
+NUVIO_AUTOSYNC_PROVE=/path/to/video.mp4 /Applications/Nuvio.app/Contents/MacOS/Nuvio
 ```
 
 ### With Console.app Logging
 
 ```bash
 # Terminal 1: Start prove harness
-NUVIO_AUTOSYNC_PROVE=1 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop
+NUVIO_AUTOSYNC_PROVE=1 /Applications/Nuvio.app/Contents/MacOS/Nuvio
 
 # Terminal 2: Capture console logs
-log stream --predicate 'process == "NuvioDesktop"' --style compact > autosync-prove-console.log
+log stream --predicate 'process == "Nuvio"' --style compact > autosync-prove-console.log
 ```
 
 ## Expected Output
@@ -115,7 +115,7 @@ The harness logs unique markers to prove DMG is built from correct tip:
 
 ## Console.app Markers
 
-Expected CoreAudio logs (Console.app → filter "NuvioDesktop"):
+Expected CoreAudio logs (Console.app → filter "Nuvio"):
 
 ```
 [Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v5_DIRECT_TAP]
@@ -160,12 +160,12 @@ WORKSPACE="/path/to/nuvio/workspace"
 
 echo "Installing DMG..."
 hdiutil attach "$DMG_PATH"
-cp -R "/Volumes/NuvioDesktop/NuvioDesktop.app" "$WORKSPACE/"
-hdiutil detach "/Volumes/NuvioDesktop"
+cp -R "/Volumes/Nuvio/Nuvio.app" /Applications/
+hdiutil detach "/Volumes/Nuvio"
 
 echo "Running Auto Sync prove harness..."
 cd "$WORKSPACE"
-NUVIO_AUTOSYNC_PROVE=1 ./NuvioDesktop.app/Contents/MacOS/NuvioDesktop 2>&1 | tee autosync-prove-output.log
+NUVIO_AUTOSYNC_PROVE=1 /Applications/Nuvio.app/Contents/MacOS/Nuvio 2>&1 | tee autosync-prove-output.log
 
 EXIT_CODE=$?
 echo "Exit code: $EXIT_CODE"
@@ -175,7 +175,7 @@ if [ $EXIT_CODE -eq 0 ]; then
 else
     echo "❌ PROVE FAILED"
     echo "Capturing Console logs..."
-    log show --predicate 'process == "NuvioDesktop"' --last 5m > autosync-prove-console.log
+    log show --predicate 'process == "Nuvio"' --last 5m > autosync-prove-console.log
 fi
 
 exit $EXIT_CODE
@@ -190,7 +190,7 @@ exit $EXIT_CODE
 
 ### "Failed to load native player bridge"
 - Verify DMG is installed correctly
-- Check NuvioDesktop.app structure
+- Check Nuvio.app structure
 - Run from correct MacOS executable path
 
 ### 0 samples but no errors
