@@ -90,7 +90,7 @@ internal fun PlayerScreenRuntime.performAutomaticSubtitleSync() {
             if (subtitleAutoSyncState.cues.isEmpty()) {
                 subtitleAutoSyncState = subtitleAutoSyncState.copy(
                     isLoading = false,
-                    errorMessage = "Could not load subtitle cues",
+                    errorMessage = "Could not load subtitle cues. Please check the subtitle URL and try again.",
                 )
                 return@launch
             }
@@ -117,7 +117,7 @@ internal fun PlayerScreenRuntime.performAutomaticSubtitleSync() {
             if (audioSamples.isEmpty()) {
                 subtitleAutoSyncState = subtitleAutoSyncState.copy(
                     isLoading = false,
-                    errorMessage = "Could not capture audio data. Auto-sync may not be available on this platform.",
+                    errorMessage = "Could not capture audio data. Auto-sync may not be available on this device/platform.",
                 )
                 return@launch
             }
