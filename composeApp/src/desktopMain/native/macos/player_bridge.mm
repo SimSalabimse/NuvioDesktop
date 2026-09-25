@@ -2781,12 +2781,21 @@ static OSStatus audioTapIOProc(
         _audioCaptureThread.join();
     }
     
-    // Tear down existing tap if any
-    if (_audioTapIOProcID) {
-        if (_audioTapID != kAudioObjectUnknown) {
-            AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
-        }
+    // Tear down existing tap/aggregate device if any
+    if (_audioTapIOProcID && _audioAggregateDeviceID != kAudioObjectUnknown) {
+        AudioDeviceStop(_audioAggregateDeviceID, _audioTapIOProcID);
+        AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
+        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
         _audioTapIOProcID = nullptr;
+        _audioAggregateDeviceID = kAudioObjectUnknown;
+    }
+    
+    if (_audioTapID != kAudioObjectUnknown) {
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 140200
+        if (@available(macOS 14.2, *)) {
+            AudioHardwareDestroyProcessTap(_audioTapID);
+        }
+#endif
         _audioTapID = kAudioObjectUnknown;
     }
     
@@ -2892,6 +2901,7 @@ static OSStatus audioTapIOProc(
                 
                 status = AudioHardwareCreateAggregateDevice(aggregateDescription, &_audioAggregateDeviceID);
                 CFRelease(aggregateDescription);
+                CFRelease(aggregateUID);
                 
                 NSLog(@"[Nuvio] CoreAudio: AudioHardwareCreateAggregateDevice returned %d, aggregateID=%u", (int)status, (unsigned)_audioAggregateDeviceID);
                 
@@ -2923,8 +2933,6 @@ static OSStatus audioTapIOProc(
                     if (status != noErr) {
                         NSLog(@"[Nuvio] CoreAudio: WARNING - Failed to set tap list on aggregate, audio may not route correctly");
                     }
-                    
-                    CFRelease(aggregateUID);
                     // Set up IOProc on the aggregate device (not the tap directly)
                     status = AudioDeviceCreateIOProcID(
                         _audioAggregateDeviceID,
