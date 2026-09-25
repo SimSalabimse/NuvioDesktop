@@ -2861,8 +2861,8 @@ static OSStatus audioTapIOProc(
     // aggregate device that includes the output device as a subdevice.
     if (@available(macOS 14.2, *)) {
         NSLog(@"[Nuvio] CoreAudio: ========================================");
-        NSLog(@"[Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v4]");
-        NSLog(@"[Nuvio] CoreAudio: Using Process Tap API (macOS 14.2+)");
+        NSLog(@"[Nuvio] CoreAudio: Starting Mac Auto-Sync Audio Capture [BUILD_20260925_v5_DIRECT_TAP]");
+        NSLog(@"[Nuvio] CoreAudio: Using Process Tap API (macOS 14.2+) - NO AGGREGATE DEVICE");
         NSLog(@"[Nuvio] CoreAudio: ========================================");
         
         // Get this process's PID and translate to AudioObjectID
