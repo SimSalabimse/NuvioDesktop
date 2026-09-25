@@ -3023,7 +3023,6 @@ static OSStatus audioTapIOProc(
                             };
                             
                             status = AudioObjectSetPropertyData(_audioAggregateDeviceID, &masterDeviceAddress, 0, nullptr, sizeof(CFStringRef), &outputDeviceUID);
-                            CFRelease(outputDeviceUID);
                             NSLog(@"[Nuvio] CoreAudio: Set MasterDevice: status=%d [v6_AGGREGATE]", (int)status);
                             
                             // Set TapList
@@ -3073,6 +3072,10 @@ static OSStatus audioTapIOProc(
                                     NSLog(@"[Nuvio] CoreAudio: Failed to query aggregate input format: %d [v7_ROUTING]", (int)formatStatus);
                                 }
                                 NSLog(@"[Nuvio] CoreAudio: ================================================");
+                                
+                                // Release outputDeviceUID after census logging
+                                CFRelease(outputDeviceUID);
+                                
                                 NSLog(@"[Nuvio] CoreAudio: Creating IOProcID on AGGREGATE device (ID=%u)...", (unsigned)_audioAggregateDeviceID);
                                 
                                 // Create IOProc on AGGREGATE (not tap directly)
