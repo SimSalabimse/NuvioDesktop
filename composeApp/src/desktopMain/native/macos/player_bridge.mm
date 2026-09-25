@@ -2907,26 +2907,30 @@ static OSStatus audioTapIOProc(
                 
                 if (status == noErr && _audioAggregateDeviceID != kAudioObjectUnknown) {
                     // Now set the tap list property on the aggregate device
-                    // Tap list is an array of tap AudioObjectIDs
+                    // Tap list requires a CFArray of tap AudioObjectIDs (not a raw C array)
                     AudioObjectPropertyAddress tapListAddress = {
                         .mSelector = kAudioAggregateDevicePropertyTapList,
                         .mScope = kAudioObjectPropertyScopeGlobal,
                         .mElement = kAudioObjectPropertyElementMain
                     };
                     
-                    AudioObjectID tapIDs[] = { _audioTapID };
-                    UInt32 tapListSize = sizeof(tapIDs);
+                    // Create CFArray containing the tap ID
+                    CFNumberRef tapIDNumber = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &_audioTapID);
+                    CFArrayRef tapList = CFArrayCreate(kCFAllocatorDefault, (const void **)&tapIDNumber, 1, &kCFTypeArrayCallBacks);
+                    CFRelease(tapIDNumber);
                     
-                    NSLog(@"[Nuvio] CoreAudio: Setting tap list on aggregate %u to include tap %u", (unsigned)_audioAggregateDeviceID, (unsigned)_audioTapID);
+                    NSLog(@"[Nuvio] CoreAudio: Setting tap list on aggregate %u to include tap %u (as CFArray)", (unsigned)_audioAggregateDeviceID, (unsigned)_audioTapID);
                     
                     status = AudioObjectSetPropertyData(
                         _audioAggregateDeviceID,
                         &tapListAddress,
                         0,
                         nullptr,
-                        tapListSize,
-                        tapIDs
+                        sizeof(CFArrayRef),
+                        &tapList
                     );
+                    
+                    CFRelease(tapList);
                     
                     NSLog(@"[Nuvio] CoreAudio: AudioObjectSetPropertyData(TapList) returned %d", (int)status);
                     
