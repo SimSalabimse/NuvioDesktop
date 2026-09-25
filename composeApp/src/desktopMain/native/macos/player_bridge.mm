@@ -1885,12 +1885,16 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     }
     
     // Tear down aggregate device and process tap
-    if (_audioTapIOProcID && _audioAggregateDeviceID != kAudioObjectUnknown) {
-        NSLog(@"[Nuvio] CoreAudio: Stopping aggregate device %u", (unsigned)_audioAggregateDeviceID);
-        AudioDeviceStop(_audioAggregateDeviceID, _audioTapIOProcID);
-        AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
-        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
+    if (_audioTapIOProcID && _audioTapID != kAudioObjectUnknown) {
+        NSLog(@"[Nuvio] CoreAudio: Stopping tap device %u", (unsigned)_audioTapID);
+        AudioDeviceStop(_audioTapID, _audioTapIOProcID);
+        AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
         _audioTapIOProcID = nullptr;
+    }
+    
+    if (_audioAggregateDeviceID != kAudioObjectUnknown) {
+        NSLog(@"[Nuvio] CoreAudio: Destroying aggregate device %u", (unsigned)_audioAggregateDeviceID);
+        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
         _audioAggregateDeviceID = kAudioObjectUnknown;
     }
     
@@ -2729,11 +2733,23 @@ static OSStatus audioTapIOProc(
     
     if (!inInputData || inInputData->mNumberBuffers == 0) {
         static int noDataLogCount = 0;
-        if (noDataLogCount < 3) {
-            NSLog(@"[Nuvio] CoreAudio IOProc: Called but no input data (call #%d)", ioProcCallCount);
+        if (noDataLogCount < 10) {  // Increased to 10 for more diagnostic info
+            NSLog(@"[Nuvio] CoreAudio IOProc: Called but no input data (call #%d, inInputData=%p, buffers=%u) [v4_TAP_READ]", 
+                  ioProcCallCount, inInputData, inInputData ? inInputData->mNumberBuffers : 0);
             noDataLogCount++;
         }
         return noErr;
+    }
+    
+    // Log buffer details on first few calls for diagnostics
+    if (ioProcCallCount <= 3) {
+        NSLog(@"[Nuvio] CoreAudio IOProc: Input data details #%d - buffers=%u [v4_TAP_READ]", 
+              ioProcCallCount, (unsigned)inInputData->mNumberBuffers);
+        for (UInt32 i = 0; i < inInputData->mNumberBuffers; i++) {
+            const AudioBuffer &buffer = inInputData->mBuffers[i];
+            NSLog(@"[Nuvio] CoreAudio IOProc:   Buffer[%u]: channels=%u dataSize=%u data=%p", 
+                  i, (unsigned)buffer.mNumberChannels, (unsigned)buffer.mDataByteSize, buffer.mData);
+        }
     }
     
     // Compute RMS from all channels in the tapped audio
@@ -3061,25 +3077,27 @@ static OSStatus audioTapIOProc(
                                 _audioAggregateDeviceID = kAudioObjectUnknown;
                                 _audioTapID = kAudioObjectUnknown;
                             } else {
-                            NSLog(@"[Nuvio] CoreAudio: ✅ All aggregate config steps completed successfully [v4]");
-                            NSLog(@"[Nuvio] CoreAudio: Creating IOProcID for audio buffer delivery...");
+                            NSLog(@"[Nuvio] CoreAudio: ✅ Aggregate config complete, but tap audio must be read from TAP device, not aggregate [v4]");
+                            NSLog(@"[Nuvio] CoreAudio: Creating IOProcID on PROCESS TAP (ID=%u) to read captured audio as input...", (unsigned)_audioTapID);
                             
-                            // Set up IOProc on the aggregate device (not the tap directly)
+                            // CRITICAL FIX: Attach IOProc to the TAP device itself (as input source), not the aggregate
+                            // Process taps capture audio and present it as an INPUT device
+                            // Aggregate device IOProcs on output scope won't receive tap audio in inInputData
                             status = AudioDeviceCreateIOProcID(
-                                _audioAggregateDeviceID,
+                                _audioTapID,  // Read from TAP, not aggregate
                                 audioTapIOProc,
                                 (__bridge void *)self,
                                 &_audioTapIOProcID
                             );
-                            NSLog(@"[Nuvio] CoreAudio: AudioDeviceCreateIOProcID on aggregate returned %d", (int)status);
+                            NSLog(@"[Nuvio] CoreAudio: AudioDeviceCreateIOProcID(tap=%u) returned %d [v4]", (unsigned)_audioTapID, (int)status);
                             
                             if (status == noErr) {
-                                NSLog(@"[Nuvio] CoreAudio: Calling AudioDeviceStart on fully-configured aggregate device...");
-                                status = AudioDeviceStart(_audioAggregateDeviceID, _audioTapIOProcID);
-                                NSLog(@"[Nuvio] CoreAudio: AudioDeviceStart returned %d (0=success, 1852797029='nope'=bad config) [v4]", (int)status);
+                                NSLog(@"[Nuvio] CoreAudio: Starting tap device to begin audio capture...");
+                                status = AudioDeviceStart(_audioTapID, _audioTapIOProcID);  // Start TAP, not aggregate
+                                NSLog(@"[Nuvio] CoreAudio: AudioDeviceStart(tap=%u) returned %d (0=success) [v4]", (unsigned)_audioTapID, (int)status);
                                 
                                 if (status == noErr) {
-                                    NSLog(@"[Nuvio] CoreAudio: ✅✅✅ SUCCESS - Aggregate device started, IOProc receiving tapped audio [BUILD_v4]");
+                                    NSLog(@"[Nuvio] CoreAudio: ✅✅✅ SUCCESS - Process tap started, IOProc receiving captured audio [BUILD_v4]");
                                     
                                     // Start capture thread
                                     {
@@ -3096,9 +3114,8 @@ static OSStatus audioTapIOProc(
                                     });
                                     return;
                                 } else {
-                                    NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceStart failed with status %d (1852797029='nope' means invalid aggregate config)", (int)status);
-                                    NSLog(@"[Nuvio] CoreAudio: This typically means the aggregate device is missing subdevices or has a configuration error");
-                                    AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
+                                    NSLog(@"[Nuvio] CoreAudio: FATAL - AudioDeviceStart(tap) failed with status %d", (int)status);
+                                    AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
                                     AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
                                     if (@available(macOS 14.2, *)) {
                                         AudioHardwareDestroyProcessTap(_audioTapID);
@@ -3108,7 +3125,7 @@ static OSStatus audioTapIOProc(
                                     _audioTapID = kAudioObjectUnknown;
                                 }
                             } else {
-                                NSLog(@"[Nuvio] CoreAudio: Failed to create IOProcID on aggregate: %d", (int)status);
+                                NSLog(@"[Nuvio] CoreAudio: Failed to create IOProcID on tap: %d", (int)status);
                                 AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
                                 if (@available(macOS 14.2, *)) {
                                     AudioHardwareDestroyProcessTap(_audioTapID);
@@ -3157,12 +3174,16 @@ static OSStatus audioTapIOProc(
     }
     
     // Tear down aggregate device and process tap
-    if (_audioTapIOProcID && _audioAggregateDeviceID != kAudioObjectUnknown) {
-        NSLog(@"[Nuvio] CoreAudio: Stopping aggregate device %u", (unsigned)_audioAggregateDeviceID);
-        AudioDeviceStop(_audioAggregateDeviceID, _audioTapIOProcID);
-        AudioDeviceDestroyIOProcID(_audioAggregateDeviceID, _audioTapIOProcID);
-        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
+    if (_audioTapIOProcID && _audioTapID != kAudioObjectUnknown) {
+        NSLog(@"[Nuvio] CoreAudio: Stopping tap device %u", (unsigned)_audioTapID);
+        AudioDeviceStop(_audioTapID, _audioTapIOProcID);
+        AudioDeviceDestroyIOProcID(_audioTapID, _audioTapIOProcID);
         _audioTapIOProcID = nullptr;
+    }
+    
+    if (_audioAggregateDeviceID != kAudioObjectUnknown) {
+        NSLog(@"[Nuvio] CoreAudio: Destroying aggregate device %u", (unsigned)_audioAggregateDeviceID);
+        AudioHardwareDestroyAggregateDevice(_audioAggregateDeviceID);
         _audioAggregateDeviceID = kAudioObjectUnknown;
     }
     
