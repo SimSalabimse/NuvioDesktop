@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -28,10 +27,9 @@ import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.Visibility
-import androidx.compose.material3.BasicAlertDialog
-import com.nuvio.app.core.ui.NuvioLoadingIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import com.nuvio.app.core.ui.DialogSurface
+import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -68,7 +66,6 @@ import nuvio.composeapp.generated.resources.submit_intro_title
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.floor
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubmitIntroDialog(
     imdbId: String,
@@ -97,23 +94,16 @@ fun SubmitIntroDialog(
         onSegmentTypeChange(enabledTypes.first())
     }
 
-    BasicAlertDialog(onDismissRequest = onDismiss) {
-        Surface(
+    DialogSurface(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.heightIn(max = 560.dp),
+    ) {
+        Column(
             modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 24.dp)
-                .widthIn(max = 420.dp)
-                .heightIn(max = 560.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
+                .weight(1f, fill = false)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .heightIn(max = 512.dp)
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
                 // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -289,7 +279,6 @@ fun SubmitIntroDialog(
                     }
                 }
             }
-        }
     }
 }
 
