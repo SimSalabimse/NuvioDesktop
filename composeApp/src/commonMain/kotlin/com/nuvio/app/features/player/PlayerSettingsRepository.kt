@@ -71,7 +71,7 @@ data class PlayerSettingsUiState(
     val animeSkipEnabled: Boolean = false,
     val animeSkipClientId: String = "",
     val introDbApiKey: String = "",
-    val introSubmitEnabled: Boolean = false,
+    val introSubmitEnabled: Boolean = true,
     val streamAutoPlayNextEpisodeEnabled: Boolean = false,
     val streamAutoPlayNextEpisodeFallbackEnabled: Boolean = true,
     val streamAutoPlayPreferBingeGroup: Boolean = true,
@@ -142,7 +142,7 @@ object PlayerSettingsRepository {
     private var animeSkipEnabled = false
     private var animeSkipClientId = ""
     private var introDbApiKey = ""
-    private var introSubmitEnabled = false
+    private var introSubmitEnabled = true
     private var streamAutoPlayNextEpisodeEnabled = false
     private var streamAutoPlayNextEpisodeFallbackEnabled = true
     private var streamAutoPlayPreferBingeGroup = true
@@ -218,7 +218,7 @@ object PlayerSettingsRepository {
         animeSkipEnabled = false
         animeSkipClientId = ""
         introDbApiKey = ""
-        introSubmitEnabled = false
+        introSubmitEnabled = true
         streamAutoPlayNextEpisodeEnabled = false
         streamAutoPlayNextEpisodeFallbackEnabled = true
         streamAutoPlayPreferBingeGroup = true
@@ -357,7 +357,7 @@ object PlayerSettingsRepository {
         animeSkipEnabled = PlayerSettingsStorage.loadAnimeSkipEnabled() ?: false
         animeSkipClientId = PlayerSettingsStorage.loadAnimeSkipClientId() ?: ""
         introDbApiKey = PlayerSettingsStorage.loadIntroDbApiKey() ?: ""
-        introSubmitEnabled = PlayerSettingsStorage.loadIntroSubmitEnabled() ?: false
+        introSubmitEnabled = PlayerSettingsStorage.loadIntroSubmitEnabled() ?: true
         streamAutoPlayNextEpisodeEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeEnabled() ?: false
         streamAutoPlayNextEpisodeFallbackEnabled = PlayerSettingsStorage.loadStreamAutoPlayNextEpisodeFallbackEnabled() ?: true
         streamAutoPlayPreferBingeGroup = PlayerSettingsStorage.loadStreamAutoPlayPreferBingeGroup() ?: true

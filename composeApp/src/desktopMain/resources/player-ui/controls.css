@@ -1937,6 +1937,33 @@ button:disabled {
   width: min(92vw, 520px);
 }
 
+/* Flag capture: no dimming scrim, and the form sits low so the picture stays visible. */
+#submitIntroModal.modal-layer {
+  align-items: end;
+  justify-content: center;
+  padding: 24px 24px calc(var(--overlay-bottom) + 12px);
+  background-color: transparent;
+}
+
+#submitIntroModal.modal-layer.modal-visible,
+#submitIntroModal.modal-layer.modal-closing {
+  pointer-events: none;
+}
+
+#submitIntroModal .track-panel.submit {
+  pointer-events: auto;
+  max-height: 100%;
+  background: rgba(16, 17, 22, 0.42);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
+#submitIntroModal .intro-form {
+  min-height: 0;
+}
+
 .player-rail-modal {
   display: flex;
   align-items: flex-end;
@@ -2141,6 +2168,12 @@ button:disabled {
 .panel-button.primary:hover:not(:disabled),
 .segment-button.selected:hover:not(:disabled) {
   background: var(--theme-accent-strong);
+}
+
+.segment-button:disabled,
+.segment-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .filter-chip.selected,
@@ -3006,8 +3039,14 @@ button.action:focus-visible {
 
 .segment-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .segment-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .segment-button {
@@ -3049,7 +3088,27 @@ button.action:focus-visible {
   color: #fff;
   font: inherit;
   font-size: 16px;
+  font-variant-numeric: tabular-nums;
   outline: none;
+}
+
+.time-input:hover {
+  border-color: rgba(255, 255, 255, .28);
+}
+
+.time-input:focus {
+  border-color: var(--theme-focus);
+  box-shadow: 0 0 0 2px rgba(158, 202, 255, .28);
+}
+
+.submit-duration {
+  color: rgba(255, 255, 255, .64);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.submit-duration[hidden] {
+  display: none;
 }
 
 .submit-status {

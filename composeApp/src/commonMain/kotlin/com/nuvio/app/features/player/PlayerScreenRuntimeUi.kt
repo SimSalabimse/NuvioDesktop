@@ -30,6 +30,9 @@ import com.nuvio.app.features.p2p.P2pStreamingState
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.SkipIntroRepository
+import com.nuvio.app.features.player.skip.disabledFlagSegmentTypes
+import com.nuvio.app.features.player.skip.formatFlagTimestamp
+import com.nuvio.app.features.player.skip.shouldShowSubmitIntroFlag
 import com.nuvio.app.features.streams.AddonStreamGroup
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamItem
@@ -298,6 +301,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroSegmentIntroLabel = stringResource(Res.string.submit_intro_segment_intro),
         submitIntroSegmentRecapLabel = stringResource(Res.string.submit_intro_segment_recap),
         submitIntroSegmentOutroLabel = stringResource(Res.string.submit_intro_segment_outro),
+        submitIntroSegmentPreviewLabel = stringResource(Res.string.submit_intro_segment_preview),
         submitIntroStartTimeLabel = stringResource(Res.string.submit_intro_start_time_label),
         submitIntroEndTimeLabel = stringResource(Res.string.submit_intro_end_time_label),
         submitIntroCaptureLabel = stringResource(Res.string.submit_intro_capture_button),
@@ -366,10 +370,11 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         controlsVisible = controlsVisible && !playerControlsLocked,
         parentalWarnings = parentalWarnings,
         showParentalGuide = showParentalGuide,
-        showSubmitIntro = isSeries &&
-            playerSettingsUiState.introSubmitEnabled &&
-            playerSettingsUiState.introDbApiKey.isNotBlank() &&
-            !activeSubmitIntroImdbId().isNullOrBlank(),
+        showSubmitIntro = shouldShowSubmitIntroFlag(
+            isSeries = isSeries,
+            introSubmitEnabled = playerSettingsUiState.introSubmitEnabled,
+            imdbId = activeSubmitIntroImdbId(),
+        ),
         showVideoSettings = isIos,
         showSources = activeVideoId != null,
         showEpisodes = isSeries,
@@ -391,6 +396,10 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroContentKey = activeSubmitIntroContentKey(),
         submitIntroStartTime = submitIntroStartTimeStr,
         submitIntroEndTime = submitIntroEndTimeStr,
+        existingSegmentTypes = disabledFlagSegmentTypes(
+            skipIntervals = skipIntervals,
+            submittedInSession = submittedFlagSegmentTypesByVideoId[activeSubmitIntroContentKey()].orEmpty(),
+        ),
         isSubmitIntroSubmitting = isSubmitIntroSubmitting,
         submitIntroStatusMessage = submitIntroStatusMessage.orEmpty(),
         showP2pConsent = playerControlsPendingP2pSwitch != null,
@@ -693,9 +702,11 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 }
             },
             onSubmitIntroClick = if (
-                isSeries &&
-                playerSettingsUiState.introSubmitEnabled &&
-                playerSettingsUiState.introDbApiKey.isNotBlank()
+                shouldShowSubmitIntroFlag(
+                    isSeries = isSeries,
+                    introSubmitEnabled = playerSettingsUiState.introSubmitEnabled,
+                    imdbId = activeSubmitIntroImdbId(),
+                )
             ) {
                 { showSubmitIntroModal = true }
             } else {
@@ -927,6 +938,7 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
             submitIntroSegmentType = when (value.toInt()) {
                 1 -> "recap"
                 2 -> "outro"
+                3 -> "preview"
                 else -> "intro"
             }
             submitIntroStatusMessage = null
@@ -1166,6 +1178,10 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
     val episode = activeEpisodeNumber
     val start = submitIntroStartTimeSec
     val end = submitIntroEndTimeSec
+    if (playerSettingsUiState.introDbApiKey.isBlank()) {
+        submitIntroStatusMessage = "Add an IntroDB key under Settings, Playback, to submit timestamps."
+        return
+    }
     if (imdbId.isNullOrBlank() || season == null || episode == null || start == null || end == null || end <= start) {
         submitIntroStatusMessage = "Check the start and end times."
         return
@@ -1183,10 +1199,11 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         )
         isSubmitIntroSubmitting = false
         if (result) {
+            rememberSubmittedFlagSegment(submitIntroSegmentType)
             submitIntroStartTimeSec = 0.0
             submitIntroEndTimeSec = 0.0
-            submitIntroStartTimeStr = "00:00"
-            submitIntroEndTimeStr = "00:00"
+            submitIntroStartTimeStr = formatFlagTimestamp(0.0)
+            submitIntroEndTimeStr = formatFlagTimestamp(0.0)
             submitIntroSegmentType = "intro"
             submitIntroStatusMessage = null
             playerControlsCloseModalsToken += 1
@@ -1195,6 +1212,12 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
             submitIntroStatusMessage = "Unable to submit timestamps."
         }
     }
+}
+
+private fun PlayerScreenRuntime.rememberSubmittedFlagSegment(segmentType: String) {
+    val key = activeSubmitIntroContentKey()
+    if (key.isEmpty()) return
+    submittedFlagSegmentTypesByVideoId.getOrPut(key) { mutableSetOf() }.add(segmentType)
 }
 
 private fun PlayerScreenRuntime.activeSubmitIntroContentKey(): String {
@@ -1217,15 +1240,7 @@ private fun skipPromptLabel(type: String?): String =
         else -> stringResource(Res.string.player_skip)
     }
 
-private fun formatPlayerControlsSeconds(seconds: Double): String {
-    val totalSeconds = seconds
-        .takeIf { it.isFinite() && it >= 0.0 }
-        ?.toLong()
-        ?: 0L
-    val minutes = totalSeconds / 60L
-    val remainder = totalSeconds % 60L
-    return "${minutes.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}"
-}
+private fun formatPlayerControlsSeconds(seconds: Double): String = formatFlagTimestamp(seconds)
 
 private fun PlayerScreenRuntime.handlePlayerControlsScrubChange(positionMs: Long) {
     playerControlsLog.d { "scrubChange positionMs=$positionMs ${playerControlLogContext()}" }

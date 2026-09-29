@@ -402,19 +402,21 @@
                 <button class="segment-button selected" id="segmentIntroButton" type="button" data-segment="intro">Intro</button>
                 <button class="segment-button" id="segmentRecapButton" type="button" data-segment="recap">Recap</button>
                 <button class="segment-button" id="segmentOutroButton" type="button" data-segment="outro">Outro</button>
+                <button class="segment-button" id="segmentPreviewButton" type="button" data-segment="preview">Preview</button>
               </div>
             </div>
+            <div class="submit-duration" id="submitIntroDurationLabel" hidden></div>
             <div class="time-field-row">
               <label class="time-field-wrap">
-                <span class="form-label" id="startTimeLabel">START TIME (MM:SS)</span>
-                <input class="time-input" id="submitIntroStartInput" value="00:00" inputmode="decimal">
+                <span class="form-label" id="startTimeLabel">START TIME</span>
+                <input class="time-input" id="submitIntroStartInput" value="00:00:00" inputmode="text" spellcheck="false" autocomplete="off" placeholder="00:00:00" aria-label="Start time, hours minutes seconds" title="HH:MM:SS. Arrow keys nudge 1 second. Shift plus arrow keys nudge 10 seconds.">
               </label>
               <button class="capture-button" id="captureStartButton" type="button">Capture</button>
             </div>
             <div class="time-field-row">
               <label class="time-field-wrap">
-                <span class="form-label" id="endTimeLabel">END TIME (MM:SS)</span>
-                <input class="time-input" id="submitIntroEndInput" value="00:00" inputmode="decimal">
+                <span class="form-label" id="endTimeLabel">END TIME</span>
+                <input class="time-input" id="submitIntroEndInput" value="00:00:00" inputmode="text" spellcheck="false" autocomplete="off" placeholder="00:00:00" aria-label="End time, hours minutes seconds" title="HH:MM:SS. Arrow keys nudge 1 second. Shift plus arrow keys nudge 10 seconds.">
               </label>
               <button class="capture-button" id="captureEndButton" type="button">Capture</button>
             </div>

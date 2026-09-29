@@ -148,6 +148,8 @@ const segmentTypeLabel = document.getElementById("segmentTypeLabel");
 const segmentIntroButton = document.getElementById("segmentIntroButton");
 const segmentRecapButton = document.getElementById("segmentRecapButton");
 const segmentOutroButton = document.getElementById("segmentOutroButton");
+const segmentPreviewButton = document.getElementById("segmentPreviewButton");
+const submitIntroDurationLabel = document.getElementById("submitIntroDurationLabel");
 const startTimeLabel = document.getElementById("startTimeLabel");
 const endTimeLabel = document.getElementById("endTimeLabel");
 const submitIntroStartInput = document.getElementById("submitIntroStartInput");
@@ -214,8 +216,9 @@ let state = {
   submitIntroSegmentIntroLabel: "Intro",
   submitIntroSegmentRecapLabel: "Recap",
   submitIntroSegmentOutroLabel: "Outro",
-  submitIntroStartTimeLabel: "START TIME (MM:SS)",
-  submitIntroEndTimeLabel: "END TIME (MM:SS)",
+  submitIntroSegmentPreviewLabel: "Preview",
+  submitIntroStartTimeLabel: "START TIME",
+  submitIntroEndTimeLabel: "END TIME",
   submitIntroCaptureLabel: "Capture",
   submitIntroSubmitLabel: "Submit",
   p2pConsentTitle: "P2P Streaming",
@@ -315,8 +318,9 @@ let state = {
   episodeStreamItems: [],
   blurUnwatchedEpisodes: false,
   submitIntroSegmentType: "intro",
-  submitIntroStartTime: "00:00",
-  submitIntroEndTime: "00:00",
+  submitIntroStartTime: "00:00:00",
+  submitIntroEndTime: "00:00:00",
+  existingSegmentTypes: [],
   isSubmitIntroSubmitting: false,
   submitIntroStatusMessage: "",
   showP2pConsent: false,
@@ -380,8 +384,8 @@ let pendingSpeedTimer = 0;
 let submitIntroDraft = {
   contentKey: "",
   segmentType: "intro",
-  startTime: "00:00",
-  endTime: "00:00",
+  startTime: "00:00:00",
+  endTime: "00:00:00",
   status: "",
 };
 let hasReceivedPlayerControls = false;
@@ -991,8 +995,8 @@ const openPlayerModal = modal => {
       submitIntroDraft = {
         contentKey: contentKey,
         segmentType: state.submitIntroSegmentType || "intro",
-        startTime: state.submitIntroStartTime || "00:00",
-        endTime: state.submitIntroEndTime || "00:00",
+        startTime: normalizeFlagTimestamp(state.submitIntroStartTime) || "00:00:00",
+        endTime: normalizeFlagTimestamp(state.submitIntroEndTime) || "00:00:00",
         status: "",
       };
     }
@@ -1892,18 +1896,39 @@ const renderSubmitIntroModal = () => {
   segmentIntroButton.textContent = state.submitIntroSegmentIntroLabel || "Intro";
   segmentRecapButton.textContent = state.submitIntroSegmentRecapLabel || "Recap";
   segmentOutroButton.textContent = state.submitIntroSegmentOutroLabel || "Outro";
-  startTimeLabel.textContent = state.submitIntroStartTimeLabel || "START TIME (MM:SS)";
-  endTimeLabel.textContent = state.submitIntroEndTimeLabel || "END TIME (MM:SS)";
+  segmentPreviewButton.textContent = state.submitIntroSegmentPreviewLabel || "Preview";
+  const durationMs = Math.max(0, Number(state.durationMs) || 0);
+  if (durationMs > 0) {
+    submitIntroDurationLabel.hidden = false;
+    submitIntroDurationLabel.textContent = `Length ${formatFlagTimestamp(durationMs / 1000)} (from this stream)`;
+  } else {
+    submitIntroDurationLabel.hidden = true;
+    submitIntroDurationLabel.textContent = "";
+  }
+  startTimeLabel.textContent = state.submitIntroStartTimeLabel || "START TIME";
+  endTimeLabel.textContent = state.submitIntroEndTimeLabel || "END TIME";
   captureStartButton.textContent = state.submitIntroCaptureLabel || "Capture";
   captureEndButton.textContent = state.submitIntroCaptureLabel || "Capture";
   submitIntroCancelButton.textContent = state.cancelLabel || "Cancel";
+  const existingTypes = flagSegmentTypes();
+  const segmentButtons = [segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton];
+  if (existingTypes.includes(submitIntroDraft.segmentType)) {
+    const firstAvailable = segmentButtons.find(button => !existingTypes.includes(button.dataset.segment));
+    if (firstAvailable) submitIntroDraft.segmentType = firstAvailable.dataset.segment;
+  }
+  const selectedDisabled = existingTypes.includes(submitIntroDraft.segmentType);
   submitIntroSubmitButton.textContent = state.isSubmitIntroSubmitting
     ? `${state.submitIntroSubmitLabel || "Submit"}...`
     : (state.submitIntroSubmitLabel || "Submit");
-  submitIntroSubmitButton.disabled = Boolean(state.isSubmitIntroSubmitting);
+  submitIntroSubmitButton.disabled = Boolean(state.isSubmitIntroSubmitting) || selectedDisabled;
 
-  [segmentIntroButton, segmentRecapButton, segmentOutroButton].forEach(button => {
-    button.classList.toggle("selected", button.dataset.segment === submitIntroDraft.segmentType);
+  segmentButtons.forEach(button => {
+    const segmentType = button.dataset.segment;
+    const isExisting = existingTypes.includes(segmentType);
+    button.disabled = isExisting;
+    button.classList.toggle("disabled", isExisting);
+    button.setAttribute("aria-disabled", isExisting ? "true" : "false");
+    button.classList.toggle("selected", !isExisting && segmentType === submitIntroDraft.segmentType);
   });
   setInputValue(submitIntroStartInput, submitIntroDraft.startTime);
   setInputValue(submitIntroEndInput, submitIntroDraft.endTime);
@@ -2823,14 +2848,15 @@ const updateSubmitSegment = segment => {
   renderSubmitIntroModal();
 };
 
-[segmentIntroButton, segmentRecapButton, segmentOutroButton].forEach(button => {
+[segmentIntroButton, segmentRecapButton, segmentOutroButton, segmentPreviewButton].forEach(button => {
   button.addEventListener("click", event => {
     event.stopPropagation();
+    if (button.disabled) return;
     updateSubmitSegment(button.dataset.segment || "intro");
   });
 });
 
-const currentTimeText = () => formatTime(isScrubbing ? scrubPositionMs : state.positionMs);
+const currentTimeText = () => formatFlagTimestamp((isScrubbing ? scrubPositionMs : state.positionMs) / 1000);
 
 captureStartButton.addEventListener("click", event => {
   event.stopPropagation();
@@ -2862,21 +2888,87 @@ submitIntroCancelButton.addEventListener("click", event => {
   closePlayerModal();
 });
 
+// BEGIN FLAG TIME
+const formatFlagTimestamp = totalSeconds => {
+  const numeric = Number(totalSeconds);
+  const maxSeconds = 99 * 3600 + 59 * 60 + 59;
+  const total = Number.isFinite(numeric) ? Math.max(0, Math.min(maxSeconds, Math.floor(numeric))) : 0;
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  const pad = value => String(value).padStart(2, "0");
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+};
+
 const parseIntroTime = raw => {
   const value = String(raw || "").trim();
   if (!value) return null;
   const separator = value.includes(":") ? ":" : (value.includes(".") ? "." : "");
-  if (separator) {
-    const parts = value.split(separator);
-    if (parts.length !== 2) return null;
+  if (!separator) {
+    const seconds = Number(value);
+    return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+  }
+  const parts = value.split(separator);
+  if (parts.some(part => part.trim() === "")) return null;
+  if (parts.length === 3) {
+    const hours = Number(parts[0]);
+    const minutes = Number(parts[1]);
+    const seconds = Number(parts[2]);
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || !Number.isFinite(seconds)) return null;
+    if (hours < 0 || minutes < 0 || minutes >= 60 || seconds < 0 || seconds >= 60) return null;
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+  if (parts.length === 2) {
     const minutes = Number(parts[0]);
     const seconds = Number(parts[1]);
-    if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || seconds < 0 || seconds >= 60) return null;
+    if (!Number.isFinite(minutes) || !Number.isFinite(seconds) || minutes < 0 || seconds < 0 || seconds >= 60) return null;
     return minutes * 60 + seconds;
   }
-  const seconds = Number(value);
-  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+  return null;
 };
+
+const normalizeFlagTimestamp = raw => {
+  const parsed = parseIntroTime(raw);
+  return parsed == null ? null : formatFlagTimestamp(parsed);
+};
+
+const segmentIndexForFlag = type => {
+  if (type === "recap") return 1;
+  if (type === "outro") return 2;
+  if (type === "preview") return 3;
+  return 0;
+};
+// END FLAG TIME
+
+const flagSegmentTypes = () => Array.isArray(state.existingSegmentTypes) ? state.existingSegmentTypes : [];
+
+const nudgeFlagInput = (input, deltaSeconds) => {
+  const parsed = parseIntroTime(input.value);
+  const next = Math.max(0, (parsed == null ? 0 : parsed) + deltaSeconds);
+  const text = formatFlagTimestamp(next);
+  input.value = text;
+  if (input === submitIntroStartInput) submitIntroDraft.startTime = text;
+  else submitIntroDraft.endTime = text;
+  submitIntroDraft.status = "";
+};
+
+const onFlagTimeKeyDown = event => {
+  if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+  event.preventDefault();
+  const step = event.shiftKey ? 10 : 1;
+  nudgeFlagInput(event.currentTarget, event.key === "ArrowUp" ? step : -step);
+};
+
+[submitIntroStartInput, submitIntroEndInput].forEach(input => {
+  input.addEventListener("keydown", onFlagTimeKeyDown);
+  input.addEventListener("blur", () => {
+    const normalized = normalizeFlagTimestamp(input.value);
+    if (!normalized) return;
+    input.value = normalized;
+    if (input === submitIntroStartInput) submitIntroDraft.startTime = normalized;
+    else submitIntroDraft.endTime = normalized;
+  });
+});
 
 submitIntroSubmitButton.addEventListener("click", event => {
   event.stopPropagation();
@@ -2884,12 +2976,17 @@ submitIntroSubmitButton.addEventListener("click", event => {
   submitIntroDraft.endTime = submitIntroEndInput.value;
   const start = parseIntroTime(submitIntroDraft.startTime);
   const end = parseIntroTime(submitIntroDraft.endTime);
+  if (flagSegmentTypes().includes(submitIntroDraft.segmentType)) {
+    submitIntroDraft.status = "That segment is already flagged.";
+    renderSubmitIntroModal();
+    return;
+  }
   if (start == null || end == null || end <= start) {
     submitIntroDraft.status = "Check the start and end times.";
     renderSubmitIntroModal();
     return;
   }
-  const segmentIndex = submitIntroDraft.segmentType === "recap" ? 1 : (submitIntroDraft.segmentType === "outro" ? 2 : 0);
+  const segmentIndex = segmentIndexForFlag(submitIntroDraft.segmentType);
   submitIntroDraft.status = "";
   send("submitIntroSegment", segmentIndex);
   send("submitIntroStart", start);
@@ -3047,8 +3144,8 @@ window.playerControls = nextState => {
   }
   if (submitIntroSuccessToken !== previousSubmitIntroSuccessToken) {
     submitIntroDraft.segmentType = "intro";
-    submitIntroDraft.startTime = "00:00";
-    submitIntroDraft.endTime = "00:00";
+    submitIntroDraft.startTime = "00:00:00";
+    submitIntroDraft.endTime = "00:00:00";
     submitIntroDraft.status = "";
   }
   const notificationToken = Number(state.notificationToken) || 0;
