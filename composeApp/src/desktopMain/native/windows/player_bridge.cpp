@@ -15,6 +15,8 @@
 #include <condition_variable>
 #include <cctype>
 #include <cstdint>
+#include <cstring>
+#include <cstdlib>
 #include <cstdio>
 #include <cwctype>
 #include <deque>
@@ -41,7 +43,35 @@ typedef enum mpv_format {
     MPV_FORMAT_FLAG = 3,
     MPV_FORMAT_INT64 = 4,
     MPV_FORMAT_DOUBLE = 5,
+    MPV_FORMAT_NODE = 6,
+    MPV_FORMAT_NODE_ARRAY = 7,
+    MPV_FORMAT_NODE_MAP = 8,
+    MPV_FORMAT_BYTE_ARRAY = 9,
 } mpv_format;
+
+// Minimal subset of mpv/client.h node types for dynamic libmpv loading.
+// Layout must match libmpv ABI (see Linux bridge via <mpv/client.h>).
+typedef struct mpv_node mpv_node;
+typedef struct mpv_node_list {
+    int num;
+    mpv_node *values;
+    char **keys;
+} mpv_node_list;
+typedef struct mpv_byte_array {
+    void *data;
+    size_t size;
+} mpv_byte_array;
+struct mpv_node {
+    union {
+        char *string;
+        int flag;
+        int64_t int64;
+        double double_;
+        mpv_node_list *list;
+        mpv_byte_array *ba;
+    } u;
+    mpv_format format;
+};
 
 typedef enum mpv_event_id {
     MPV_EVENT_NONE = 0,
@@ -495,6 +525,7 @@ struct MpvApi {
     using mpv_command_fn = int (*)(mpv_handle *, const char **);
     using mpv_error_string_fn = const char *(*)(int);
     using mpv_free_fn = void (*)(void *);
+    using mpv_free_node_contents_fn = void (*)(mpv_node *);
     using mpv_wait_event_fn = mpv_event *(*)(mpv_handle *, double);
     using mpv_wakeup_fn = void (*)(mpv_handle *);
 
@@ -513,6 +544,7 @@ struct MpvApi {
     mpv_command_fn command = nullptr;
     mpv_error_string_fn errorString = nullptr;
     mpv_free_fn freeValue = nullptr;
+    mpv_free_node_contents_fn freeNodeContents = nullptr;
     mpv_wait_event_fn waitEvent = nullptr;
     mpv_wakeup_fn wakeup = nullptr;
 
@@ -572,6 +604,7 @@ struct MpvApi {
         command = loadSymbol<mpv_command_fn>("mpv_command");
         errorString = loadSymbol<mpv_error_string_fn>("mpv_error_string");
         freeValue = loadSymbol<mpv_free_fn>("mpv_free");
+        freeNodeContents = loadSymbol<mpv_free_node_contents_fn>("mpv_free_node_contents");
         waitEvent = loadSymbol<mpv_wait_event_fn>("mpv_wait_event");
         wakeup = loadSymbol<mpv_wakeup_fn>("mpv_wakeup");
     }
@@ -904,6 +937,15 @@ public:
     void shutdown() {
         if (shuttingDown.exchange(true)) {
             return;
+        }
+
+        // Stop audio capture if running
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
+            isCapturingAudio = false;
+        }
+        if (audioCaptureThread.joinable()) {
+            audioCaptureThread.join();
         }
 
         // Hide the player's window immediately, asynchronously, before anything below can block.
@@ -1274,6 +1316,171 @@ public:
         appliedSubtitleStripSdh = stripSdh;
     }
 
+    void startAudioEnergyCapture(int64_t startTimeMs) {
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
+            if (isCapturingAudio && audioCaptureThread.joinable()) {
+                isCapturingAudio = false;
+            }
+        }
+        
+        if (audioCaptureThread.joinable()) {
+            audioCaptureThread.join();
+        }
+        
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
+            audioCaptureSamples.clear();
+            audioCaptureStartMs = startTimeMs;
+            isCapturingAudio = true;
+            audioCaptureStartTime = std::chrono::steady_clock::now();
+        }
+        
+        auto self = shared_from_this();
+        audioCaptureThread = std::thread([self]() {
+            self->runAudioCaptureLoop();
+        });
+    }
+
+    std::string stopAudioEnergyCapture() {
+        {
+            std::lock_guard<std::mutex> lock(audioCaptureMutex);
+            isCapturingAudio = false;
+        }
+        
+        if (audioCaptureThread.joinable()) {
+            audioCaptureThread.join();
+        }
+        
+        std::lock_guard<std::mutex> lock(audioCaptureMutex);
+        std::ostringstream json;
+        json << "[";
+        for (size_t i = 0; i < audioCaptureSamples.size(); ++i) {
+            if (i > 0) json << ",";
+            json << "{\"timestampMs\":" << audioCaptureSamples[i].timestampMs 
+                 << ",\"energy\":" << audioCaptureSamples[i].energy << "}";
+        }
+        json << "]";
+        
+        return json.str();
+    }
+
+    int64_t getAudioCaptureDuration() {
+        std::lock_guard<std::mutex> lock(audioCaptureMutex);
+        if (!isCapturingAudio || audioCaptureSamples.empty()) {
+            return 0;
+        }
+        
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now - audioCaptureStartTime
+        );
+        return elapsed.count();
+    }
+
+    void runAudioCaptureLoop() {
+        const int64_t sampleIntervalMs = 100;
+        
+        while (true) {
+            bool shouldContinue = false;
+            {
+                std::lock_guard<std::mutex> lock(audioCaptureMutex);
+                shouldContinue = isCapturingAudio;
+            }
+            
+            if (!shouldContinue) {
+                break;
+            }
+            
+            int64_t currentPosMs = positionMs();
+            double currentVolume = volume();
+            bool paused = isPaused();
+            
+            // Compute real energy from MPV astats filter
+            double energy = computeRealAudioEnergy(currentPosMs, currentVolume, paused);
+            
+            // Only store sample if we got valid energy (-1.0 = filter metadata unavailable)
+            if (energy >= 0.0) {
+                std::lock_guard<std::mutex> lock(audioCaptureMutex);
+                if (isCapturingAudio && currentPosMs >= audioCaptureStartMs) {
+                    AudioEnergySample sample;
+                    sample.timestampMs = currentPosMs;
+                    sample.energy = energy;
+                    audioCaptureSamples.push_back(sample);
+                }
+            }
+            
+            std::this_thread::sleep_for(std::chrono::milliseconds(sampleIntervalMs));
+        }
+    }
+
+    double computeRealAudioEnergy(int64_t positionMs, double volumeLevel, bool paused) {
+        // Real PCM-derived audio energy from MPV's astats filter
+        // The astats lavfi filter computes RMS levels from actual decoded audio samples
+        
+        if (paused) {
+            return 0.0;
+        }
+        
+        std::lock_guard<std::mutex> lock(mpvMutex);
+        if (!mpv) {
+            return -1.0; // Signal no MPV handle
+        }
+        
+        // Read af-metadata string properties directly (no mpv_node needed)
+        // MPV exposes filter metadata as individual string properties
+        char *rmsStr = nullptr;
+        int rmsResult = mpvApi().getProperty(mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.RMS_level", 
+                                             MPV_FORMAT_STRING, &rmsStr);
+        
+        double rmsDb = -96.0;
+        bool foundRms = false;
+        if (rmsResult >= 0 && rmsStr) {
+            rmsDb = std::atof(rmsStr);
+            mpvApi().freeValue(rmsStr);
+            foundRms = true;
+        }
+        
+        // Try peak level as fallback
+        char *peakStr = nullptr;
+        int peakResult = mpvApi().getProperty(mpv, "af-metadata/nuvio_astats/lavfi.astats.Overall.Peak_level",
+                                              MPV_FORMAT_STRING, &peakStr);
+        
+        double peakDb = -96.0;
+        bool foundPeak = false;
+        if (peakResult >= 0 && peakStr) {
+            peakDb = std::atof(peakStr);
+            mpvApi().freeValue(peakStr);
+            foundPeak = true;
+        }
+        
+        if (!foundRms && !foundPeak) {
+            // No audio statistics available - honest failure
+            return -1.0;
+        }
+        
+        // Use RMS as primary, peak as fallback
+        double useDb = foundRms ? rmsDb : peakDb;
+        
+        // Convert dB to linear energy (0-1 range)
+        // Typical dialogue: -30 to -10 dB
+        // Silence/background: -60 to -40 dB
+        double linearEnergy = 0.0;
+        if (useDb > -60.0) {
+            // Normalize: -60 dB = 0.0, -10 dB = 1.0
+            linearEnergy = (useDb + 60.0) / 50.0;
+            linearEnergy = std::max(0.0, std::min(1.0, linearEnergy));
+        }
+        
+        // Optional: scale by user volume (but don't hide real silence)
+        double scaledEnergy = linearEnergy;
+        if (volumeLevel < 0.5) {
+            scaledEnergy *= (0.5 + volumeLevel);
+        }
+        
+        return std::min(scaledEnergy, 1.0);
+    }
+
 private:
     HWND hostHwnd = nullptr;
     HWND containerHwnd = nullptr;
@@ -1317,6 +1524,18 @@ private:
     std::mutex controlsMutex;
     std::string pendingControlsJson;
     double initialStartSeconds = 0.0;
+
+    struct AudioEnergySample {
+        int64_t timestampMs;
+        double energy;
+    };
+
+    std::mutex audioCaptureMutex;
+    std::vector<AudioEnergySample> audioCaptureSamples;
+    int64_t audioCaptureStartMs = 0;
+    bool isCapturingAudio = false;
+    std::chrono::steady_clock::time_point audioCaptureStartTime;
+    std::thread audioCaptureThread;
 
     friend LRESULT CALLBACK messageWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK containerWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -1662,6 +1881,10 @@ private:
             setMpvOptionStringLocked("demuxer-seekable-cache", "yes");
             setMpvOptionStringLocked("cache-secs", "36000");
             setMpvOptionStringLocked("hr-seek", "no");
+            
+            // Audio statistics filter for real PCM-derived energy measurement
+            // Label as @nuvio_astats so we can read from af-metadata/nuvio_astats
+            setMpvOptionStringLocked("af", "@nuvio_astats:lavfi=[astats=metadata=1:reset=1]");
 
             int64_t wid = (int64_t)(intptr_t)containerHwnd;
             int widResult = api.setOption(mpv, "wid", MPV_FORMAT_INT64, &wid);
@@ -2592,4 +2815,36 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_applySubtitleStyle
         useLibass == JNI_TRUE,
         stripSdh == JNI_TRUE
     );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_startAudioEnergyCapture(
+    JNIEnv *,
+    jobject,
+    jlong handle,
+    jlong startTimeMs
+) {
+    auto player = playerFromHandle(handle);
+    if (player) player->startAudioEnergyCapture(startTimeMs);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_stopAudioEnergyCapture(
+    JNIEnv *env,
+    jobject,
+    jlong handle
+) {
+    auto player = playerFromHandle(handle);
+    std::string result = player ? player->stopAudioEnergyCapture() : "[]";
+    return newJavaStringUtf8(env, result);
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_getAudioCaptureDuration(
+    JNIEnv *,
+    jobject,
+    jlong handle
+) {
+    auto player = playerFromHandle(handle);
+    return player ? player->getAudioCaptureDuration() : 0;
 }
