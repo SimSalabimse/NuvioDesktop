@@ -592,12 +592,7 @@ internal class NativePlayerController(
         val current = handle
         if (current != 0L) {
             val nextLevel = level.coerceDesktopPlayerVolumeLevel()
-            rememberedVolumeLevel = nextLevel
-            currentVolumeLevel = nextLevel
-            DesktopPlayerVolumeStorage.saveVolumeLevel(nextLevel)
-            NativePlayerBridge.setVolume(current, nextLevel)
-            controlsState = controlsState.copy(volumeLevel = nextLevel)
-            updateControls(controlsState)
+            setVolumeInternal(current, nextLevel, persistent = true)
         }
     }
 
@@ -606,10 +601,7 @@ internal class NativePlayerController(
         val current = handle
         if (current != 0L) {
             val nextLevel = level.coerceDesktopPlayerVolumeLevel()
-            currentVolumeLevel = nextLevel
-            NativePlayerBridge.setVolume(current, nextLevel)
-            controlsState = controlsState.copy(volumeLevel = nextLevel)
-            updateControls(controlsState)
+            setVolumeInternal(current, nextLevel, persistent = false)
         }
     }
 
@@ -618,10 +610,20 @@ internal class NativePlayerController(
         val current = handle
         if (current == 0L) return
         val level = rememberedVolumeLevel.coerceDesktopPlayerVolumeLevel()
-        currentVolumeLevel = level
-        NativePlayerBridge.setVolume(current, level)
-        controlsState = controlsState.copy(volumeLevel = level)
+        setVolumeInternal(current, level, persistent = false)
         log.d { "applied remembered volume level=$level handle=$current" }
+    }
+
+    private fun setVolumeInternal(handle: Long, level: Float, persistent: Boolean) {
+        val coercedLevel = level.coerceDesktopPlayerVolumeLevel()
+        if (persistent) {
+            rememberedVolumeLevel = coercedLevel
+            DesktopPlayerVolumeStorage.saveVolumeLevel(coercedLevel)
+        }
+        currentVolumeLevel = coercedLevel
+        NativePlayerBridge.setVolume(handle, coercedLevel)
+        controlsState = controlsState.copy(volumeLevel = coercedLevel)
+        updateControls(controlsState)
     }
 
     private fun fallbackSeekBy(offsetMs: Long) {
@@ -779,6 +781,7 @@ internal class NativePlayerController(
             if (releaseRequested) {
                 false
             } else {
+                releaseRequested = true
                 pendingSource = null
                 true
             }
