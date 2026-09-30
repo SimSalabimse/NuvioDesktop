@@ -19,15 +19,18 @@ class FlagSubmitTimesTest {
     }
 
     @Test
-    fun disabledTypesUnionExistingIntervalsAndSessionSubmits() {
-        val intervals = listOf(
-            SkipInterval(0.0, 90.0, "intro", "introdb"),
-            SkipInterval(1_200.0, 1_260.0, "ending", "introdb"),
-        )
-
+    fun disabledTypesIgnoreCommunityIntervalsAndKeepOwnSessionSubmits() {
         assertEquals(
-            listOf("intro", "outro", "preview"),
-            disabledFlagSegmentTypes(intervals, submittedInSession = setOf("preview", "intro")),
+            listOf("preview"),
+            disabledFlagSegmentTypes(submittedInSession = setOf("preview", "chapter")),
+        )
+        assertEquals(
+            emptyList(),
+            disabledFlagSegmentTypes(submittedInSession = emptySet()),
+        )
+        assertEquals(
+            listOf("intro", "outro"),
+            disabledFlagSegmentTypes(submittedInSession = setOf("opening", "ending", "credits")),
         )
     }
 

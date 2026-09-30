@@ -15,10 +15,6 @@ internal fun canonicalFlagSegmentType(raw: String?): String? {
 }
 
 /**
- * Segment buttons to gray out: types already stored for this title, plus types
- * flagged earlier in this playback session.
- */
-/**
  * Player header flag. A saved IntroDB key is not required to show the button;
  * the submit dialog explains when the key is missing.
  */
@@ -28,12 +24,14 @@ internal fun shouldShowSubmitIntroFlag(
     imdbId: String?,
 ): Boolean = isSeries && introSubmitEnabled && !imdbId.isNullOrBlank()
 
+/**
+ * Segment buttons to gray out. Community skip data from other people must stay
+ * submittable. Only types this user already flagged in the current session count.
+ */
 internal fun disabledFlagSegmentTypes(
-    skipIntervals: List<SkipInterval>,
     submittedInSession: Set<String>,
 ): List<String> {
     val types = LinkedHashSet<String>()
-    skipIntervals.mapNotNullTo(types) { canonicalFlagSegmentType(it.type) }
     submittedInSession.mapNotNullTo(types) { canonicalFlagSegmentType(it) }
     return types.toList()
 }

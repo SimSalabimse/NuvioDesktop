@@ -397,7 +397,6 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroStartTime = submitIntroStartTimeStr,
         submitIntroEndTime = submitIntroEndTimeStr,
         existingSegmentTypes = disabledFlagSegmentTypes(
-            skipIntervals = skipIntervals,
             submittedInSession = submittedFlagSegmentTypesByVideoId[activeSubmitIntroContentKey()].orEmpty(),
         ),
         isSubmitIntroSubmitting = isSubmitIntroSubmitting,
