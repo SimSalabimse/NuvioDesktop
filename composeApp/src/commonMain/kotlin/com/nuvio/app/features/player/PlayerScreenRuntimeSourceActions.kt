@@ -164,7 +164,7 @@ internal fun PlayerScreenRuntime.switchToP2pSourceStream(stream: StreamItem) {
         pendingP2pSwitch = PendingPlayerP2pSwitch(stream = stream, episode = null, isAutoPlay = false)
         return
     }
-    val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
+    val currentPositionMs = playheadPositionMs().coerceAtLeast(0L)
     flushWatchProgress()
     stopActiveP2pStream()
     saveP2pStreamForReuse(
@@ -263,7 +263,7 @@ internal fun PlayerScreenRuntime.switchToSource(stream: StreamItem) {
         activeSourceIdentityKey = sourceIdentityKey ?: activeSourceIdentityKey
         return
     }
-    val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
+    val currentPositionMs = playheadPositionMs().coerceAtLeast(0L)
     flushWatchProgress()
     stopActiveP2pStream()
     val currentVideoId = activeVideoId

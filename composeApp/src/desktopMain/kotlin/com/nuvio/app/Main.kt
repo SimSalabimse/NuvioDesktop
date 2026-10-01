@@ -169,24 +169,39 @@ fun main(args: Array<String>) {
             LaunchedEffect(windowState) {
                 // Only persist geometry while windowed: fullscreen/native-Windows-fullscreen
                 // coordinates aren't a meaningful "windowed position" to restore later.
-                snapshotFlow { Triple(windowState.placement, windowState.position, windowState.size) }
-                    .collect { (placement, position, size) ->
-                        val isFullscreen = fullscreenController.isFullscreen(window, windowState)
-                        if (!isFullscreen && restoresMaximizedWindowPlacement) {
-                            DesktopWindowModeStorage.saveWasMaximized(placement == WindowPlacement.Maximized)
-                        }
-                        val isWindowed = placement == WindowPlacement.Floating && !isFullscreen
-                        if (isWindowed && position.isSpecified) {
-                            DesktopWindowModeStorage.saveWindowedGeometry(
-                                DesktopWindowGeometry(
+                // Dragging emits a placement on every pixel, so the file write is throttled
+                // and the newest rectangle is flushed when this effect leaves.
+                val geometryWriteIntervalMs = 300L
+                var lastGeometryWriteMs = 0L
+                var pendingGeometry: DesktopWindowGeometry? = null
+                try {
+                    snapshotFlow { Triple(windowState.placement, windowState.position, windowState.size) }
+                        .collect { (placement, position, size) ->
+                            val isFullscreen = fullscreenController.isFullscreen(window, windowState)
+                            if (!isFullscreen && restoresMaximizedWindowPlacement) {
+                                DesktopWindowModeStorage.saveWasMaximized(placement == WindowPlacement.Maximized)
+                            }
+                            val isWindowed = placement == WindowPlacement.Floating && !isFullscreen
+                            if (isWindowed && position.isSpecified) {
+                                val geometry = DesktopWindowGeometry(
                                     x = position.x.value,
                                     y = position.y.value,
                                     width = size.width.value,
                                     height = size.height.value,
-                                ),
-                            )
+                                )
+                                val now = System.currentTimeMillis()
+                                if (now - lastGeometryWriteMs >= geometryWriteIntervalMs) {
+                                    DesktopWindowModeStorage.saveWindowedGeometry(geometry)
+                                    lastGeometryWriteMs = now
+                                    pendingGeometry = null
+                                } else {
+                                    pendingGeometry = geometry
+                                }
+                            }
                         }
-                    }
+                } finally {
+                    pendingGeometry?.let(DesktopWindowModeStorage::saveWindowedGeometry)
+                }
             }
             DisposableEffect(window, windowState) {
                 val unregisterFullscreenToggle = registerDesktopAppFullscreenToggle(

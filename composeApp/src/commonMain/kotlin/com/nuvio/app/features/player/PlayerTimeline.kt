@@ -18,10 +18,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.drawBehind
@@ -43,6 +45,40 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 internal val PlayerTimelineContentInset = 2.dp
+
+internal val LocalPlaybackClock = staticCompositionLocalOf<State<PlaybackClock>?> { null }
+internal val LocalPlaybackClockLive = staticCompositionLocalOf { false }
+internal val LocalTimelineScrubbing = staticCompositionLocalOf { false }
+
+@Composable
+internal fun liveTimelinePositionMs(fallbackPositionMs: Long): Long {
+    if (LocalTimelineScrubbing.current || !LocalPlaybackClockLive.current) return fallbackPositionMs
+    return LocalPlaybackClock.current?.value?.positionMs ?: fallbackPositionMs
+}
+
+@Composable
+internal fun liveBufferedPositionMs(fallbackBufferedMs: Long): Long {
+    if (LocalTimelineScrubbing.current || !LocalPlaybackClockLive.current) return fallbackBufferedMs
+    return LocalPlaybackClock.current?.value?.bufferedPositionMs ?: fallbackBufferedMs
+}
+
+@Composable
+internal fun PlaybackRuntimeLabel(
+    fallbackPositionMs: Long,
+    durationMs: Long,
+    showRemainingTime: Boolean,
+    style: androidx.compose.ui.text.TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = formatPlaybackRuntime(liveTimelinePositionMs(fallbackPositionMs), durationMs, showRemainingTime),
+        style = style,
+        color = color,
+        maxLines = 1,
+        modifier = modifier,
+    )
+}
 
 @Composable
 internal fun PlayerTimelineDetails(
@@ -113,7 +149,8 @@ internal fun PlayerTimeline(
 ) {
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
-    val bufferedFraction = (snapshot.bufferedPositionMs.toFloat() / rangeEnd).coerceIn(0f, 1f)
+    val timelinePositionMs = liveTimelinePositionMs(displayedPositionMs)
+    val bufferedFraction = (liveBufferedPositionMs(snapshot.bufferedPositionMs).toFloat() / rangeEnd).coerceIn(0f, 1f)
     val accent = MaterialTheme.colorScheme.primary
     val accentBrush = MaterialTheme.themePalette.accentBrush()
     val description = stringResource(Res.string.player_seek_position)
@@ -130,14 +167,14 @@ internal fun PlayerTimeline(
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Slider(
-            value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
+            value = timelinePositionMs.coerceIn(0L, durationMs).toFloat(),
             onValueChange = { value ->
                 val position = value.toLong().coerceIn(0L, durationMs)
                 scrubPosition = position
                 onScrubChange(position)
             },
             onValueChangeFinished = {
-                onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
+                onScrubFinished((scrubPosition ?: timelinePositionMs).coerceIn(0L, durationMs))
                 scrubPosition = null
             },
             valueRange = 0f..rangeEnd,

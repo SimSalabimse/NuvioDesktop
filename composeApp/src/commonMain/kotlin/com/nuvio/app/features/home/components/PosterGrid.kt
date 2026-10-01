@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioAsyncImage
+import com.nuvio.app.core.ui.posterImageRequest
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
 import com.nuvio.app.core.ui.SkeletonPoster
@@ -144,20 +145,15 @@ private fun PosterGridTile(
                         hoverScaleEnabled = false,
                     ),
             ) {
-                if (item.poster != null) {
+                val poster = item.poster
+                if (poster != null) {
                     val platformContext = coil3.compose.LocalPlatformContext.current
-                    val hasFallback = !item.rawPosterUrl.isNullOrBlank() && item.rawPosterUrl != item.poster
-                    val imageModel = remember(item.poster, item.rawPosterUrl, platformContext) {
-                        if (hasFallback) {
-                            coil3.request.ImageRequest.Builder(platformContext)
-                                .data(item.poster)
-                                .memoryCacheKeyExtras(
-                                    mapOf(com.nuvio.app.core.poster.CustomPosterFallbackInterceptor.FALLBACK_URL_KEY to item.rawPosterUrl!!)
-                                )
-                                .build()
-                        } else {
-                            item.poster
-                        }
+                    val imageModel = remember(poster, item.rawPosterUrl, platformContext) {
+                        posterImageRequest(
+                            context = platformContext,
+                            imageUrl = poster,
+                            fallbackImageUrl = item.rawPosterUrl,
+                        )
                     }
                     if (isDesktop) {
                         NuvioAsyncImage(

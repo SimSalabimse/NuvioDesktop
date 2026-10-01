@@ -171,6 +171,8 @@ internal class PlayerScreenRuntime(
     var layoutSize by mutableStateOf(IntSize.Zero)
     var playbackSnapshot by mutableStateOf(PlayerPlaybackSnapshot())
     var playbackSnapshotKey by mutableStateOf<PlaybackKey?>(null)
+    val playbackClockState = mutableStateOf(PlaybackClock())
+    var playbackClockLive = false
     var playerController by mutableStateOf<PlayerEngineController?>(null)
     var playerLifecycleController by mutableStateOf<PlayerEngineController?>(null)
     val playerReleaseSurfaceRetention = PlayerReleaseSurfaceRetention()

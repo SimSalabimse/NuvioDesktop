@@ -54,7 +54,7 @@ internal fun PlayerScreenRuntime.loadSubtitleAutoSyncCues(force: Boolean = false
 
 internal fun PlayerScreenRuntime.captureSubtitleAutoSyncTime() {
     subtitleAutoSyncState = subtitleAutoSyncState.copy(
-        capturedPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L),
+        capturedPositionMs = playheadPositionMs().coerceAtLeast(0L),
         errorMessage = null,
     )
     loadSubtitleAutoSyncCues()

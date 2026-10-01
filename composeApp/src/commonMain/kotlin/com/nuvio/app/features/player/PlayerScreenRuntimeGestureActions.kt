@@ -2,6 +2,8 @@ package com.nuvio.app.features.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -173,7 +175,7 @@ internal fun PlayerScreenRuntime.prepareTogglePlaybackForNativeFallback(revealCo
 }
 
 internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
-    val fromMs = playbackSnapshot.positionMs
+    val fromMs = playheadPositionMs()
     val targetMs = (fromMs + offsetMs).coerceAtLeast(0L)
         .let { if (playbackSnapshot.durationMs > 0L) it.coerceAtMost(playbackSnapshot.durationMs) else it }
     lastManualSkipSeekPositions = fromMs to targetMs
@@ -214,7 +216,7 @@ private fun PlayerScreenRuntime.handleDoubleTapSeek(
     direction: PlayerSeekDirection,
     sendToController: Boolean,
 ) {
-    val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
+    val currentPositionMs = playheadPositionMs().coerceAtLeast(0L)
     val currentSeekState = accumulatedSeekState
     val nextState = if (currentSeekState?.direction == direction) {
         currentSeekState.copy(amountMs = currentSeekState.amountMs + PlayerDoubleTapSeekStepMs)
@@ -350,10 +352,10 @@ internal fun PlayerScreenRuntime.rememberSurfaceGestureCallbacks(): PlayerSurfac
         isHoldToSpeedGestureActive = rememberUpdatedState(isHoldToSpeedGestureActive),
         touchGesturesEnabled = rememberUpdatedState(playerSettingsUiState.touchGesturesEnabled),
         playerControlsLocked = rememberUpdatedState(playerControlsLocked),
-        currentPositionMs = rememberUpdatedState(playbackSnapshot.positionMs.coerceAtLeast(0L)),
+        currentPositionMs = remember { derivedStateOf { playheadPositionMs().coerceAtLeast(0L) } },
         currentDurationMs = rememberUpdatedState(playbackSnapshot.durationMs),
         commitHorizontalSeek = rememberUpdatedState { targetPositionMs: Long ->
-            lastManualSkipSeekPositions = playbackSnapshot.positionMs to targetPositionMs
+            lastManualSkipSeekPositions = playheadPositionMs() to targetPositionMs
             playerController?.seekTo(targetPositionMs)
             scheduleProgressSyncAfterSeek()
         },

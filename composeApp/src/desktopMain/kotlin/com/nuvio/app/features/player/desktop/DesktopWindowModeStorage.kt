@@ -49,9 +49,13 @@ internal object DesktopWindowModeStorage {
     }
 
     fun saveWindowedGeometry(geometry: DesktopWindowGeometry) {
-        store.putFloat(WindowXKey, geometry.x)
-        store.putFloat(WindowYKey, geometry.y)
-        store.putFloat(WindowWidthKey, geometry.width)
-        store.putFloat(WindowHeightKey, geometry.height)
+        store.putFloats(
+            mapOf(
+                WindowXKey to geometry.x,
+                WindowYKey to geometry.y,
+                WindowWidthKey to geometry.width,
+                WindowHeightKey to geometry.height,
+            ),
+        )
     }
 }

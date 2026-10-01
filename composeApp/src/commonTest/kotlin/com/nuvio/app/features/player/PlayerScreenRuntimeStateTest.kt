@@ -36,7 +36,8 @@ class PlayerScreenRuntimeStateTest {
 
         runtime.updatePlaybackSnapshot(buffering.copy(positionMs = 80_000L))
         assertNull(runtime.scrubbingPositionMs)
-        assertEquals(80_000L, runtime.playbackSnapshot.positionMs)
+        assertEquals(80_000L, runtime.playbackClockState.value.positionMs)
+        assertEquals(30_000L, runtime.playbackSnapshot.positionMs)
     }
 
     @Test

@@ -3095,8 +3095,10 @@ window.playerUpdate = update => {
   const volumeLevel = Number.isFinite(reportedVolumeLevel)
     ? clampVolumeLevel(reportedVolumeLevel)
     : state.volumeLevel;
-  const audioTracks = normalizeTracks(update.audioTracks);
-  const subtitleTracks = normalizeTracks(update.subtitleTracks);
+  const hasAudioTracks = Object.prototype.hasOwnProperty.call(update, "audioTracks");
+  const hasSubtitleTracks = Object.prototype.hasOwnProperty.call(update, "subtitleTracks");
+  const audioTracks = hasAudioTracks ? normalizeTracks(update.audioTracks) : state.audioTracks;
+  const subtitleTracks = hasSubtitleTracks ? normalizeTracks(update.subtitleTracks) : state.subtitleTracks;
   const audioTracksChanged = trackListSignature(audioTracks) !== trackListSignature(state.audioTracks);
   const subtitleTracksChanged = trackListSignature(subtitleTracks) !== trackListSignature(state.subtitleTracks);
   const nativeIsPlaying = !Boolean(update.paused);

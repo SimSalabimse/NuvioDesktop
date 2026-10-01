@@ -208,11 +208,12 @@ internal fun PlayerControlActions(
                 ),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Text(
-                    text = formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, showRemainingTime),
+                PlaybackRuntimeLabel(
+                    fallbackPositionMs = displayedPositionMs,
+                    durationMs = playbackSnapshot.durationMs,
+                    showRemainingTime = showRemainingTime,
                     style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontSize = (metrics.timeSize.value + 2).sp),
                     color = Color.White.copy(alpha = 0.9f),
-                    maxLines = 1,
                 )
             }
         }

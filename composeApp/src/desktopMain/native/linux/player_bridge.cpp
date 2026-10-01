@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <atomic>
 #include <clocale>
+#include <cmath>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
@@ -101,6 +102,22 @@ struct Player {
     // also what restores the page after a web-process crash/reload.
     std::string pendingControlsJson;
     std::atomic<bool> firstFrameShown{false};  // gates the loading-screen composite
+    // Playback snapshot written on the mpv event thread. JNI getters and the
+    // controls timer only read these; they must not call mpv_get_property.
+    std::atomic<double> cachedDuration{0.0};
+    std::atomic<double> cachedPosition{0.0};
+    std::atomic<double> cachedBuffered{0.0};
+    std::atomic<double> cachedSpeed{1.0};
+    std::atomic<double> cachedVolume{1.0};
+    std::atomic<bool> cachedPaused{false};
+    std::atomic<bool> cachedLoading{true};
+    std::atomic<bool> cachedEnded{false};
+    std::atomic<bool> tracksDirty{true};
+    std::mutex tracksMutex;
+    std::string cachedAudioTracks;
+    std::string cachedSubtitleTracks;
+    std::string lastSentAudioTracks;
+    std::string lastSentSubtitleTracks;
     // Keyboard shortcuts render a small feedback toast in the page without
     // revealing the chrome, so they open the composite gate for a bounded
     // window instead of latching overlayActive (nothing would ever close it —
@@ -290,7 +307,7 @@ bool computeLoading(mpv_handle *mpv) {
 // the first frame, fall back to computeLoading so mid-playback rebuffers still show.
 bool playerLoading(Player *p) {
     if (!p || !p->mpv) return true;
-    return !p->firstFrameShown.load() || computeLoading(p->mpv);
+    return p->cachedLoading.load();
 }
 
 void mpvSetDouble(mpv_handle *mpv, const char *name, double value) {
@@ -454,12 +471,15 @@ void onPlayerMessage(WebKitUserContentManager *, WebKitJavascriptResult *js, gpo
         if (strcmp(type, "setPlaybackState") == 0 ||
             strcmp(type, "setPlaybackStateQuiet") == 0) {
             bool shouldPlay = value >= 0.5;
-            if (shouldPlay && (player->ended.load() || mpvGetFlag(player->mpv, "eof-reached"))) {
+            if (shouldPlay && player->cachedEnded.load()) {
                 const char *cmd[] = {"seek", "0", "absolute", nullptr};
                 mpv_command(player->mpv, cmd);
                 player->ended.store(false);
+                player->cachedEnded.store(false);
+                player->cachedPosition.store(0.0);
             }
             mpvSetFlag(player->mpv, "pause", !shouldPlay);
+            player->cachedPaused.store(!shouldPlay);
         } else if (strncmp(type, "keyboard", 8) == 0) {
             // Keyboard shortcuts (page keydown, real X focus): the page renders
             // its feedback toast without revealing the chrome, so neither latch
@@ -865,20 +885,39 @@ gboolean pushPlayerUpdate(gpointer data) {
             if (!onTop) XRaiseWindow(dpy, player->overlayXid);
         }
     }
-    double duration = mpvGetDouble(player->mpv, "duration");
-    double position = mpvGetDouble(player->mpv, "time-pos");
-    double volumeLevel = mpvGetDouble(player->mpv, "volume") / 100.0;
-    volumeLevel = std::max(0.0, std::min(kMaxVolumePercent / 100.0, volumeLevel));
-    bool paused = mpvGetFlag(player->mpv, "pause");
-    bool loading = playerLoading(player);
-    std::string audioTracks = buildTracksJson(player->mpv, "audio");
-    std::string subtitleTracks = buildTracksJson(player->mpv, "sub");
-    char head[224];
-    snprintf(head, sizeof(head),
-             "window.playerUpdate&&window.playerUpdate({duration:%0.3f,position:%0.3f,volumeLevel:%0.3f,paused:%s,loading:%s,audioTracks:",
-             duration, position, volumeLevel, paused ? "true" : "false", loading ? "true" : "false");
-    std::string js = std::string(head) + audioTracks +
-                     ",subtitleTracks:" + subtitleTracks + "})";
+    double duration = player->cachedDuration.load();
+    double position = player->cachedPosition.load();
+    double volumeLevel = player->cachedVolume.load();
+    bool paused = player->cachedPaused.load();
+    bool loading = player->cachedLoading.load();
+    std::string audioTracks;
+    std::string subtitleTracks;
+    bool includeTracks = false;
+    {
+        std::lock_guard<std::mutex> lock(player->tracksMutex);
+        std::string audio = player->cachedAudioTracks.empty() ? "[]" : player->cachedAudioTracks;
+        std::string subs = player->cachedSubtitleTracks.empty() ? "[]" : player->cachedSubtitleTracks;
+        if (audio != player->lastSentAudioTracks || subs != player->lastSentSubtitleTracks) {
+            audioTracks = std::move(audio);
+            subtitleTracks = std::move(subs);
+            player->lastSentAudioTracks = audioTracks;
+            player->lastSentSubtitleTracks = subtitleTracks;
+            includeTracks = true;
+        }
+    }
+    char head[320];
+    std::string js;
+    if (includeTracks) {
+        snprintf(head, sizeof(head),
+                 "window.playerUpdate&&window.playerUpdate({duration:%0.3f,position:%0.3f,volumeLevel:%0.3f,paused:%s,loading:%s,audioTracks:",
+                 duration, position, volumeLevel, paused ? "true" : "false", loading ? "true" : "false");
+        js = std::string(head) + audioTracks + ",subtitleTracks:" + subtitleTracks + "})";
+    } else {
+        snprintf(head, sizeof(head),
+                 "window.playerUpdate&&window.playerUpdate({duration:%0.3f,position:%0.3f,volumeLevel:%0.3f,paused:%s,loading:%s})",
+                 duration, position, volumeLevel, paused ? "true" : "false", loading ? "true" : "false");
+        js = head;
+    }
     evalJs(player->webview, js);
     return G_SOURCE_CONTINUE;
 }
@@ -1455,37 +1494,95 @@ gboolean warmupOnGtk(gpointer data) {
     return G_SOURCE_REMOVE;
 }
 
+// One playback snapshot for the JNI getters and the controls timer. Runs only
+// on the mpv event thread. Track JSON is rebuilt only when the list or the
+// selected track changed.
+void refreshPlaybackCache(Player *player) {
+    if (!player || !player->mpv || !player->running.load()) return;
+    mpv_handle *mpv = player->mpv;
+    double duration = mpvGetDouble(mpv, "duration");
+    double position = mpvGetDouble(mpv, "time-pos");
+    if (!std::isfinite(position) || position < 0.0) position = std::max(player->cachedPosition.load(), 0.0);
+    double cacheTime = mpvGetDouble(mpv, "demuxer-cache-time");
+    double buffered = cacheTime > position ? cacheTime : position;
+    bool paused = mpvGetFlag(mpv, "pause");
+    bool ended = mpvGetFlag(mpv, "eof-reached") || player->ended.load();
+    bool loading = !player->firstFrameShown.load() || computeLoading(mpv);
+    double speed = mpvGetDouble(mpv, "speed");
+    if (!std::isfinite(speed) || speed <= 0.0) speed = player->cachedSpeed.load();
+    double volume = mpvGetDouble(mpv, "volume");
+    if (!std::isfinite(volume)) volume = player->cachedVolume.load() * 100.0;
+    volume = std::max(0.0, std::min(kMaxVolumePercent, volume)) / 100.0;
+
+    player->cachedDuration.store(std::max(duration, 0.0));
+    player->cachedPosition.store(std::max(position, 0.0));
+    player->cachedBuffered.store(std::max(buffered, 0.0));
+    player->cachedSpeed.store(speed);
+    player->cachedVolume.store(volume);
+    player->cachedPaused.store(paused);
+    player->cachedEnded.store(ended);
+    player->cachedLoading.store(loading);
+
+    if (!player->tracksDirty.exchange(false)) return;
+    std::string audio = buildTracksJson(mpv, "audio");
+    std::string subtitles = buildTracksJson(mpv, "sub");
+    std::lock_guard<std::mutex> lock(player->tracksMutex);
+    player->cachedAudioTracks = std::move(audio);
+    player->cachedSubtitleTracks = std::move(subtitles);
+}
+
+void markTracksDirty(Player *player) {
+    if (!player) return;
+    player->tracksDirty.store(true);
+    if (player->mpv) mpv_wakeup(player->mpv);
+}
+
 // Drains the mpv event queue so the core keeps running and tracks EOF.
 void runEventLoop(Player *player) {
+    if (player->mpv) {
+        mpv_observe_property(player->mpv, 1, "track-list", MPV_FORMAT_NONE);
+        mpv_observe_property(player->mpv, 2, "aid", MPV_FORMAT_NONE);
+        mpv_observe_property(player->mpv, 3, "sid", MPV_FORMAT_NONE);
+    }
     while (player->running.load()) {
         mpv_event *event = mpv_wait_event(player->mpv, 0.05);
-        if (!event || event->event_id == MPV_EVENT_NONE) continue;
-        switch (event->event_id) {
-            case MPV_EVENT_LOG_MESSAGE: {
-                auto *msg = static_cast<mpv_event_log_message *>(event->data);
-                if (msg) NUVIO_LOG("mpv[%s] %s: %s", msg->level, msg->prefix, msg->text);
-                break;
-            }
-            case MPV_EVENT_END_FILE: {
-                auto *end = static_cast<mpv_event_end_file *>(event->data);
-                if (end && end->reason == MPV_END_FILE_REASON_EOF) {
-                    player->ended.store(true);
+        if (event && event->event_id != MPV_EVENT_NONE) {
+            switch (event->event_id) {
+                case MPV_EVENT_LOG_MESSAGE: {
+                    auto *msg = static_cast<mpv_event_log_message *>(event->data);
+                    if (msg) NUVIO_LOG("mpv[%s] %s: %s", msg->level, msg->prefix, msg->text);
+                    break;
                 }
-                break;
+                case MPV_EVENT_END_FILE: {
+                    auto *end = static_cast<mpv_event_end_file *>(event->data);
+                    if (end && end->reason == MPV_END_FILE_REASON_EOF) {
+                        player->ended.store(true);
+                    }
+                    break;
+                }
+                case MPV_EVENT_START_FILE:
+                    player->ended.store(false);
+                    player->cachedEnded.store(false);
+                    player->firstFrameShown.store(false);  // re-show loading for the new file
+                    player->tracksDirty.store(true);
+                    break;
+                case MPV_EVENT_PLAYBACK_RESTART:
+                    player->firstFrameShown.store(true);
+                    break;
+                case MPV_EVENT_PROPERTY_CHANGE:
+                    if (event->reply_userdata >= 1 && event->reply_userdata <= 3) {
+                        player->tracksDirty.store(true);
+                    }
+                    break;
+                case MPV_EVENT_SHUTDOWN:
+                    player->running.store(false);
+                    break;
+                default:
+                    break;
             }
-            case MPV_EVENT_START_FILE:
-                player->ended.store(false);
-                player->firstFrameShown.store(false);  // re-show loading for the new file
-                break;
-            case MPV_EVENT_PLAYBACK_RESTART:
-                player->firstFrameShown.store(true);
-                break;
-            case MPV_EVENT_SHUTDOWN:
-                player->running.store(false);
-                break;
-            default:
-                break;
         }
+        if (!player->running.load()) break;
+        refreshPlaybackCache(player);
     }
 }
 
@@ -1700,6 +1797,10 @@ JNIEXPORT jlong JNICALL NP(create)(
         gLivePlayers.insert(player);
     }
 
+    player->cachedPosition.store(initialPositionMs > 0 ? static_cast<double>(initialPositionMs) / 1000.0 : 0.0);
+    player->cachedPaused.store(playWhenReady == JNI_FALSE);
+    player->cachedLoading.store(true);
+    player->tracksDirty.store(true);
     player->running.store(true);
     player->eventThread = std::thread(runEventLoop, player);
 
@@ -1746,7 +1847,9 @@ JNIEXPORT void JNICALL NP(dispose)(JNIEnv *env, jobject, jlong handle) {
 
 JNIEXPORT void JNICALL NP(setPaused)(JNIEnv *, jobject, jlong handle, jboolean paused) {
     Player *p = asPlayer(handle);
-    if (p) mpvSetFlag(p->mpv, "pause", paused == JNI_TRUE);
+    if (!p) return;
+    mpvSetFlag(p->mpv, "pause", paused == JNI_TRUE);
+    p->cachedPaused.store(paused == JNI_TRUE);
 }
 
 JNIEXPORT void JNICALL NP(seekTo)(JNIEnv *, jobject, jlong handle, jlong positionMs) {
@@ -1756,6 +1859,8 @@ JNIEXPORT void JNICALL NP(seekTo)(JNIEnv *, jobject, jlong handle, jlong positio
     const char *cmd[] = {"seek", target.c_str(), "absolute", nullptr};
     mpv_command(p->mpv, cmd);
     p->ended.store(false);
+    p->cachedEnded.store(false);
+    p->cachedPosition.store(std::max(static_cast<double>(positionMs) / 1000.0, 0.0));
 }
 
 JNIEXPORT void JNICALL NP(seekBy)(JNIEnv *, jobject, jlong handle, jlong offsetMs) {
@@ -1765,11 +1870,16 @@ JNIEXPORT void JNICALL NP(seekBy)(JNIEnv *, jobject, jlong handle, jlong offsetM
     const char *cmd[] = {"seek", delta.c_str(), "relative", nullptr};
     mpv_command(p->mpv, cmd);
     p->ended.store(false);
+    p->cachedEnded.store(false);
+    double next = std::max(p->cachedPosition.load() + (static_cast<double>(offsetMs) / 1000.0), 0.0);
+    p->cachedPosition.store(next);
 }
 
 JNIEXPORT void JNICALL NP(setSpeed)(JNIEnv *, jobject, jlong handle, jfloat speed) {
     Player *p = asPlayer(handle);
-    if (p) mpvSetDouble(p->mpv, "speed", speed);
+    if (!p) return;
+    mpvSetDouble(p->mpv, "speed", speed);
+    p->cachedSpeed.store(speed);
 }
 
 JNIEXPORT void JNICALL NP(setVolume)(JNIEnv *, jobject, jlong handle, jfloat level) {
@@ -1779,43 +1889,42 @@ JNIEXPORT void JNICALL NP(setVolume)(JNIEnv *, jobject, jlong handle, jfloat lev
     if (next < 0) next = 0;
     if (next > kMaxVolumePercent) next = kMaxVolumePercent;
     mpvSetDouble(p->mpv, "volume", next);
+    p->cachedVolume.store(next / 100.0);
 }
 
 JNIEXPORT void JNICALL NP(adjustVolume)(JNIEnv *, jobject, jlong handle, jfloat delta) {
     Player *p = asPlayer(handle);
     if (!p) return;
-    double current = mpvGetDouble(p->mpv, "volume");
+    double current = p->cachedVolume.load() * 100.0;
     double next = current + delta * 100.0;
     if (next < 0) next = 0;
     if (next > kMaxVolumePercent) next = kMaxVolumePercent;
     mpvSetDouble(p->mpv, "volume", next);
+    p->cachedVolume.store(next / 100.0);
 }
 
 JNIEXPORT jfloat JNICALL NP(volume)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return 0.0f;
-    return static_cast<jfloat>(mpvGetDouble(p->mpv, "volume") / 100.0);
+    return static_cast<jfloat>(p->cachedVolume.load());
 }
 
 JNIEXPORT jlong JNICALL NP(durationMs)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return 0;
-    return static_cast<jlong>(mpvGetDouble(p->mpv, "duration") * 1000.0);
+    return static_cast<jlong>(std::llround(std::max(p->cachedDuration.load(), 0.0) * 1000.0));
 }
 
 JNIEXPORT jlong JNICALL NP(positionMs)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return 0;
-    return static_cast<jlong>(mpvGetDouble(p->mpv, "time-pos") * 1000.0);
+    return static_cast<jlong>(std::llround(std::max(p->cachedPosition.load(), 0.0) * 1000.0));
 }
 
 JNIEXPORT jlong JNICALL NP(bufferedPositionMs)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return 0;
-    double pos = mpvGetDouble(p->mpv, "time-pos");
-    double cache = mpvGetDouble(p->mpv, "demuxer-cache-time");
-    double buffered = cache > pos ? cache : pos;
-    return static_cast<jlong>(buffered * 1000.0);
+    return static_cast<jlong>(std::llround(std::max(p->cachedBuffered.load(), 0.0) * 1000.0));
 }
 
 JNIEXPORT jboolean JNICALL NP(isLoading)(JNIEnv *, jobject, jlong handle) {
@@ -1828,22 +1937,21 @@ JNIEXPORT jboolean JNICALL NP(isEnded)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return JNI_FALSE;
     // keep-open=yes makes mpv PAUSE at EOF instead of unloading, so
-    // MPV_EVENT_END_FILE never fires — the `eof-reached` property is what flips.
-    // Mirror the macOS bridge (rawIsEnded reads eof-reached) so Nuvio's
-    // next-episode / autoplay logic actually triggers at the end of a file.
-    return (mpvGetFlag(p->mpv, "eof-reached") || p->ended.load()) ? JNI_TRUE : JNI_FALSE;
+    // MPV_EVENT_END_FILE never fires — the event thread copies `eof-reached`
+    // into the snapshot so next-episode / autoplay still triggers.
+    return p->cachedEnded.load() ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jboolean JNICALL NP(isPaused)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return JNI_FALSE;
-    return mpvGetFlag(p->mpv, "pause") ? JNI_TRUE : JNI_FALSE;
+    return p->cachedPaused.load() ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jfloat JNICALL NP(speed)(JNIEnv *, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return 1.0f;
-    return static_cast<jfloat>(mpvGetDouble(p->mpv, "speed"));
+    return static_cast<jfloat>(p->cachedSpeed.load());
 }
 
 JNIEXPORT void JNICALL NP(setResizeMode)(JNIEnv *, jobject, jlong handle, jint mode) {
@@ -1869,13 +1977,15 @@ JNIEXPORT void JNICALL NP(setResizeMode)(JNIEnv *, jobject, jlong handle, jint m
 JNIEXPORT jstring JNICALL NP(audioTracksJson)(JNIEnv *env, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return utf8ToJstring(env, "[]");
-    return utf8ToJstring(env, buildTracksJson(p->mpv, "audio"));
+    std::lock_guard<std::mutex> lock(p->tracksMutex);
+    return utf8ToJstring(env, p->cachedAudioTracks.empty() ? "[]" : p->cachedAudioTracks.c_str());
 }
 
 JNIEXPORT jstring JNICALL NP(subtitleTracksJson)(JNIEnv *env, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return utf8ToJstring(env, "[]");
-    return utf8ToJstring(env, buildTracksJson(p->mpv, "sub"));
+    std::lock_guard<std::mutex> lock(p->tracksMutex);
+    return utf8ToJstring(env, p->cachedSubtitleTracks.empty() ? "[]" : p->cachedSubtitleTracks.c_str());
 }
 
 JNIEXPORT void JNICALL NP(selectAudioTrack)(JNIEnv *, jobject, jlong handle, jint trackId) {
@@ -1884,6 +1994,7 @@ JNIEXPORT void JNICALL NP(selectAudioTrack)(JNIEnv *, jobject, jlong handle, jin
     int64_t id = trackId;
     if (trackId < 0) mpv_set_property_string(p->mpv, "aid", "no");
     else mpv_set_property(p->mpv, "aid", MPV_FORMAT_INT64, &id);
+    markTracksDirty(p);
 }
 
 JNIEXPORT void JNICALL NP(selectSubtitleTrack)(JNIEnv *, jobject, jlong handle, jint trackId) {
@@ -1892,6 +2003,7 @@ JNIEXPORT void JNICALL NP(selectSubtitleTrack)(JNIEnv *, jobject, jlong handle, 
     int64_t id = trackId;
     if (trackId < 0) mpv_set_property_string(p->mpv, "sid", "no");
     else mpv_set_property(p->mpv, "sid", MPV_FORMAT_INT64, &id);
+    markTracksDirty(p);
 }
 
 JNIEXPORT void JNICALL NP(addSubtitleUrl)(JNIEnv *env, jobject, jlong handle, jstring url) {
@@ -1900,6 +2012,7 @@ JNIEXPORT void JNICALL NP(addSubtitleUrl)(JNIEnv *env, jobject, jlong handle, js
     std::string sub = jstringToUtf8(env, url);
     const char *cmd[] = {"sub-add", sub.c_str(), "select", nullptr};
     mpv_command(p->mpv, cmd);
+    markTracksDirty(p);
 }
 
 JNIEXPORT void JNICALL NP(clearExternalSubtitles)(JNIEnv *, jobject, jlong handle) {
@@ -1907,6 +2020,7 @@ JNIEXPORT void JNICALL NP(clearExternalSubtitles)(JNIEnv *, jobject, jlong handl
     if (!p) return;
     const char *cmd[] = {"sub-remove", nullptr};
     mpv_command(p->mpv, cmd);
+    markTracksDirty(p);
 }
 
 JNIEXPORT void JNICALL NP(clearExternalSubtitlesAndSelect)(JNIEnv *, jobject, jlong handle, jint trackId) {
@@ -1917,6 +2031,7 @@ JNIEXPORT void JNICALL NP(clearExternalSubtitlesAndSelect)(JNIEnv *, jobject, jl
     int64_t id = trackId;
     if (trackId < 0) mpv_set_property_string(p->mpv, "sid", "no");
     else mpv_set_property(p->mpv, "sid", MPV_FORMAT_INT64, &id);
+    markTracksDirty(p);
 }
 
 JNIEXPORT void JNICALL NP(setSubtitleDelayMs)(JNIEnv *, jobject, jlong handle, jint delayMs) {

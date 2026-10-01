@@ -234,6 +234,12 @@ data class PlayerPlaybackSnapshot(
     val videoHeight: Int = 0,
 )
 
+/** Playhead clock. Kept off [PlayerPlaybackSnapshot] so position ticks do not recompose the player. */
+data class PlaybackClock(
+    val positionMs: Long = 0L,
+    val bufferedPositionMs: Long = 0L,
+)
+
 data class PlayerNowPlayingInfo(
     val title: String,
     val subtitle: String? = null,

@@ -46,6 +46,7 @@ typedef enum mpv_format {
 typedef enum mpv_event_id {
     MPV_EVENT_NONE = 0,
     MPV_EVENT_SHUTDOWN = 1,
+    MPV_EVENT_PROPERTY_CHANGE = 22,
 } mpv_event_id;
 
 typedef struct mpv_event {
@@ -497,6 +498,7 @@ struct MpvApi {
     using mpv_free_fn = void (*)(void *);
     using mpv_wait_event_fn = mpv_event *(*)(mpv_handle *, double);
     using mpv_wakeup_fn = void (*)(mpv_handle *);
+    using mpv_observe_property_fn = int (*)(mpv_handle *, uint64_t, const char *, mpv_format);
 
     HMODULE library = nullptr;
     std::once_flag loadOnce;
@@ -515,6 +517,7 @@ struct MpvApi {
     mpv_free_fn freeValue = nullptr;
     mpv_wait_event_fn waitEvent = nullptr;
     mpv_wakeup_fn wakeup = nullptr;
+    mpv_observe_property_fn observeProperty = nullptr;
 
     void ensureLoaded() {
         std::call_once(loadOnce, [this]() { load(); });
@@ -574,6 +577,7 @@ struct MpvApi {
         freeValue = loadSymbol<mpv_free_fn>("mpv_free");
         waitEvent = loadSymbol<mpv_wait_event_fn>("mpv_wait_event");
         wakeup = loadSymbol<mpv_wakeup_fn>("mpv_wakeup");
+        observeProperty = loadSymbol<mpv_observe_property_fn>("mpv_observe_property");
     }
 
     template <typename T>
@@ -1023,10 +1027,11 @@ public:
         if (!mpv) return;
         int flag = paused ? 1 : 0;
         mpvApi().setProperty(mpv, "pause", MPV_FORMAT_FLAG, &flag);
+        cachedPaused.store(paused);
     }
 
     bool isPaused() {
-        return flagProperty("pause", true);
+        return cachedPaused.load();
     }
 
     void seekToMilliseconds(long long positionMs) {
@@ -1035,6 +1040,8 @@ public:
         std::string seconds = std::to_string((double)positionMs / 1000.0);
         const char *command[] = {"seek", seconds.c_str(), "absolute+keyframes", nullptr};
         mpvApi().command(mpv, command);
+        cachedPositionSeconds.store(std::max((double)positionMs / 1000.0, 0.0));
+        cachedEnded.store(false);
     }
 
     void seekByMilliseconds(long long offsetMs) {
@@ -1043,6 +1050,9 @@ public:
         std::string seconds = std::to_string((double)offsetMs / 1000.0);
         const char *command[] = {"seek", seconds.c_str(), "relative+keyframes", nullptr};
         mpvApi().command(mpv, command);
+        double nextPosition = std::max(cachedPositionSeconds.load() + ((double)offsetMs / 1000.0), 0.0);
+        cachedPositionSeconds.store(nextPosition);
+        cachedEnded.store(false);
     }
 
     void setSpeed(double speed) {
@@ -1050,19 +1060,20 @@ public:
         if (!mpv) return;
         double clamped = std::max(0.25, std::min(4.0, speed));
         mpvApi().setProperty(mpv, "speed", MPV_FORMAT_DOUBLE, &clamped);
+        cachedSpeed.store(clamped);
     }
 
     double speed() {
-        return doubleProperty("speed", 1.0);
+        return cachedSpeed.load();
     }
 
     void adjustVolume(double delta) {
         std::lock_guard<std::mutex> lock(mpvMutex);
         if (!mpv) return;
-        double current = 100.0;
-        mpvApi().getProperty(mpv, "volume", MPV_FORMAT_DOUBLE, &current);
+        double current = std::max(0.0, std::min(kMaxVolumePercent, cachedVolumeLevel.load() * 100.0));
         double next = std::max(0.0, std::min(kMaxVolumePercent, current + delta));
         mpvApi().setProperty(mpv, "volume", MPV_FORMAT_DOUBLE, &next);
+        cachedVolumeLevel.store(next / 100.0);
     }
 
     void setVolume(double level) {
@@ -1070,10 +1081,11 @@ public:
         if (!mpv) return;
         double next = std::max(0.0, std::min(kMaxVolumePercent, level * 100.0));
         mpvApi().setProperty(mpv, "volume", MPV_FORMAT_DOUBLE, &next);
+        cachedVolumeLevel.store(next / 100.0);
     }
 
     double volume() {
-        return std::max(0.0, std::min(kMaxVolumePercent, doubleProperty("volume", 100.0))) / 100.0;
+        return cachedVolumeLevel.load();
     }
 
     void setResizeMode(int mode) {
@@ -1098,65 +1110,70 @@ public:
     }
 
     long long durationMs() {
-        return (long long)std::llround(doubleProperty("duration", 0.0) * 1000.0);
+        return (long long)std::llround(std::max(cachedDurationSeconds.load(), 0.0) * 1000.0);
     }
 
     long long positionMs() {
-        return (long long)std::llround(doubleProperty("time-pos", 0.0) * 1000.0);
+        return (long long)std::llround(std::max(cachedPositionSeconds.load(), 0.0) * 1000.0);
     }
 
     long long bufferedPositionMs() {
-        double buffered = rawPositionSeconds() + cacheAheadSeconds();
+        double buffered = cachedPositionSeconds.load() + cachedCacheAheadSeconds.load();
         return (long long)std::llround(std::max(buffered, 0.0) * 1000.0);
     }
 
     bool isLoading() {
-        bool paused = isPaused();
-        bool eofReached = isEnded();
-        bool idle = flagProperty("core-idle", true);
-        bool bufferingCache = flagProperty("paused-for-cache", false);
-        bool fileReady = doubleProperty("duration", 0.0) > 0.0 || int64Property("track-list/count", 0) > 0;
-        return !fileReady || (idle && !paused && !eofReached) || bufferingCache;
+        return cachedLoading.load();
     }
 
     bool isEnded() {
-        return flagProperty("eof-reached", false);
+        return cachedEnded.load();
     }
 
     std::string audioTracksJson() {
-        return tracksJsonForType("audio");
+        std::lock_guard<std::mutex> lock(tracksMutex);
+        return cachedAudioTracksJson.empty() ? "[]" : cachedAudioTracksJson;
     }
 
     std::string subtitleTracksJson() {
-        return tracksJsonForType("sub");
+        std::lock_guard<std::mutex> lock(tracksMutex);
+        return cachedSubtitleTracksJson.empty() ? "[]" : cachedSubtitleTracksJson;
     }
 
     void selectAudioTrackId(int trackId) {
-        std::lock_guard<std::mutex> lock(mpvMutex);
-        if (!mpv) return;
-        int64_t id = trackId;
-        mpvApi().setProperty(mpv, "aid", MPV_FORMAT_INT64, &id);
+        {
+            std::lock_guard<std::mutex> lock(mpvMutex);
+            if (!mpv) return;
+            int64_t id = trackId;
+            mpvApi().setProperty(mpv, "aid", MPV_FORMAT_INT64, &id);
+        }
+        markTracksDirty();
     }
 
     void selectSubtitleTrackId(int trackId) {
-        std::lock_guard<std::mutex> lock(mpvMutex);
-        if (!mpv) return;
-        if (trackId < 0) {
-            mpvApi().setPropertyString(mpv, "sid", "no");
-            return;
+        {
+            std::lock_guard<std::mutex> lock(mpvMutex);
+            if (!mpv) return;
+            if (trackId < 0) {
+                mpvApi().setPropertyString(mpv, "sid", "no");
+            } else {
+                int64_t id = trackId;
+                mpvApi().setProperty(mpv, "sid", MPV_FORMAT_INT64, &id);
+            }
         }
-        int64_t id = trackId;
-        mpvApi().setProperty(mpv, "sid", MPV_FORMAT_INT64, &id);
+        markTracksDirty();
     }
 
     void addSubtitleUrl(const std::string &url) {
         if (url.empty()) return;
         command({"sub-add", url, "select"});
+        markTracksDirty();
     }
 
     void removeExternalSubtitles() {
         removeExternalSubtitleTracks();
         setStringProperty("sid", "no");
+        markTracksDirty();
     }
 
     void removeExternalSubtitlesAndSelect(int trackId) {
@@ -1165,6 +1182,7 @@ public:
             selectSubtitleTrackId(trackId);
         } else {
             setStringProperty("sid", "no");
+            markTracksDirty();
         }
     }
 
@@ -1317,6 +1335,23 @@ private:
     std::mutex controlsMutex;
     std::string pendingControlsJson;
     double initialStartSeconds = 0.0;
+
+    // Playback snapshot written on the mpv event thread. Kotlin snapshot() and the
+    // controls timer only read these; they must not call mpv_get_property.
+    std::atomic<double> cachedDurationSeconds{0.0};
+    std::atomic<double> cachedPositionSeconds{0.0};
+    std::atomic<double> cachedCacheAheadSeconds{0.0};
+    std::atomic<double> cachedSpeed{1.0};
+    std::atomic<double> cachedVolumeLevel{1.0};
+    std::atomic_bool cachedPaused{true};
+    std::atomic_bool cachedLoading{true};
+    std::atomic_bool cachedEnded{false};
+    std::atomic_bool tracksDirty{true};
+    std::mutex tracksMutex;
+    std::string cachedAudioTracksJson;
+    std::string cachedSubtitleTracksJson;
+    std::string lastSentAudioTracksJson;
+    std::string lastSentSubtitleTracksJson;
 
     friend LRESULT CALLBACK messageWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     friend LRESULT CALLBACK containerWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -1613,6 +1648,13 @@ private:
         int decoderPriority,
         bool nvidiaRtxSuperResolutionEnabled
     ) {
+        cachedPositionSeconds.store(initialPositionMs > 0 ? (double)initialPositionMs / 1000.0 : 0.0);
+        cachedPaused.store(!playWhenReady);
+        cachedLoading.store(true);
+        cachedEnded.store(false);
+        cachedSpeed.store(1.0);
+        tracksDirty.store(true);
+
         MpvApi &api = mpvApi();
         {
             std::lock_guard<std::mutex> lock(mpvMutex);
@@ -1764,23 +1806,37 @@ private:
 
     void syncControls() {
         if (!webView) return;
-        double duration = doubleProperty("duration", 0.0);
-        double position = doubleProperty("time-pos", 0.0);
-        double volumeLevel = volume();
-        bool paused = isPaused();
-        bool loading = isLoading();
-        std::string audioTracks = audioTracksJson();
-        std::string subtitleTracks = subtitleTracksJson();
+        double duration = cachedDurationSeconds.load();
+        double position = cachedPositionSeconds.load();
+        double volumeLevel = cachedVolumeLevel.load();
+        bool paused = cachedPaused.load();
+        bool loading = cachedLoading.load();
+        std::string audioTracks;
+        std::string subtitleTracks;
+        bool includeTracks = false;
+        {
+            std::lock_guard<std::mutex> lock(tracksMutex);
+            if (cachedAudioTracksJson != lastSentAudioTracksJson ||
+                cachedSubtitleTracksJson != lastSentSubtitleTracksJson) {
+                audioTracks = cachedAudioTracksJson.empty() ? "[]" : cachedAudioTracksJson;
+                subtitleTracks = cachedSubtitleTracksJson.empty() ? "[]" : cachedSubtitleTracksJson;
+                lastSentAudioTracksJson = audioTracks;
+                lastSentSubtitleTracksJson = subtitleTracks;
+                includeTracks = true;
+            }
+        }
 
         std::ostringstream script;
         script << "window.playerUpdate({duration:" << duration
                << ",position:" << position
                << ",volumeLevel:" << volumeLevel
                << ",paused:" << (paused ? "true" : "false")
-               << ",loading:" << (loading ? "true" : "false")
-               << ",audioTracks:" << audioTracks
-               << ",subtitleTracks:" << subtitleTracks
-               << "})";
+               << ",loading:" << (loading ? "true" : "false");
+        if (includeTracks) {
+            script << ",audioTracks:" << audioTracks
+                   << ",subtitleTracks:" << subtitleTracks;
+        }
+        script << "})";
         std::wstring wideScript = toWide(script.str());
         webView->ExecuteScript(wideScript.c_str(), nullptr);
     }
@@ -1885,6 +1941,17 @@ private:
     }
 
     void drainMpvEvents() {
+        mpv_handle *observed = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(mpvMutex);
+            observed = mpv;
+        }
+        if (observed && mpvApi().observeProperty) {
+            mpvApi().observeProperty(observed, 11, "track-list", MPV_FORMAT_NONE);
+            mpvApi().observeProperty(observed, 12, "aid", MPV_FORMAT_NONE);
+            mpvApi().observeProperty(observed, 13, "sid", MPV_FORMAT_NONE);
+        }
+        refreshPlaybackCache();
         while (!stopping.load()) {
             mpv_handle *current = nullptr;
             {
@@ -1896,10 +1963,68 @@ private:
             }
 
             mpv_event *event = mpvApi().waitEvent(current, 0.5);
-            if (!event) continue;
-            if (event->event_id == MPV_EVENT_SHUTDOWN) {
+            if (event && event->event_id == MPV_EVENT_SHUTDOWN) {
                 return;
             }
+            if (event && event->event_id == MPV_EVENT_PROPERTY_CHANGE) {
+                uint64_t reply = event->reply_userdata;
+                if (reply == 11 || reply == 12 || reply == 13) {
+                    tracksDirty.store(true);
+                }
+            }
+            if (stopping.load()) return;
+            refreshPlaybackCache();
+        }
+    }
+
+    void markTracksDirty() {
+        tracksDirty.store(true);
+        mpv_handle *current = nullptr;
+        {
+            std::lock_guard<std::mutex> lock(mpvMutex);
+            current = mpv;
+        }
+        if (current && mpvApi().wakeup) {
+            mpvApi().wakeup(current);
+        }
+    }
+
+    void refreshPlaybackCache() {
+        if (stopping.load() || shuttingDown.load()) return;
+        double duration = doubleProperty("duration", 0.0);
+        if (!std::isfinite(duration)) duration = 0.0;
+        double position = doubleProperty("time-pos", cachedPositionSeconds.load());
+        if (!std::isfinite(position)) position = cachedPositionSeconds.load();
+        position = std::max(position, 0.0);
+        double cacheAhead = cacheAheadForPosition(position);
+        bool paused = flagProperty("pause", cachedPaused.load());
+        bool ended = flagProperty("eof-reached", cachedEnded.load());
+        bool idle = flagProperty("core-idle", true);
+        bool bufferingCache = flagProperty("paused-for-cache", false);
+        bool fileReady = duration > 0.0 || int64Property("track-list/count", 0) > 0;
+        bool loading = !fileReady || (idle && !paused && !ended) || bufferingCache;
+        double speed = doubleProperty("speed", cachedSpeed.load());
+        if (!std::isfinite(speed)) speed = 1.0;
+        double volumePercent = doubleProperty("volume", cachedVolumeLevel.load() * 100.0);
+        if (!std::isfinite(volumePercent)) volumePercent = cachedVolumeLevel.load() * 100.0;
+        volumePercent = std::max(0.0, std::min(kMaxVolumePercent, volumePercent));
+
+        cachedDurationSeconds.store(std::max(duration, 0.0));
+        cachedPositionSeconds.store(position);
+        cachedCacheAheadSeconds.store(std::max(cacheAhead, 0.0));
+        cachedSpeed.store(std::max(0.25, std::min(4.0, speed)));
+        cachedPaused.store(paused);
+        cachedLoading.store(loading);
+        cachedEnded.store(ended);
+        cachedVolumeLevel.store(volumePercent / 100.0);
+
+        if (!tracksDirty.exchange(false)) return;
+        std::string audio = tracksJsonForType("audio");
+        std::string subtitles = tracksJsonForType("sub");
+        {
+            std::lock_guard<std::mutex> lock(tracksMutex);
+            cachedAudioTracksJson = std::move(audio);
+            cachedSubtitleTracksJson = std::move(subtitles);
         }
     }
 
@@ -2019,7 +2144,15 @@ private:
     }
 
     double cacheAheadSeconds() {
-        double effectivePosition = effectiveCachePositionSeconds();
+        return cacheAheadForPosition(rawPositionSeconds());
+    }
+
+    double cacheAheadForPosition(double position) {
+        double safePosition = std::isfinite(position) ? std::max(position, 0.0) : 0.0;
+        double effectivePosition = safePosition;
+        if (initialStartSeconds > 0.0 && safePosition + 5.0 < initialStartSeconds) {
+            effectivePosition = initialStartSeconds;
+        }
         double cacheTime = doubleProperty("demuxer-cache-time", 0.0);
         if (std::isfinite(cacheTime) && cacheTime > 0.0) {
             if (cacheTime >= effectivePosition - 5.0) {

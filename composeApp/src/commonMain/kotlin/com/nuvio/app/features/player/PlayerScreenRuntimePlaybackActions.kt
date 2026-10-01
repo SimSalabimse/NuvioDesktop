@@ -16,9 +16,21 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 
 internal fun PlayerScreenRuntime.finishTimelineScrub(positionMs: Long) {
-    lastManualSkipSeekPositions = playbackSnapshot.positionMs to positionMs
+    lastManualSkipSeekPositions = playheadPositionMs() to positionMs
     isScrubbingTimeline = false
     scrubbingPositionMs = positionMs.takeIf { playbackSnapshot.isLoading }
+}
+
+internal fun PlayerScreenRuntime.playheadPositionMs(): Long =
+    if (playbackClockLive) playbackClockState.value.positionMs else playbackSnapshot.positionMs
+
+internal fun PlayerScreenRuntime.progressSnapshot(): PlayerPlaybackSnapshot {
+    if (!playbackClockLive) return playbackSnapshot
+    val clock = playbackClockState.value
+    return playbackSnapshot.copy(
+        positionMs = clock.positionMs,
+        bufferedPositionMs = clock.bufferedPositionMs,
+    )
 }
 
 internal fun PlayerScreenRuntime.updatePlaybackSnapshot(
@@ -26,8 +38,17 @@ internal fun PlayerScreenRuntime.updatePlaybackSnapshot(
     playbackKey: PlaybackKey = activePlaybackKey,
 ): Boolean {
     if (playbackKey != activePlaybackKey) return false
-    playbackSnapshot = snapshot
-    playbackSnapshotKey = playbackKey
+    playbackClockState.value = PlaybackClock(
+        positionMs = snapshot.positionMs,
+        bufferedPositionMs = snapshot.bufferedPositionMs,
+    )
+    playbackClockLive = true
+    val structural = snapshot.copy(positionMs = 0L, bufferedPositionMs = 0L)
+    val previousStructural = playbackSnapshot.copy(positionMs = 0L, bufferedPositionMs = 0L)
+    if (structural != previousStructural || playbackSnapshotKey != playbackKey) {
+        playbackSnapshot = snapshot
+        playbackSnapshotKey = playbackKey
+    }
     val targetPositionMs = scrubbingPositionMs ?: return true
     if (!isScrubbingTimeline && (
             !snapshot.isLoading || snapshot.isEnded ||
@@ -81,7 +102,7 @@ internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
     )
 
 internal fun PlayerScreenRuntime.currentLaunch(launch: PlayerLaunch): PlayerLaunch {
-    val positionMs = playbackSnapshot.positionMs.takeIf {
+    val positionMs = playheadPositionMs().takeIf {
         it > 0L && initialSeekApplied && playbackSnapshotKey == activePlaybackKey
     }
     return launch.copy(
@@ -155,7 +176,7 @@ private fun PlayerScreenRuntime.resetTrackSelectionState() {
 }
 
 internal fun PlayerScreenRuntime.currentPlaybackProgressPercent(
-    snapshot: PlayerPlaybackSnapshot = playbackSnapshot,
+    snapshot: PlayerPlaybackSnapshot = progressSnapshot(),
 ): Float {
     val duration = snapshot.durationMs.takeIf { it > 0L } ?: return 0f
     return ((snapshot.positionMs.toFloat() / duration.toFloat()) * 100f)
@@ -340,7 +361,7 @@ internal fun PlayerScreenRuntime.flushWatchProgress(
     }
     WatchProgressRepository.flushPlaybackProgress(
         session = playbackSession,
-        snapshot = playbackSnapshot,
+        snapshot = progressSnapshot(),
     )
 }
 
@@ -351,7 +372,7 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
         delay(PlayerSeekProgressSyncDebounceMs)
         WatchProgressRepository.upsertPlaybackProgress(
             session = playbackSession,
-            snapshot = playbackSnapshot,
+            snapshot = progressSnapshot(),
         )
 
         val progressPercent = currentPlaybackProgressPercent()
@@ -399,7 +420,7 @@ internal fun PlayerScreenRuntime.persistPlaybackProgressTick() {
     lastProgressPersistEpochMs = now
     WatchProgressRepository.upsertPlaybackProgress(
         session = playbackSession,
-        snapshot = playbackSnapshot,
+        snapshot = progressSnapshot(),
         syncRemote = false,
     )
 }

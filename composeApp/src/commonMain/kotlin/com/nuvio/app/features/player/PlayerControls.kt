@@ -694,6 +694,7 @@ internal fun PlayerSeekBar(
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val seekDescription = stringResource(Res.string.player_seek_position)
+    val timelinePositionMs = liveTimelinePositionMs(displayedPositionMs)
     Column(modifier = modifier) {
         Slider(
             modifier = Modifier
@@ -701,9 +702,9 @@ internal fun PlayerSeekBar(
                 .height(metrics.sliderTouchHeight)
                 .graphicsLayer(scaleY = metrics.sliderScaleY)
                 .semantics { contentDescription = seekDescription },
-            value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
+            value = timelinePositionMs.coerceIn(0L, seekDurationMs).toFloat(),
             onValueChange = { value -> onScrubChange(value.toLong()) },
-            onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
+            onValueChangeFinished = { onScrubFinished(timelinePositionMs.coerceIn(0L, seekDurationMs)) },
             enabled = durationMs > 0L,
             valueRange = 0f..seekDurationMs.toFloat(),
             track = { sliderState -> PlayerProgressTrack(sliderState) },
@@ -716,7 +717,7 @@ internal fun PlayerSeekBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TimePill(text = formatPlaybackTime(displayedPositionMs), fontSize = metrics.timeSize)
+            TimePill(text = formatPlaybackTime(timelinePositionMs), fontSize = metrics.timeSize)
             TimePill(text = formatPlaybackTime(durationMs), fontSize = metrics.timeSize)
         }
     }
@@ -761,14 +762,6 @@ internal fun LockedPlayerOverlay(
     modifier: Modifier = Modifier,
 ) {
     val durationMs = playbackSnapshot.durationMs.coerceAtLeast(1L)
-    val sliderColors = SliderDefaults.colors(
-        thumbColor = Color.White,
-        activeTrackColor = Color.White,
-        inactiveTrackColor = Color.White.copy(alpha = 0.28f),
-        disabledThumbColor = Color.White,
-        disabledActiveTrackColor = Color.White,
-        disabledInactiveTrackColor = Color.White.copy(alpha = 0.28f),
-    )
 
     Box(modifier = modifier.fillMaxSize()) {
         Box(
@@ -824,29 +817,11 @@ internal fun LockedPlayerOverlay(
                 .padding(bottom = metrics.sliderBottomOffset),
         ) {
             if (useLegacyLayout) {
-                Slider(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(metrics.sliderTouchHeight)
-                        .graphicsLayer(scaleY = metrics.sliderScaleY),
-                    value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
-                    onValueChange = {},
-                    onValueChangeFinished = {},
-                    valueRange = 0f..durationMs.toFloat(),
-                    enabled = false,
-                    colors = sliderColors,
+                LiveLockedLegacySeek(
+                    fallbackPositionMs = displayedPositionMs,
+                    durationMs = durationMs,
+                    metrics = metrics,
                 )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp)
-                        .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    TimePill(text = formatPlaybackTime(displayedPositionMs), fontSize = metrics.timeSize)
-                    TimePill(text = formatPlaybackTime(durationMs), fontSize = metrics.timeSize)
-                }
             } else {
                 PlayerTimeline(
                     snapshot = playbackSnapshot,
@@ -855,14 +830,56 @@ internal fun LockedPlayerOverlay(
                     onScrubFinished = {},
                     enabled = false,
                 )
-                Text(
-                    text = formatPlaybackRuntime(displayedPositionMs, playbackSnapshot.durationMs, showRemainingTime),
+                PlaybackRuntimeLabel(
+                    fallbackPositionMs = displayedPositionMs,
+                    durationMs = playbackSnapshot.durationMs,
+                    showRemainingTime = showRemainingTime,
                     style = MaterialTheme.nuvioTypeScale.bodyMd.copy(fontSize = (metrics.timeSize.value + 2).sp),
                     color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.align(Alignment.End),
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LiveLockedLegacySeek(
+    fallbackPositionMs: Long,
+    durationMs: Long,
+    metrics: PlayerLayoutMetrics,
+) {
+    val timelinePositionMs = liveTimelinePositionMs(fallbackPositionMs)
+    val sliderColors = SliderDefaults.colors(
+        thumbColor = Color.White,
+        activeTrackColor = Color.White,
+        inactiveTrackColor = Color.White.copy(alpha = 0.28f),
+        disabledThumbColor = Color.White,
+        disabledActiveTrackColor = Color.White,
+        disabledInactiveTrackColor = Color.White.copy(alpha = 0.28f),
+    )
+    Slider(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(metrics.sliderTouchHeight)
+            .graphicsLayer(scaleY = metrics.sliderScaleY),
+        value = timelinePositionMs.coerceIn(0L, durationMs).toFloat(),
+        onValueChange = {},
+        onValueChangeFinished = {},
+        valueRange = 0f..durationMs.toFloat(),
+        enabled = false,
+        colors = sliderColors,
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp)
+            .padding(top = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TimePill(text = formatPlaybackTime(timelinePositionMs), fontSize = metrics.timeSize)
+        TimePill(text = formatPlaybackTime(durationMs), fontSize = metrics.timeSize)
     }
 }
 

@@ -85,6 +85,8 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         playerControllerSourceUrl = null
         playbackSnapshot = PlayerPlaybackSnapshot()
         playbackSnapshotKey = null
+        playbackClockState.value = PlaybackClock()
+        playbackClockLive = false
         cancelNextEpisodeAutoPlay()
         isScrubbingTimeline = false
         scrubbingPositionMs = null
@@ -420,8 +422,14 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         pausedOverlayVisible = true
     }
 
+    PlaybackProgressClock()
+}
+
+@Composable
+private fun PlayerScreenRuntime.PlaybackProgressClock() {
+    val positionMs = playbackClockState.value.positionMs
     LaunchedEffect(
-        playbackSnapshot.positionMs,
+        positionMs,
         playbackSnapshot.isPlaying,
         playbackSnapshot.isLoading,
         playbackSnapshot.isEnded,
@@ -556,88 +564,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         }
     }
 
-    LaunchedEffect(
-        playbackSnapshot.positionMs,
-        playbackSnapshot.isLoading,
-        skipIntervals,
-        playerSettingsUiState.autoSkipSegmentTypes,
-        playerController,
-        initialLoadCompleted,
-        activeInitialPositionMs,
-        activeInitialProgressFraction,
-        playbackSnapshot.durationMs,
-        playbackSnapshot.isPlaying,
-        playerSettingsUiState.skipIntroEnabled,
-        isScrubbingTimeline,
-        initialSeekApplied,
-        lastManualSkipSeekPositions,
-        playerControllerSourceUrl,
-        activeSourceUrl,
-    ) {
-        if (skipIntervals.isEmpty()) {
-            activeSkipInterval = null
-            return@LaunchedEffect
-        }
-        val initialProgressFraction = activeInitialProgressFraction
-        val initialPlaybackPositionMs = when {
-            activeInitialPositionMs > 0L -> activeInitialPositionMs
-            initialProgressFraction != null && playbackSnapshot.durationMs > 0L -> {
-                val fraction = initialProgressFraction.coerceIn(0f, 1f)
-                (playbackSnapshot.durationMs.toDouble() * fraction.toDouble()).toLong()
-            }
-            else -> 0L
-        }
-        autoSkippedIntervalKeys += skipIntervals.autoSkipKeysCompletedBy(initialPlaybackPositionMs)
-        val positionSec = playbackSnapshot.positionMs / 1000.0
-        lastManualSkipSeekPositions?.let { (fromMs, toMs) ->
-            autoSkippedIntervals += skipIntervals.intervalsAtSeekPositions(fromMs, toMs)
-        }
-        val current = skipIntervals.firstOrNull { interval ->
-            positionSec >= interval.startTime && positionSec < interval.endTime &&
-                interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs) != null
-        }
-        if (current != activeSkipInterval) {
-            activeSkipInterval = current
-            if (current != null) skipIntervalDismissed = false
-        }
-        if (current != null) {
-            val segmentType = AutoSkipSegmentType.fromSkipIntervalType(current.type)
-            val intervalKey = current.autoSkipKey()
-            val controller = playerController
-            if (
-                playerControllerSourceUrl == activeSourceUrl &&
-                playerSettingsUiState.skipIntroEnabled &&
-                playbackSnapshot.isPlaying &&
-                !isScrubbingTimeline && initialSeekApplied &&
-                current.shouldAutoSkip(playerSettingsUiState.autoSkipSegmentTypes) &&
-                current !in autoSkippedIntervals &&
-                initialLoadCompleted &&
-                !playbackSnapshot.isLoading &&
-                controller != null &&
-                segmentType != null &&
-                segmentType in playerSettingsUiState.autoSkipSegmentTypes &&
-                intervalKey !in autoSkippedIntervalKeys
-            ) {
-                val durationMs = playbackSnapshot.durationMs
-                val rawMs = current.internalSkipAction(skipIntervals, durationMs)?.targetMs ?: return@LaunchedEffect
-                val seekPositionMs = if (durationMs > 0L) rawMs.coerceAtMost(durationMs - 1) else rawMs
-                if (!controller.trySeekTo(seekPositionMs)) return@LaunchedEffect
-                autoSkippedIntervalKeys.add(intervalKey)
-                autoSkippedIntervals.add(current)
-                scheduleProgressSyncAfterSeek()
-                skipIntervalDismissed = true
-                playerNotificationMessage = getString(
-                    when (segmentType) {
-                        AutoSkipSegmentType.INTRO -> Res.string.player_auto_skip_intro_notification
-                        AutoSkipSegmentType.RECAP -> Res.string.player_auto_skip_recap_notification
-                        AutoSkipSegmentType.OUTRO, AutoSkipSegmentType.MOVIE_CREDITS -> Res.string.player_auto_skip_outro_notification
-                    },
-                    formatPlaybackTime(seekPositionMs),
-                )
-                playerNotificationToken += 1L
-            }
-        }
-    }
+    SkipWindowClock()
 
     LaunchedEffect(
         playerMetaVideos,
@@ -707,9 +634,101 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         } else null
     }
 
+}
+
+@Composable
+private fun PlayerScreenRuntime.SkipWindowClock() {
+    val positionMs = playbackClockState.value.positionMs
     LaunchedEffect(
+        positionMs,
+        playbackSnapshot.isLoading,
+        skipIntervals,
+        playerSettingsUiState.autoSkipSegmentTypes,
+        playerController,
+        initialLoadCompleted,
+        activeInitialPositionMs,
+        activeInitialProgressFraction,
+        playbackSnapshot.durationMs,
+        playbackSnapshot.isPlaying,
+        playerSettingsUiState.skipIntroEnabled,
+        isScrubbingTimeline,
+        initialSeekApplied,
+        lastManualSkipSeekPositions,
+        playerControllerSourceUrl,
+        activeSourceUrl,
+    ) {
+        if (skipIntervals.isEmpty()) {
+            activeSkipInterval = null
+            return@LaunchedEffect
+        }
+        val initialProgressFraction = activeInitialProgressFraction
+        val initialPlaybackPositionMs = when {
+            activeInitialPositionMs > 0L -> activeInitialPositionMs
+            initialProgressFraction != null && playbackSnapshot.durationMs > 0L -> {
+                val fraction = initialProgressFraction.coerceIn(0f, 1f)
+                (playbackSnapshot.durationMs.toDouble() * fraction.toDouble()).toLong()
+            }
+            else -> 0L
+        }
+        autoSkippedIntervalKeys += skipIntervals.autoSkipKeysCompletedBy(initialPlaybackPositionMs)
+        val positionSec = positionMs / 1000.0
+        lastManualSkipSeekPositions?.let { (fromMs, toMs) ->
+            autoSkippedIntervals += skipIntervals.intervalsAtSeekPositions(fromMs, toMs)
+        }
+        val current = skipIntervals.firstOrNull { interval ->
+            positionSec >= interval.startTime && positionSec < interval.endTime &&
+                interval.internalSkipAction(skipIntervals, playbackSnapshot.durationMs) != null
+        }
+        if (current != activeSkipInterval) {
+            activeSkipInterval = current
+            if (current != null) skipIntervalDismissed = false
+        }
+        if (current != null) {
+            val segmentType = AutoSkipSegmentType.fromSkipIntervalType(current.type)
+            val intervalKey = current.autoSkipKey()
+            val controller = playerController
+            if (
+                playerControllerSourceUrl == activeSourceUrl &&
+                playerSettingsUiState.skipIntroEnabled &&
+                playbackSnapshot.isPlaying &&
+                !isScrubbingTimeline && initialSeekApplied &&
+                current.shouldAutoSkip(playerSettingsUiState.autoSkipSegmentTypes) &&
+                current !in autoSkippedIntervals &&
+                initialLoadCompleted &&
+                !playbackSnapshot.isLoading &&
+                controller != null &&
+                segmentType != null &&
+                segmentType in playerSettingsUiState.autoSkipSegmentTypes &&
+                intervalKey !in autoSkippedIntervalKeys
+            ) {
+                val durationMs = playbackSnapshot.durationMs
+                val rawMs = current.internalSkipAction(skipIntervals, durationMs)?.targetMs ?: return@LaunchedEffect
+                val seekPositionMs = if (durationMs > 0L) rawMs.coerceAtMost(durationMs - 1) else rawMs
+                if (!controller.trySeekTo(seekPositionMs)) return@LaunchedEffect
+                autoSkippedIntervalKeys.add(intervalKey)
+                autoSkippedIntervals.add(current)
+                scheduleProgressSyncAfterSeek()
+                skipIntervalDismissed = true
+                playerNotificationMessage = getString(
+                    when (segmentType) {
+                        AutoSkipSegmentType.INTRO -> Res.string.player_auto_skip_intro_notification
+                        AutoSkipSegmentType.RECAP -> Res.string.player_auto_skip_recap_notification
+                        AutoSkipSegmentType.OUTRO, AutoSkipSegmentType.MOVIE_CREDITS -> Res.string.player_auto_skip_outro_notification
+                    },
+                    formatPlaybackTime(seekPositionMs),
+                )
+                playerNotificationToken += 1L
+            }
+        }
+    }
+
+    LaunchedEffect(
+        positionMs,
         activePlaybackKey,
-        playbackSnapshot,
+        playbackSnapshot.isPlaying,
+        playbackSnapshot.isLoading,
+        playbackSnapshot.isEnded,
+        playbackSnapshot.durationMs,
         playbackSnapshotKey,
         initialSeekApplied,
         isScrubbingTimeline,
@@ -798,7 +817,7 @@ internal fun PlayerScreenRuntime.tryRefreshCredentialedSourceAfterError(message:
     credentialRefreshAttemptedSourceUrl = failedUrl
     removeFailedStreamFromCache()
 
-    val savedPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
+    val savedPositionMs = playheadPositionMs().coerceAtLeast(0L)
     val expectedProviderAddonId = activeProviderAddonId
     val expectedProviderName = activeProviderName
     val expectedStreamTitle = activeStreamTitle

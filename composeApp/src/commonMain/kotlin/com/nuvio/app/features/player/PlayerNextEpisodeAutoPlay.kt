@@ -29,7 +29,7 @@ internal fun PlayerScreenRuntime.isAtNextEpisodeThreshold(): Boolean {
         !initialSeekApplied || isScrubbingTimeline || errorMessage != null
     ) return false
     return playbackSnapshot.isEnded || PlayerNextEpisodeRules.shouldShowNextEpisodeCard(
-        positionMs = playbackSnapshot.positionMs,
+        positionMs = playheadPositionMs(),
         durationMs = playbackSnapshot.durationMs,
         skipIntervals = skipIntervals,
         thresholdMode = playerSettingsUiState.nextEpisodeThresholdMode,

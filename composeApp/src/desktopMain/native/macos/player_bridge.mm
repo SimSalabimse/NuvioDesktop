@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cmath>
 #include <dlfcn.h>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -1071,6 +1072,12 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     std::atomic_bool _cachedPaused;
     std::atomic_bool _cachedLoading;
     std::atomic_bool _cachedEnded;
+    std::atomic_bool _tracksDirty;
+    std::mutex _tracksMutex;
+    std::string _cachedAudioTracksJson;
+    std::string _cachedSubtitleTracksJson;
+    std::string _lastSentAudioTracksJson;
+    std::string _lastSentSubtitleTracksJson;
     BOOL _hasAppliedSubtitleStyle;
     BOOL _appliedSubtitleUseLibass;
     NSString *_appliedSubtitleTextColor;
@@ -1105,6 +1112,7 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     _cachedPaused.store(!playWhenReady);
     _cachedLoading.store(true);
     _cachedEnded.store(false);
+    _tracksDirty.store(true);
     _mpvEventQueue = dispatch_queue_create("com.nuvio.desktop.mpv-events", DISPATCH_QUEUE_SERIAL);
     _mpvDrainQueue = dispatch_queue_create("com.nuvio.desktop.mpv-drain", DISPATCH_QUEUE_SERIAL);
     _mpvDrainStopped.store(false);
@@ -1583,8 +1591,29 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
             BOOL ended = [self rawIsEnded];
             BOOL loading = [self rawLoadingWithPaused:paused ended:ended duration:duration];
             double speed = [self rawSpeed];
-            NSString *audioTracks = [self audioTracksJson] ?: @"[]";
-            NSString *subtitleTracks = [self subtitleTracksJson] ?: @"[]";
+            NSString *audioTracks = nil;
+            NSString *subtitleTracks = nil;
+            if (_tracksDirty.exchange(false)) {
+                NSString *nextAudio = [self tracksJsonForType:@"audio"] ?: @"[]";
+                NSString *nextSubtitles = [self tracksJsonForType:@"sub"] ?: @"[]";
+                std::string audioUtf8 = nextAudio.UTF8String ? nextAudio.UTF8String : "[]";
+                std::string subtitleUtf8 = nextSubtitles.UTF8String ? nextSubtitles.UTF8String : "[]";
+                bool includeTracks = false;
+                {
+                    std::lock_guard<std::mutex> lock(_tracksMutex);
+                    includeTracks = audioUtf8 != _lastSentAudioTracksJson || subtitleUtf8 != _lastSentSubtitleTracksJson;
+                    _cachedAudioTracksJson = audioUtf8;
+                    _cachedSubtitleTracksJson = subtitleUtf8;
+                    if (includeTracks) {
+                        _lastSentAudioTracksJson = audioUtf8;
+                        _lastSentSubtitleTracksJson = subtitleUtf8;
+                    }
+                }
+                if (includeTracks) {
+                    audioTracks = nextAudio;
+                    subtitleTracks = nextSubtitles;
+                }
+            }
             NSString *gamma = [[self stringProperty:"video-params/gamma" fallback:@""] lowercaseString];
             NSString *primaries = [[self stringProperty:"video-params/primaries" fallback:@""] lowercaseString];
             [self updateCachedDuration:duration
@@ -1601,15 +1630,17 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
                     return;
                 }
                 [self applyHdrForPolledGamma:gamma primaries:primaries reason:@"sync" force:NO];
-                NSString *script = [NSString stringWithFormat:
-                    @"window.playerUpdate({duration:%0.3f,position:%0.3f,volumeLevel:%0.3f,paused:%@,loading:%@,audioTracks:%@,subtitleTracks:%@})",
+                NSMutableString *script = [NSMutableString stringWithFormat:
+                    @"window.playerUpdate({duration:%0.3f,position:%0.3f,volumeLevel:%0.3f,paused:%@,loading:%@",
                     duration,
                     position,
                     volumeLevel,
                     paused ? @"true" : @"false",
-                    loading ? @"true" : @"false",
-                    audioTracks,
-                    subtitleTracks];
+                    loading ? @"true" : @"false"];
+                if (audioTracks && subtitleTracks) {
+                    [script appendFormat:@",audioTracks:%@,subtitleTracks:%@", audioTracks, subtitleTracks];
+                }
+                [script appendString:@"})"];
                 [self->_webView evaluateJavaScript:script completionHandler:nil];
             });
         }
@@ -1913,6 +1944,9 @@ static void nuvioMpvWakeup(void *ctx) {
     if (!mpv) return;
     _mpvDrainStopped.store(false);
     mpv_observe_property(mpv, 2, "current-ao", MPV_FORMAT_STRING);
+    mpv_observe_property(mpv, 3, "track-list", MPV_FORMAT_NONE);
+    mpv_observe_property(mpv, 4, "aid", MPV_FORMAT_NONE);
+    mpv_observe_property(mpv, 5, "sid", MPV_FORMAT_NONE);
     mpv_set_wakeup_callback(mpv, nuvioMpvWakeup, (__bridge void *)self);
 }
 
@@ -1935,6 +1969,9 @@ static void nuvioMpvWakeup(void *ctx) {
         switch (event->event_id) {
             case MPV_EVENT_PROPERTY_CHANGE: {
                 mpv_event_property *prop = (mpv_event_property *)event->data;
+                if (event->reply_userdata == 3 || event->reply_userdata == 4 || event->reply_userdata == 5) {
+                    _tracksDirty.store(true);
+                }
                 if (event->reply_userdata == 2 && prop && prop->format == MPV_FORMAT_STRING) {
                     const char *ao = prop->data ? *(const char **)prop->data : NULL;
                     BOOL isAvf = ao && strcmp(ao, "avfoundation") == 0;
@@ -2152,38 +2189,47 @@ static void nuvioMpvWakeup(void *ctx) {
 }
 
 - (NSString *)audioTracksJson {
-    return [self tracksJsonForType:@"audio"];
+    std::lock_guard<std::mutex> lock(_tracksMutex);
+    if (_cachedAudioTracksJson.empty()) return @"[]";
+    return [NSString stringWithUTF8String:_cachedAudioTracksJson.c_str()] ?: @"[]";
 }
 
 - (NSString *)subtitleTracksJson {
-    return [self tracksJsonForType:@"sub"];
+    std::lock_guard<std::mutex> lock(_tracksMutex);
+    if (_cachedSubtitleTracksJson.empty()) return @"[]";
+    return [NSString stringWithUTF8String:_cachedSubtitleTracksJson.c_str()] ?: @"[]";
 }
 
 - (void)selectAudioTrackId:(int)trackId {
     if (!_mpv) return;
     int64_t id = trackId;
     mpv_set_property(_mpv, "aid", MPV_FORMAT_INT64, &id);
+    _tracksDirty.store(true);
 }
 
 - (void)selectSubtitleTrackId:(int)trackId {
     if (!_mpv) return;
     if (trackId < 0) {
         [self setStringProperty:"sid" value:@"no"];
+        _tracksDirty.store(true);
         return;
     }
     int64_t id = trackId;
     mpv_set_property(_mpv, "sid", MPV_FORMAT_INT64, &id);
+    _tracksDirty.store(true);
 }
 
 - (void)addSubtitleUrl:(NSString *)url {
     if (!_mpv || url.length == 0) return;
     [self command:@[@"sub-add", url, @"select"]];
+    _tracksDirty.store(true);
 }
 
 - (void)removeExternalSubtitles {
     if (!_mpv) return;
     [self removeExternalSubtitleTracks];
     [self setStringProperty:"sid" value:@"no"];
+    _tracksDirty.store(true);
 }
 
 - (void)removeExternalSubtitlesAndSelect:(int)trackId {
@@ -2193,6 +2239,7 @@ static void nuvioMpvWakeup(void *ctx) {
         [self selectSubtitleTrackId:trackId];
     } else {
         [self setStringProperty:"sid" value:@"no"];
+        _tracksDirty.store(true);
     }
 }
 

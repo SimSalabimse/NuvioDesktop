@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.Color
@@ -60,6 +61,11 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     }
     val isInPip = rememberIsInPictureInPicture()
     val displayedPositionMs = scrubbingPositionMs ?: playbackSnapshot.positionMs
+    CompositionLocalProvider(
+        LocalPlaybackClock provides playbackClockState,
+        LocalPlaybackClockLive provides playbackClockLive,
+        LocalTimelineScrubbing provides (scrubbingPositionMs != null),
+    ) {
     val seasonNumber = activeSeasonNumber
     val episodeNumber = activeEpisodeNumber
     val episodeTitle = activeEpisodeTitle
@@ -589,6 +595,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         )
         RenderPlayerModals(displayedPositionMs = displayedPositionMs)
     }
+    }
 }
 
 @Composable
@@ -689,7 +696,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                             title = title,
                             streamTitle = activeStreamTitle,
                             sourceHeaders = activeSourceHeaders,
-                            resumePositionMs = playbackSnapshot.positionMs,
+                            resumePositionMs = playheadPositionMs(),
                             durationMs = playbackSnapshot.durationMs.takeIf { it > 0L },
                             playbackSession = playbackSession,
                             subtitles = loadedSubtitles,
@@ -1256,7 +1263,7 @@ private fun PlayerScreenRuntime.handlePlayerControlsScrubFinished(positionMs: Lo
 
 private fun PlayerScreenRuntime.playerControlLogContext(): String =
     "video=${activeVideoId ?: "none"} s=${activeSeasonNumber ?: "-"} e=${activeEpisodeNumber ?: "-"} " +
-        "pos=${playbackSnapshot.positionMs} duration=${playbackSnapshot.durationMs} " +
+        "pos=${playheadPositionMs()} duration=${playbackSnapshot.durationMs} " +
         "speed=${playbackSnapshot.playbackSpeed} controller=${playerController != null}"
 
 private fun String.shouldLogPlayerControlsEvent(): Boolean {
@@ -1291,7 +1298,7 @@ private fun PlayerScreenRuntime.openInExternalPlayer() {
             title = title,
             streamTitle = activeStreamTitle,
             sourceHeaders = activeSourceHeaders,
-            resumePositionMs = playbackSnapshot.positionMs,
+            resumePositionMs = playheadPositionMs(),
             subtitles = loadedSubtitles,
         ),
     )

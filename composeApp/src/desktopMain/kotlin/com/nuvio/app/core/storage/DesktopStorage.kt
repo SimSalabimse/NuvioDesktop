@@ -120,6 +120,16 @@ internal object DesktopStorage {
             putString(key, value.toString())
         }
 
+        fun putFloats(values: Map<String, Float>) = synchronized(lock) {
+            ensureLoaded()
+            var changed = false
+            values.forEach { (key, value) ->
+                val encoded = value.toString()
+                if (properties.setProperty(key, encoded) != encoded) changed = true
+            }
+            if (changed) persist()
+        }
+
         fun getStringSet(key: String): Set<String>? =
             getString(key)?.let { payload ->
                 runCatching { json.decodeFromString<List<String>>(payload).toSet() }.getOrNull()

@@ -49,6 +49,7 @@ import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioAsyncImage as AsyncImage
+import com.nuvio.app.core.ui.posterImageRequest
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioDesktopVerticalScrollbar
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
@@ -402,8 +403,17 @@ private fun CatalogPosterTile(
                     ),
             ) {
                 if (item.poster != null) {
+                    val platformContext = coil3.compose.LocalPlatformContext.current
+                    val poster = item.poster
+                    val imageModel = remember(poster, item.rawPosterUrl, platformContext) {
+                        posterImageRequest(
+                            context = platformContext,
+                            imageUrl = poster,
+                            fallbackImageUrl = item.rawPosterUrl,
+                        )
+                    }
                     AsyncImage(
-                        model = item.poster,
+                        model = imageModel,
                         contentDescription = item.name,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
