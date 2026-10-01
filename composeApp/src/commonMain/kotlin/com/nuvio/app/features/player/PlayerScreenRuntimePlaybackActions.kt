@@ -10,6 +10,7 @@ import com.nuvio.app.features.watchprogress.WatchProgressClock
 import com.nuvio.app.features.watchprogress.WatchProgressPlaybackSession
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
+import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -46,7 +47,11 @@ internal fun PlayerScreenRuntime.updatePlaybackSnapshot(
     val structural = snapshot.copy(positionMs = 0L, bufferedPositionMs = 0L)
     val previousStructural = playbackSnapshot.copy(positionMs = 0L, bufferedPositionMs = 0L)
     if (structural != previousStructural || playbackSnapshotKey != playbackKey) {
-        playbackSnapshot = snapshot
+        playbackSnapshot = if (snapshot.durationMs <= 0L && playbackSnapshotKey == playbackKey) {
+            snapshot.copy(durationMs = playbackSnapshot.durationMs)
+        } else {
+            snapshot
+        }
         playbackSnapshotKey = playbackKey
     }
     val targetPositionMs = scrubbingPositionMs ?: return true
@@ -218,12 +223,14 @@ internal fun PlayerScreenRuntime.currentTrackingMedia(): TrackingMediaReference 
     snapshotTrackingScrobbleItemInputs().buildMedia()
 
 internal fun PlayerScreenRuntime.emitTrackingScrobbleStart() {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     if (hasRequestedScrobbleStartForCurrentItem) return
     hasRequestedScrobbleStartForCurrentItem = true
     val requestGeneration = scrobbleStartRequestGeneration + 1L
     scrobbleStartRequestGeneration = requestGeneration
 
     scope.launch {
+        if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
         val media = currentTrackingMedia()
         if (!media.hasResolvableIdentity) {
             hasRequestedScrobbleStartForCurrentItem = false
@@ -262,6 +269,7 @@ private fun PlayerScreenRuntime.emitTrackingScrobbleTerminal(
     action: TrackingScrobbleAction,
     progressPercent: Float?,
 ) {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     val provided = progressPercent
     if (!hasRequestedScrobbleStartForCurrentItem && (provided ?: 0f) < 80f) return
 
@@ -284,6 +292,7 @@ private fun PlayerScreenRuntime.emitTrackingScrobbleTerminal(
 }
 
 internal fun PlayerScreenRuntime.emitStopScrobbleForCurrentProgress() {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     val progressPercent = currentPlaybackProgressPercent()
     if (!shouldSendStopScrobble(hasRequestedScrobbleStartForCurrentItem, progressPercent)) {
         return
@@ -310,9 +319,11 @@ internal fun shouldUpdateTrackingScrobbleAfterSeek(
 ): Boolean = hasActiveScrobble && progressPercent >= 1f && progressPercent < 80f
 
 internal fun PlayerScreenRuntime.emitTrackingSeekScrobbleStart() {
+    if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return
     val mediaSnapshot = currentTrackingMedia
     val inputsSnapshot = snapshotTrackingScrobbleItemInputs()
     scope.launch {
+        if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
         val media = mediaSnapshot ?: inputsSnapshot.buildMedia()
         if (!media.hasResolvableIdentity) return@launch
         TrackingScrobbleCoordinator.scrobbleSeek(
@@ -370,6 +381,7 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
     seekProgressSyncJob?.cancel()
     seekProgressSyncJob = scope.launch {
         delay(PlayerSeekProgressSyncDebounceMs)
+        if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
         WatchProgressRepository.upsertPlaybackProgress(
             session = playbackSession,
             snapshot = progressSnapshot(),
@@ -392,12 +404,15 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
             progressPercent = progressPercent.toDouble(),
         )
         scope.launch {
+            if (isShortPlaceholderDuration(playbackSnapshot.durationMs)) return@launch
             TrackingScrobbleCoordinator.scrobbleSeek(
                 profileId = profileId,
                 action = TrackingScrobbleAction.STOP,
                 event = stopEvent,
             )
-            if (!shouldRestartScrobbleAfterSeek || !shouldPlay || playbackSnapshot.isEnded) return@launch
+            if (!shouldRestartScrobbleAfterSeek || !shouldPlay || playbackSnapshot.isEnded ||
+                isShortPlaceholderDuration(playbackSnapshot.durationMs)
+            ) return@launch
             if (playbackSnapshot.isPlaying) {
                 pendingSeekScrobbleRestart = false
                 TrackingScrobbleCoordinator.scrobbleSeek(

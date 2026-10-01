@@ -1500,6 +1500,8 @@ private fun PlayerControlsState.toControlsJson(isFullscreen: Boolean): String =
         append(',')
         appendJsonField("nextEpisodeThumbnail", nextEpisodeThumbnail)
         append(',')
+        appendJsonField("nextEpisodeThumbnailBlurred", nextEpisodeThumbnailBlurred)
+        append(',')
         appendJsonField("nextEpisodeStatus", nextEpisodeStatus)
         append(',')
         appendJsonField("nextEpisodeActionLabel", nextEpisodeActionLabel)
