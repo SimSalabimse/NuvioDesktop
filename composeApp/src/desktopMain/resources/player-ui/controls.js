@@ -29,6 +29,7 @@ const fullscreenButton = document.getElementById("fullscreenButton");
 const pipButton = document.getElementById("pipButton");
 const fullscreenIcon = document.getElementById("fullscreenIcon");
 const title = document.getElementById("title");
+const runningVersion = document.getElementById("runningVersion");
 const episode = document.getElementById("episode");
 const playbackMetadata = document.querySelector(".metadata");
 const streamTitle = document.getElementById("streamTitle");
@@ -172,6 +173,7 @@ const playerToastText = document.getElementById("playerToastText");
 
 let state = {
   title: "",
+  runningVersion: "",
   episodeText: "",
   streamTitle: "",
   providerName: "",
@@ -2279,6 +2281,7 @@ const renderChrome = () => {
   syncParentalGuide(showOpening || showError);
 
   title.textContent = state.title || "";
+  setText(runningVersion, state.runningVersion);
   setText(episode, state.episodeText);
   setText(streamTitle, state.streamTitle);
   setText(providerName, state.providerName);
@@ -2659,6 +2662,22 @@ window.addEventListener("blur", () => {
     stopSpeedBoost();
   }
 });
+
+if (runningVersion) {
+  runningVersion.addEventListener("click", event => {
+    event.stopPropagation();
+    event.preventDefault();
+    const text = String(state.runningVersion || "").trim();
+    if (!text) return;
+    noteChromeActivity(true);
+    send("copyRunningVersion", 0);
+    const clipboard = navigator.clipboard;
+    if (clipboard && clipboard.writeText) {
+      clipboard.writeText(text).catch(() => {});
+    }
+    showPlayerToast("Copied");
+  });
+}
 
 document.querySelectorAll("[data-command]").forEach(button => {
   button.addEventListener("click", event => {

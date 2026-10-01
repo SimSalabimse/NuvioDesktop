@@ -2,6 +2,7 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputDirectory
@@ -42,6 +43,12 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
 
     @get:Input
     abstract val desktopAppVersionCode: Property<Int>
+
+    @get:Input
+    abstract val gitRevision: Property<String>
+
+    @get:Input
+    abstract val gitDirty: Property<Boolean>
 
     @get:Input
     abstract val supabaseUrl: Property<String>
@@ -220,6 +227,8 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |    const val VERSION_CODE = ${appVersionCode.get()}
                 |    const val DESKTOP_VERSION_NAME = "${desktopAppVersionName.get()}"
                 |    const val DESKTOP_VERSION_CODE = ${desktopAppVersionCode.get()}
+                |    const val GIT_REVISION = "${gitRevision.get()}"
+                |    const val GIT_DIRTY = ${gitDirty.get() && gitRevision.get().isNotEmpty()}
                 |}
                 """.trimMargin()
             )
@@ -606,6 +615,18 @@ fun runtimeConfigBoolean(key: String, default: Boolean): Boolean =
         else -> default
     }
 
+fun gitExecProvider(vararg args: String): Provider<String> =
+    providers.exec {
+        commandLine(listOf("git", *args))
+        workingDir(rootProject.projectDir)
+        isIgnoreExitValue = true
+    }.standardOutput.asText.map { it.trim() }
+
+val gitRevisionProvider = gitExecProvider("rev-parse", "--short=7", "HEAD").map { raw ->
+    raw.lowercase().takeIf { it.matches(Regex("[0-9a-f]{4,40}")) }.orEmpty()
+}
+val gitDirtyProvider = gitExecProvider("status", "--porcelain", "--untracked-files=no").map { it.isNotEmpty() }
+
 val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generateRuntimeConfigs") {
     outputDir.set(generatedRuntimeConfigDir)
     localPropertiesFile.set(rootProject.layout.projectDirectory.file("local.properties"))
@@ -613,6 +634,8 @@ val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generat
     appVersionCode.set(releaseAppVersionCode)
     desktopAppVersionName.set(desktopReleaseVersionName)
     desktopAppVersionCode.set(desktopReleaseVersionCode)
+    gitRevision.set(gitRevisionProvider)
+    gitDirty.set(gitDirtyProvider)
     // Public official client. Blank local.properties / env used to emit an empty
     // URL and anon key, which makes desktop sign-in fail before any request.
     // A non-blank NUVIO_SUPABASE_URL / NUVIO_SUPABASE_ANON_KEY still wins.

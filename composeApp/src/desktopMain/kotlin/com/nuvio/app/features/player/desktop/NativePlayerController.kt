@@ -2,6 +2,7 @@ package com.nuvio.app.features.player.desktop
 
 import androidx.compose.ui.graphics.Color
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.build.currentAppVersionDetail
 import com.nuvio.app.features.player.PlayerControlAddonSubtitleItem
 import com.nuvio.app.features.player.PlayerControlEpisodeItem
 import com.nuvio.app.features.player.PlayerControlFilterItem
@@ -518,6 +519,7 @@ internal class NativePlayerController(
                 val speed = value.toFloat()
                 setPlaybackSpeed(speed)
             }
+            "copyRunningVersion" -> copyDesktopRunningVersion()
             else -> {
                 val eventHandled = onEvent(type, value)
                 if (type.shouldLogNativeControlEvent()) {
@@ -532,6 +534,19 @@ internal class NativePlayerController(
                     handleFallbackAction(action)
                 }
             }
+        }
+    }
+
+    private fun copyDesktopRunningVersion() {
+        val text = currentAppVersionDetail()
+        if (text.isBlank()) return
+        runCatching {
+            java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(
+                java.awt.datatransfer.StringSelection(text),
+                null,
+            )
+        }.onFailure { error ->
+            log.w(error) { "failed to copy running version" }
         }
     }
 
@@ -1219,6 +1234,8 @@ private fun PlayerControlsState.toControlsJson(isFullscreen: Boolean): String =
     buildString {
         append('{')
         appendJsonField("title", title)
+        append(',')
+        appendJsonField("runningVersion", currentAppVersionDetail())
         append(',')
         appendJsonField("episodeText", episodeText)
         append(',')

@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,15 +9,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.build.AppVersionPolicy
+import com.nuvio.app.core.build.currentAppVersionDetail
+import kotlinx.coroutines.delay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_about_based_on_version_format
 import nuvio.composeapp.generated.resources.compose_about_made_with
-import nuvio.composeapp.generated.resources.compose_about_version_format
+import nuvio.composeapp.generated.resources.compose_about_version_copied
+import nuvio.composeapp.generated.resources.compose_about_version_copy
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -44,13 +56,28 @@ internal fun SettingsAttribution(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        val versionDetail = currentAppVersionDetail()
+        val clipboard = LocalClipboardManager.current
+        val copiedLabel = stringResource(Res.string.compose_about_version_copied)
+        val copyLabel = stringResource(Res.string.compose_about_version_copy)
+        var copied by remember { mutableStateOf(false) }
+        LaunchedEffect(copied) {
+            if (!copied) return@LaunchedEffect
+            delay(1_600)
+            copied = false
+        }
         Text(
-            text = stringResource(
-                Res.string.compose_about_version_format,
-                AppVersionPolicy.displayVersionName,
-                AppVersionPolicy.displayVersionCode,
-            ),
-            modifier = Modifier.fillMaxWidth(),
+            text = if (copied) copiedLabel else versionDetail,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    role = Role.Button,
+                    onClickLabel = copyLabel,
+                    onClick = {
+                        clipboard.setText(AnnotatedString(versionDetail))
+                        copied = true
+                    },
+                ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
