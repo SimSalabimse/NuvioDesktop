@@ -31,6 +31,9 @@ object ThemeSettingsRepository {
     private val _amoledEnabled = MutableStateFlow(false)
     val amoledEnabled: StateFlow<Boolean> = _amoledEnabled.asStateFlow()
 
+    private val _posterFadeEnabled = MutableStateFlow(false)
+    val posterFadeEnabled: StateFlow<Boolean> = _posterFadeEnabled.asStateFlow()
+
     private val _liquidGlassNativeTabBarEnabled = MutableStateFlow(false)
     val liquidGlassNativeTabBarEnabled: StateFlow<Boolean> = _liquidGlassNativeTabBarEnabled.asStateFlow()
 
@@ -66,6 +69,7 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.Default
         _customThemeColors.value = CustomThemeColors.solid(CustomThemeColors.Default.second)
         _amoledEnabled.value = false
+        _posterFadeEnabled.value = false
         _liquidGlassNativeTabBarEnabled.value = false
         _desktopNavigationLayout.value = DesktopNavigationLayout.Default
         NativeTabBridge.publishAccentColor(ThemeColors.White.nativeAccentHex)
@@ -91,6 +95,7 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
         applyEffectiveTheme()
         _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
+        _posterFadeEnabled.value = ThemeSettingsStorage.loadPosterFadeEnabled() ?: false
         val liquidGlassEnabled = ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled() ?: false
         _liquidGlassNativeTabBarEnabled.value = liquidGlassEnabled
         NativeTabBridge.publishLiquidGlassEnabled(liquidGlassEnabled)
@@ -130,6 +135,13 @@ object ThemeSettingsRepository {
         if (_amoledEnabled.value == enabled) return
         _amoledEnabled.value = enabled
         ThemeSettingsStorage.saveAmoledEnabled(enabled)
+    }
+
+    fun setPosterFade(enabled: Boolean) {
+        ensureLoaded()
+        if (_posterFadeEnabled.value == enabled) return
+        _posterFadeEnabled.value = enabled
+        ThemeSettingsStorage.savePosterFadeEnabled(enabled)
     }
 
     fun setLiquidGlassNativeTabBar(enabled: Boolean) {

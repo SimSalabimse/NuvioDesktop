@@ -284,11 +284,13 @@ fun NuvioPosterCard(
             if (imageUrl != null) {
                 val posterUrl = imageUrl
                 val platformContext = coil3.compose.LocalPlatformContext.current
-                val imageModel = remember(posterUrl, fallbackImageUrl, platformContext) {
+                val posterFadeEnabled = rememberPosterCrossfadeEnabled()
+                val imageModel = remember(posterUrl, fallbackImageUrl, platformContext, posterFadeEnabled) {
                     posterImageRequest(
                         context = platformContext,
                         imageUrl = posterUrl,
                         fallbackImageUrl = fallbackImageUrl,
+                        crossfadeEnabled = posterFadeEnabled,
                     )
                 }
                 NuvioAsyncImage(

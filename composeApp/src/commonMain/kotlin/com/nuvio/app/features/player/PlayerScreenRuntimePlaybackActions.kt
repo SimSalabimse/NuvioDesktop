@@ -174,6 +174,7 @@ private fun PlayerScreenRuntime.resetTrackSelectionState() {
     preferredSubtitleSelectionApplied = false
     isUserExplicitSubtitleSelection = false
     hasScannedTextTracksOnce = false
+    audioTracks = emptyList()
     subtitleTracks = emptyList()
     selectedSubtitleIndex = -1
     selectedAddonSubtitleId = null

@@ -28,6 +28,7 @@ import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.NuvioAsyncImage
 import com.nuvio.app.core.ui.posterImageRequest
+import com.nuvio.app.core.ui.rememberPosterCrossfadeEnabled
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
 import com.nuvio.app.core.ui.SkeletonPoster
@@ -148,11 +149,13 @@ private fun PosterGridTile(
                 val poster = item.poster
                 if (poster != null) {
                     val platformContext = coil3.compose.LocalPlatformContext.current
-                    val imageModel = remember(poster, item.rawPosterUrl, platformContext) {
+                    val posterFadeEnabled = rememberPosterCrossfadeEnabled()
+                    val imageModel = remember(poster, item.rawPosterUrl, platformContext, posterFadeEnabled) {
                         posterImageRequest(
                             context = platformContext,
                             imageUrl = poster,
                             fallbackImageUrl = item.rawPosterUrl,
+                            crossfadeEnabled = posterFadeEnabled,
                         )
                     }
                     if (isDesktop) {

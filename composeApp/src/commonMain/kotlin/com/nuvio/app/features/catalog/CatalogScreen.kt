@@ -50,6 +50,7 @@ import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioAsyncImage as AsyncImage
 import com.nuvio.app.core.ui.posterImageRequest
+import com.nuvio.app.core.ui.rememberPosterCrossfadeEnabled
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioDesktopVerticalScrollbar
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
@@ -405,11 +406,13 @@ private fun CatalogPosterTile(
                 if (item.poster != null) {
                     val platformContext = coil3.compose.LocalPlatformContext.current
                     val poster = item.poster
-                    val imageModel = remember(poster, item.rawPosterUrl, platformContext) {
+                    val posterFadeEnabled = rememberPosterCrossfadeEnabled()
+                    val imageModel = remember(poster, item.rawPosterUrl, platformContext, posterFadeEnabled) {
                         posterImageRequest(
                             context = platformContext,
                             imageUrl = poster,
                             fallbackImageUrl = item.rawPosterUrl,
+                            crossfadeEnabled = posterFadeEnabled,
                         )
                     }
                     AsyncImage(

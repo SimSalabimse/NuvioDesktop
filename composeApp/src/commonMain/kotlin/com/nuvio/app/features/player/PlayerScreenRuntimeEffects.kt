@@ -1,6 +1,7 @@
 package com.nuvio.app.features.player
 
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
+import com.nuvio.app.core.ui.NuvioToastController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.shuffle.EpisodeShuffleRepository
 import com.nuvio.app.features.shuffle.ShuffleSurface
@@ -371,6 +372,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
             args.launchId?.let { launchId -> PlayerLaunchStore.update(launchId) { currentLaunch(it) } }
             playerController?.clearNowPlayingInfo()
             P2pStreamingEngine.shutdown()
+            cancelNextEpisodePreload()
             PlayerStreamsRepository.clearAll()
         }
     }
@@ -565,7 +567,6 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
     }
 
     SkipWindowClock()
-
     LaunchedEffect(
         playerMetaVideos,
         shuffleSettings,
@@ -634,6 +635,14 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         } else null
     }
 
+    LaunchedEffect(playbackSnapshot.isEnded) {
+        if (playbackSnapshot.isEnded && nextEpisodeCardDismissed &&
+            playerSettingsUiState.streamAutoPlayNextEpisodeEnabled &&
+            nextEpisodeInfo?.hasAired == true
+        ) {
+            nextEpisodeCardDismissed = false
+        }
+    }
 }
 
 @Composable

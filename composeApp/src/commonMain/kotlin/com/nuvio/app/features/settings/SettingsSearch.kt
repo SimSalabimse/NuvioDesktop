@@ -380,6 +380,15 @@ internal fun settingsSearchEntries(
         section = stringResource(Res.string.settings_appearance_section_display),
         icon = Icons.Rounded.Palette,
     )
+    addRow(
+        page = SettingsPage.Appearance,
+        key = "poster-fade",
+        title = stringResource(Res.string.settings_appearance_poster_fade),
+        description = stringResource(Res.string.settings_appearance_poster_fade_description),
+        pageLabel = layoutPage,
+        section = stringResource(Res.string.settings_appearance_section_display),
+        icon = Icons.Rounded.Palette,
+    )
     if (liquidGlassNativeTabBarSupported) {
         addRow(
             page = SettingsPage.Appearance,
