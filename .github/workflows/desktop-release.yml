@@ -409,7 +409,18 @@ jobs:
 
       - name: Configure desktop runtime
         shell: bash
+        env:
+          RELEASE_MODE: ${{ inputs.mode }}
         run: |
+          # A build-only cut with no release secrets matches the local Mac package:
+          # empty local.properties, Gradle public fallbacks, no Sentry upload.
+          if [[ "${RELEASE_MODE}" == "build-only" && -z "${LOCAL_PROPERTIES_BASE64}" && -z "${SENTRY_AUTH_TOKEN}" && -z "${SENTRY_DESKTOP_DSN}" ]]; then
+            : > local.properties
+            echo "SKIP_SENTRY_UPLOAD=true" >> "${GITHUB_ENV}"
+            echo "Build-only Windows package is using the local Mac package defaults."
+            exit 0
+          fi
+
           missing=()
           required_values=(
             LOCAL_PROPERTIES_BASE64
@@ -463,9 +474,12 @@ jobs:
       - name: Build MSI
         shell: pwsh
         run: |
+          $tasks = @(":composeApp:packageReleaseMsi")
+          if ($env:SKIP_SENTRY_UPLOAD -ne "true") {
+            $tasks += ":desktopSentry:sentryUploadSourceBundleJava"
+          }
           & .\gradlew.bat `
-            :composeApp:packageReleaseMsi `
-            :desktopSentry:sentryUploadSourceBundleJava `
+            @tasks `
             "-Pnuvio.webview2.dir=$env:WEBVIEW2_ROOT" `
             "-Pcompose.desktop.packaging.checkJdkVendor=false" `
             --no-configuration-cache `
