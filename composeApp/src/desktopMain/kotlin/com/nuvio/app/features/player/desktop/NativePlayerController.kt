@@ -1087,6 +1087,34 @@ internal class NativePlayerController(
             json.decodeFromString<List<NativeMpvTrack>>(readJson(current))
         }.getOrDefault(emptyList())
     }
+
+    override fun startAudioEnergyCapture(startTimeMs: Long) {
+        val current = handle.takeIf { it != 0L } ?: return
+        log.d { "startAudioEnergyCapture startTimeMs=$startTimeMs handle=$current" }
+        NativePlayerBridge.startAudioEnergyCapture(current, startTimeMs)
+    }
+
+    override fun stopAudioEnergyCapture(): List<com.nuvio.app.features.player.AudioEnergySample> {
+        val current = handle.takeIf { it != 0L } ?: return emptyList()
+        log.d { "stopAudioEnergyCapture handle=$current" }
+        val jsonResult = NativePlayerBridge.stopAudioEnergyCapture(current)
+        return runCatching {
+            json.decodeFromString<List<AudioEnergySampleNative>>(jsonResult)
+                .map { sample ->
+                    com.nuvio.app.features.player.AudioEnergySample(
+                        timestampMs = sample.timestampMs,
+                        energy = sample.energy,
+                    )
+                }
+        }.onFailure { error ->
+            log.w(error) { "Failed to decode audio energy samples: jsonLength=${jsonResult.length}" }
+        }.getOrDefault(emptyList())
+    }
+
+    override fun getAudioCaptureDuration(): Long {
+        val current = handle.takeIf { it != 0L } ?: return 0L
+        return NativePlayerBridge.getAudioCaptureDuration(current)
+    }
 }
 
 private fun String.toPlaybackLogKey(): String {
@@ -1116,6 +1144,12 @@ private data class NativeMpvTrack(
     val language: String = "",
     val selected: Boolean = false,
     val forced: Boolean = false,
+)
+
+@Serializable
+private data class AudioEnergySampleNative(
+    val timestampMs: Long = 0L,
+    val energy: Double = 0.0,
 )
 
 private fun resolveTrackId(index: Int, tracks: List<NativeMpvTrack>): Int? =
