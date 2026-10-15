@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 interface PlayerEngineController {
+    val playbackEngine: AndroidPlaybackEngine? get() = null
     fun play()
     fun pause()
     fun seekTo(positionMs: Long)
@@ -47,6 +48,8 @@ interface PlayerEngineController {
     ) {
         onReleased()
     }
+
+    suspend fun getMediaInfo(): PlayerMediaInfo = PlayerMediaInfo()
 }
 
 enum class PlayerControlsAction {
@@ -89,6 +92,8 @@ data class PlayerControlsState(
     val pauseOverlayDescription: String = "",
     val resizeModeLabel: String = "Fit",
     val playbackSpeedLabel: String = "1x",
+    val holdToSpeedEnabled: Boolean = true,
+    val holdToSpeedValue: Float? = 2f,
     val volumeLevel: Float? = null,
     val subtitlesLabel: String = "Subs",
     val audioLabel: String = "Audio",
@@ -209,6 +214,7 @@ data class PlayerControlsState(
     val nextEpisodeHeaderLabel: String = "Next episode",
     val nextEpisodeTitle: String = "",
     val nextEpisodeThumbnail: String = "",
+    val nextEpisodeThumbnailBlurred: Boolean = false,
     val nextEpisodeStatus: String = "",
     val nextEpisodeActionLabel: String = "Play",
     val nextEpisodePlayable: Boolean = false,
@@ -390,6 +396,7 @@ expect fun PlatformPlayerSurface(
     initialPositionMs: Long? = null,
     initialPositionRequestKey: String? = null,
     resizeMode: PlayerResizeMode = PlayerResizeMode.Fit,
+    playbackEngine: AndroidPlaybackEngine? = null,
     useNativeController: Boolean = false,
     playerControlsState: PlayerControlsState = PlayerControlsState(),
     onPlayerControlsAction: (PlayerControlsAction) -> Boolean = { false },
