@@ -51,6 +51,14 @@ import nuvio.composeapp.generated.resources.updates_debug_test_title
 import nuvio.composeapp.generated.resources.about_supporters_contributors_subtitle
 import nuvio.composeapp.generated.resources.about_licenses_attributions_subtitle
 import org.jetbrains.compose.resources.stringResource
+import nuvio.composeapp.generated.resources.whats_new_root_description
+import nuvio.composeapp.generated.resources.compose_settings_page_whats_new
+import com.nuvio.app.features.whatsnew.BundledWhatsNewSheet
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.rounded.NewReleases
 
 private const val PRIVACY_POLICY_URL = "https://nuvio.tv/privacy-policy"
 
@@ -168,6 +176,10 @@ internal fun LazyListScope.settingsRootContent(
     if (showAboutSection) {
         item {
             val uriHandler = LocalUriHandler.current
+            var showWhatsNew by remember { mutableStateOf(false) }
+            if (showWhatsNew) {
+                BundledWhatsNewSheet(onDismiss = { showWhatsNew = false })
+            }
             SettingsSection(
                 title = stringResource(Res.string.compose_settings_root_about_section),
                 isTablet = isTablet,
@@ -183,6 +195,14 @@ internal fun LazyListScope.settingsRootContent(
                         )
                         SettingsGroupDivider(isTablet = isTablet)
                     }
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.compose_settings_page_whats_new),
+                        description = stringResource(Res.string.whats_new_root_description),
+                        icon = Icons.Rounded.NewReleases,
+                        isTablet = isTablet,
+                        onClick = { showWhatsNew = true },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_privacy_policy),
                         description = stringResource(Res.string.compose_settings_root_privacy_policy_description),

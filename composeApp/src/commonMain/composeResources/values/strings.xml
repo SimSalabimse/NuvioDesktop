@@ -2534,4 +2534,12 @@
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
     <string name="stream_info_player_engine">Player Engine</string>
     <string name="stream_info_server">Server</string>
+    <string name="compose_settings_page_whats_new">What&apos;s new</string>
+    <string name="whats_new_root_description">See what&apos;s changed in this version</string>
+    <string name="whats_new_sheet_title">What&apos;s new in %1$s</string>
+    <string name="whats_new_sheet_continue">Continue</string>
+    <string name="whats_new_section_new">New</string>
+    <string name="whats_new_section_improved">Improved</string>
+    <string name="whats_new_section_fixed">Fixed</string>
+    <string name="whats_new_version_label">Version %1$s</string>
 </resources>

@@ -1,0 +1,32 @@
+{
+  "releases": [
+    {
+      "version": "0.1.30-alpha",
+      "date": "2026-10-15",
+      "new": [
+        "This What's new screen. It shows once after each update, and you can open it again from Settings > About.",
+        "Submit Timestamps: mark intro, recap, credits and preview times from the player and send them to TheIntroDB and IntroDB.",
+        "TheIntroDB support: skip times for intros, recaps, credits and previews come from theintrodb.org.",
+        "Auto Sync lines up subtitles with the audio by itself.",
+        "Hold to speed now works on Desktop: hold to play faster, let go to go back to normal speed."
+      ],
+      "improved": [
+        "Submit Timestamps shows times as H:MM:SS with the episode length, and greys out types you already sent in this session.",
+        "Your IntroDB and TheIntroDB API keys are masked in Settings.",
+        "Streams start faster with a smaller buffer, and dropped streams reconnect by themselves.",
+        "Picture in Picture on macOS: move and resize the window, controls show once it settles, and the paused frame stays visible.",
+        "TorBox cloud libraries load even when they are very large.",
+        "The image cache has a size limit, so Nuvio uses less disk and memory over time.",
+        "Libraries on your media servers that mix movies and shows now open and sync.",
+        "Updated to the latest upstream Nuvio Desktop (0.1.30-alpha)."
+      ],
+      "fixed": [
+        "Windows: no more flicker or high frame rate while nothing is playing.",
+        "Player files are no longer read into memory at launch.",
+        "The list scrollbar stays steady while scrolling.",
+        "Full screen trailers no longer trap you in full screen.",
+        "Next episode no longer starts by an accidental click."
+      ]
+    }
+  ]
+}

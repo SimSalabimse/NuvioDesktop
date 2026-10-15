@@ -515,6 +515,9 @@ internal fun MainAppContent(
         )
     }
     launchOverlayState.targetState = launchOverlayVisible
+    com.nuvio.app.features.whatsnew.WhatsNewLaunchHost(
+        enabled = ownsAppRuntime && rootContentReady,
+    )
 
     LaunchedEffect(
         rootContentReady,
