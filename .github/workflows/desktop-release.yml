@@ -112,13 +112,21 @@ jobs:
           CURRENT_BUMP: ${{ steps.release.outputs.current_bump }}
           EXCLUDE_COMMITS: ${{ inputs.exclude_commits }}
         run: |
-          ./scripts/generate-release-notes.sh \
-            --from "${PREVIOUS_BUMP}" \
-            --to "${CURRENT_BUMP}" \
-            --repository "${GITHUB_REPOSITORY}" \
-            --repository-history \
-            --exclude "${EXCLUDE_COMMITS}" \
-            > release-notes.md
+          # Same notes as the in-app What's new (changelog.json), generated from merged PRs and
+          # commits since the previous release tag with hand-written entries kept. The app also
+          # fetches this release body live, so both stay in sync.
+          version="${{ steps.release.outputs.version }}"
+          GH_TOKEN="${{ github.token }}" python3 scripts/release-notes.py generate --write \
+            --version "${version}" --since "${PREVIOUS_BUMP}" --repo "${GITHUB_REPOSITORY}" || true
+          if ! python3 scripts/release-notes.py "${version}" > release-notes.md 2>/dev/null || [[ ! -s release-notes.md ]]; then
+            ./scripts/generate-release-notes.sh \
+              --from "${PREVIOUS_BUMP}" \
+              --to "${CURRENT_BUMP}" \
+              --repository "${GITHUB_REPOSITORY}" \
+              --repository-history \
+              --exclude "${EXCLUDE_COMMITS}" \
+              > release-notes.md
+          fi
 
           if [[ ! -s release-notes.md ]]; then
             echo "No desktop repository release-note commits were found." >&2

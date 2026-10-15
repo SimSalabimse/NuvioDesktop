@@ -5,4 +5,8 @@ internal actual object WhatsNewStorage {
     actual fun loadLastSeen(): String? = null
 
     actual fun saveLastSeen(value: String) = Unit
+
+    actual fun loadCache(): String? = null
+
+    actual fun saveCache(value: String) = Unit
 }

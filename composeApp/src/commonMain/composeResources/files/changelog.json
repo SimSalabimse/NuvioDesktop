@@ -18,7 +18,8 @@
         "TorBox cloud libraries load even when they are very large.",
         "The image cache has a size limit, so Nuvio uses less disk and memory over time.",
         "Libraries on your media servers that mix movies and shows now open and sync.",
-        "Updated to the latest upstream Nuvio Desktop (0.1.30-alpha)."
+        "Updated to the latest upstream Nuvio Desktop (0.1.30-alpha).",
+        "What's new loads the latest notes from GitHub Releases when online, is cached for offline use, and falls back to the built-in notes. It never delays launch."
       ],
       "fixed": [
         "Windows: no more flicker or high frame rate while nothing is playing.",

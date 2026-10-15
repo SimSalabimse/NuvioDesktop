@@ -83,8 +83,36 @@ internal object ReleaseNotes {
     private val currentVersion: String get() = AppVersionPolicy.displayVersionName
     private val currentKey: String get() = "$currentVersion(${AppVersionPolicy.displayVersionCode})"
 
+    /**
+     * Live GitHub release notes merged over the bundled changelog.json, newest first.
+     * A live entry replaces the bundled one for the same version; bundled-only versions stay.
+     * Offline, rate-limited or slow (4 s cap): bundled + whatever was cached last time.
+     */
+    suspend fun load(forceRefresh: Boolean = false): List<BundledRelease> =
+        merge(LiveReleaseNotes.load(forceRefresh).map { it.cleaned() }, loadBundled())
+
+    /** Bundled + cached live notes without touching the network. */
+    suspend fun loadOffline(): List<BundledRelease> = merge(LiveReleaseNotes.cached().map { it.cleaned() }, loadBundled())
+
+    internal fun merge(live: List<BundledRelease>, bundled: List<BundledRelease>): List<BundledRelease> {
+        val byVersion = LinkedHashMap<String, BundledRelease>()
+        bundled.forEach { byVersion[it.version] = it }
+        live.forEach { l -> byVersion[l.version] = l.copy(date = l.date ?: byVersion[l.version]?.date) }
+        return byVersion.values.sortedWith { a, b -> compareVersions(b.version, a.version) }
+    }
+
+    private fun compareVersions(a: String, b: String): Int {
+        val pa = a.split('.', '-').map { it.toIntOrNull() ?: 0 }
+        val pb = b.split('.', '-').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(pa.size, pb.size)) {
+            val c = pa.getOrElse(i) { 0 }.compareTo(pb.getOrElse(i) { 0 })
+            if (c != 0) return c
+        }
+        return 0
+    }
+
     @OptIn(ExperimentalResourceApi::class)
-    suspend fun load(): List<BundledRelease> {
+    suspend fun loadBundled(): List<BundledRelease> {
         cached?.let { return it }
         val list = runCatching {
             json.decodeFromString<BundledChangelog>(Res.readBytes("files/changelog.json").decodeToString())
@@ -143,7 +171,10 @@ internal fun WhatsNewLaunchHost(enabled: Boolean) {
 @Composable
 internal fun BundledWhatsNewSheet(onDismiss: () -> Unit) {
     var releases by remember { mutableStateOf<List<BundledRelease>?>(null) }
-    LaunchedEffect(Unit) { releases = ReleaseNotes.load() }
+    LaunchedEffect(Unit) {
+        releases = ReleaseNotes.loadOffline()
+        releases = ReleaseNotes.load(forceRefresh = true)
+    }
     val loaded = releases ?: return
     WhatsNewSheet(releases = loaded, onContinue = onDismiss)
 }

@@ -25,6 +25,14 @@ USAGE
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
+# Fill this version's changelog.json entry (bundled What's new) from merged PRs/commits since the
+# last release tag; hand-written notes are kept. NUVIO_SKIP_RELEASE_NOTES=1 skips it.
+if [[ "${NUVIO_SKIP_RELEASE_NOTES:-0}" != "1" ]] && command -v python3 >/dev/null 2>&1; then
+  git fetch --quiet --tags origin 2>/dev/null || true
+  python3 scripts/release-notes.py generate --write --only-if-missing --repo SimSalabimse/NuvioDesktop \
+    || echo "WARN: release-notes generation failed; using changelog.json as is" >&2
+fi
+
 task=":composeApp:notarizeReleaseDmgWithKeychain"
 clean=false
 skip_arm=false
