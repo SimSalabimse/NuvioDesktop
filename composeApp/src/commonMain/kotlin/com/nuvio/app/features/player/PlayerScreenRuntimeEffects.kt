@@ -527,6 +527,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         lastManualSkipSeekPositions = null
         activeSkipInterval = null
         skipIntervalDismissed = false
+        clearSkipFeedback()
         autoSkippedIntervalKeys.clear()
         submittedSegmentTypesInSession.clear()
         playerNotificationMessage = ""
@@ -537,9 +538,12 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         if (!playerSettingsUiState.skipIntroEnabled) return@LaunchedEffect
 
         if ((contentType ?: parentMetaType).equals("movie", ignoreCase = true)) {
-            skipIntervals = SkipIntroRepository.getMovieSkipIntervals(parentMetaId, activeVideoId)
+            skipIntervals = withUserSkipMarks(SkipIntroRepository.getMovieSkipIntervals(parentMetaId, activeVideoId))
+            launch { importUserSkipMarks() }
             return@LaunchedEffect
         }
+        skipIntervals = withUserSkipMarks(emptyList())
+        launch { importUserSkipMarks() }
 
         val lookup = resolveSkipIntervalLookup(
             videoId = activeVideoId,
@@ -574,7 +578,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
                     imdbEpisode = activeEpisodeNumber ?: lookup.episode,
                 )
             }
-            skipIntervals = intervals
+            skipIntervals = withUserSkipMarks(intervals)
         }
     }
 

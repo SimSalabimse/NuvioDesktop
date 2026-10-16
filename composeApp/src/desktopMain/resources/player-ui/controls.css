@@ -3438,3 +3438,63 @@ svg {
   stroke: none;
   pointer-events: none;
 }
+
+.skip-feedback {
+  position: absolute;
+  left: var(--hp);
+  bottom: calc(var(--overlay-bottom) + var(--skip-prompt-lift, 0px) + env(safe-area-inset-bottom));
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(30, 30, 30, .9);
+  color: var(--theme-control-foreground);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(.9);
+  transform-origin: left bottom;
+  transition: opacity 250ms ease, transform 250ms var(--ease-out);
+}
+
+.skip-feedback.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.skip-feedback-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.skip-feedback-actions[hidden] {
+  display: none;
+}
+
+.skip-feedback-actions button {
+  border: 0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, .14);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.skip-feedback-actions button:hover {
+  background: rgba(255, 255, 255, .26);
+}
+
+.skip-feedback-actions .skip-feedback-close {
+  background: transparent;
+}
+
+.player.opening-active .skip-feedback,
+.player.native-resizing .skip-feedback {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}

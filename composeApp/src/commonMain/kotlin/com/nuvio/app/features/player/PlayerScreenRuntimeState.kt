@@ -225,6 +225,10 @@ internal class PlayerScreenRuntime(
     var lastManualSkipSeekPositions by mutableStateOf<Pair<Long, Long>?>(null)
     var activeSkipInterval by mutableStateOf<SkipInterval?>(null)
     var skipIntervalDismissed by mutableStateOf(false)
+    /** Good / Wrong question after a tap on Skip (shown 4 s after the skip lands, for 8 s). */
+    var skipFeedbackInterval by mutableStateOf<SkipInterval?>(null)
+    var skipFeedbackWrong by mutableStateOf(false)
+    var skipFeedbackJob: kotlinx.coroutines.Job? = null
     val autoSkippedIntervalKeys = mutableSetOf<String>()
     var parentalWarnings by mutableStateOf<List<ParentalWarning>>(emptyList())
     var showParentalGuide by mutableStateOf(false)

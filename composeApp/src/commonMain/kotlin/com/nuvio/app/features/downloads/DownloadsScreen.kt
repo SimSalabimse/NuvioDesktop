@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
@@ -59,6 +60,20 @@ fun DownloadsScreen(
     }.collectAsStateWithLifecycle()
     LaunchedEffect(uiState.completedItems.size) {
         DownloadsRepository.markCompletedSeen()
+    }
+    LaunchedEffect(uiState.items) {
+        DownloadSpeeds.onItems(uiState.items, DownloadsClock.nowEpochMs())
+    }
+    var unwatchedOnly by rememberSaveable { mutableStateOf(false) }
+    val watchedState by com.nuvio.app.features.watched.WatchedRepository.uiState.collectAsStateWithLifecycle()
+    val progressState by com.nuvio.app.features.watchprogress.WatchProgressRepository.uiState.collectAsStateWithLifecycle()
+    val watchedIds = remember(uiState.items, watchedState, progressState) {
+        uiState.completedItems.filter { downloadWatchState(it).watched }.mapTo(mutableSetOf()) { it.id }
+    }
+    val visibleUiState = if (unwatchedOnly) {
+        uiState.copy(items = uiState.items.filterNot { it.id in watchedIds })
+    } else {
+        uiState
     }
 
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
@@ -109,9 +124,23 @@ fun DownloadsScreen(
             )
         }
 
+        if (uiState.completedItems.isNotEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    androidx.compose.material3.FilterChip(
+                        selected = unwatchedOnly,
+                        onClick = { unwatchedOnly = !unwatchedOnly },
+                        label = { Text("Unwatched only") },
+                    )
+                }
+            }
+        }
         if (selectedShowId == null) {
             downloadsRootContent(
-                uiState = uiState,
+                uiState = visibleUiState,
                 onOpenDownload = onOpenDownload,
                 onOpenShow = { showId, title ->
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
@@ -121,7 +150,7 @@ fun DownloadsScreen(
         } else {
             downloadsShowContent(
                 showId = selectedShowId.orEmpty(),
-                episodes = completedEpisodes,
+                episodes = if (unwatchedOnly) completedEpisodes.filterNot { it.id in watchedIds } else completedEpisodes,
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
             )
@@ -350,6 +379,13 @@ private fun DownloadRow(
         item = item,
         displayTitle = displayTitle,
     )
+    val speeds by DownloadSpeeds.speeds.collectAsStateWithLifecycle()
+    val watchState = rememberDownloadWatchState(item)
+    val marksRevision by com.nuvio.app.features.player.skip.SkipMarks.revision.collectAsStateWithLifecycle()
+    val skipLine = remember(item.id, marksRevision) { downloadSkipSourceLine(item) }
+    val speedLine = if (item.status == DownloadStatus.Downloading) {
+        speedAndEta(speeds[item.id], item.remainingBytesOrNull(), ::formatBytes)
+    } else null
 
     Surface(
         modifier = Modifier
@@ -374,14 +410,25 @@ private fun DownloadRow(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(
-                        text = displayTitle,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (item.status == DownloadStatus.Completed && watchState.watched) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Rounded.CheckCircle,
+                                contentDescription = "Watched",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp).padding(end = 2.dp),
+                            )
+                            Spacer(modifier = Modifier.size(4.dp))
+                        }
+                        Text(
+                            text = displayTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Text(
                         text = displaySubtitle,
                         style = MaterialTheme.typography.bodySmall,
@@ -390,10 +437,19 @@ private fun DownloadRow(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = statusText(item),
+                        text = listOfNotNull(statusText(item), speedLine).joinToString(" · "),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (skipLine != null) {
+                        Text(
+                            text = skipLine,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -440,6 +496,13 @@ private fun DownloadRow(
                 }
             }
 
+            val watchedProgress = watchState.progress
+            if (item.status == DownloadStatus.Completed && watchedProgress != null) {
+                LinearProgressIndicator(
+                    progress = { watchedProgress },
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                )
+            }
             if (item.status == DownloadStatus.Downloading) {
                 if (item.totalBytes != null && item.totalBytes > 0L) {
                     LinearProgressIndicator(

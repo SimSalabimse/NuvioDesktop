@@ -392,7 +392,8 @@ fun newestDirectory(root: File): File? =
 
 fun jpackageCompatibleVersion(version: String): String {
     val versionCore = version.substringBefore('-').substringBefore('+').trim()
-    val parts = versionCore.split('.').filter { it.isNotBlank() }
+    // Enhanced builds add a 4th part (0.1.30.1); installers only take three, so it is dropped here.
+    val parts = versionCore.split('.').filter { it.isNotBlank() }.let { if (it.size == 4) it.take(3) else it }
     require(parts.isNotEmpty() && parts.size <= 3) {
         "Desktop package version must use one to three numeric components: $version"
     }

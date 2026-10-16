@@ -65,6 +65,10 @@ const parentalGuideList = document.getElementById("parentalGuideList");
 const skipPrompt = document.getElementById("skipPrompt");
 const skipPromptLabel = document.getElementById("skipPromptLabel");
 const skipPromptProgress = document.getElementById("skipPromptProgress");
+const skipFeedback = document.getElementById("skipFeedback");
+const skipFeedbackLabel = document.getElementById("skipFeedbackLabel");
+const skipFeedbackAsk = document.getElementById("skipFeedbackAsk");
+const skipFeedbackFix = document.getElementById("skipFeedbackFix");
 const nextEpisodeCard = document.getElementById("nextEpisodeCard");
 const nextEpisodeThumb = document.getElementById("nextEpisodeThumb");
 const nextEpisodeHeader = document.getElementById("nextEpisodeHeader");
@@ -294,6 +298,9 @@ let state = {
   skipPromptStartMs: 0,
   skipPromptEndMs: 0,
   skipPromptDismissed: false,
+  skipFeedbackVisible: false,
+  skipFeedbackLabel: "",
+  skipFeedbackWrong: false,
   nextEpisodeVisible: false,
   nextEpisodeHeaderLabel: "Next episode",
   nextEpisodeTitle: "",
@@ -2275,6 +2282,13 @@ const renderNativePlaybackPrompts = () => {
     skipPromptAutoHideActive = false;
   }
 
+  const showFeedback = Boolean(state.skipFeedbackVisible);
+  skipFeedbackLabel.textContent = state.skipFeedbackLabel || "";
+  skipFeedbackAsk.hidden = Boolean(state.skipFeedbackWrong);
+  skipFeedbackFix.hidden = !state.skipFeedbackWrong;
+  skipFeedback.setAttribute("aria-hidden", showFeedback ? "false" : "true");
+  skipFeedback.classList.toggle("visible", showFeedback && !showSkip);
+
   const showNextEpisode = Boolean(state.nextEpisodeVisible);
   const nextThumbUrl = setImageSource(nextEpisodeThumb, state.nextEpisodeThumbnail);
   const blurNextThumb = Boolean(nextThumbUrl) && Boolean(state.nextEpisodeThumbnailBlurred);
@@ -3115,6 +3129,23 @@ p2pConsentCancelButton.addEventListener("click", event => {
 p2pConsentEnableButton.addEventListener("click", event => {
   event.stopPropagation();
   send("enableP2pForPlayerControls", 0);
+});
+
+[
+  ["skipFeedbackGood", "skipFeedbackGood"],
+  ["skipFeedbackWrong", "skipFeedbackWrong"],
+  ["skipFeedbackClose", "skipFeedbackDismiss"],
+  ["skipFeedbackRewind", "skipFeedbackRewind"],
+  ["skipFeedbackEndHere", "skipFeedbackEndHere"],
+  ["skipFeedbackCloseFix", "skipFeedbackDismiss"],
+].forEach(([id, type]) => {
+  const button = document.getElementById(id);
+  if (!button) return;
+  button.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    send(type, 0);
+  });
 });
 
 skipPrompt.addEventListener("click", event => {

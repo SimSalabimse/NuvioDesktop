@@ -184,6 +184,20 @@
         </span>
       </button>
 
+      <div class="skip-feedback" id="skipFeedback" aria-hidden="true">
+        <span class="skip-feedback-label" id="skipFeedbackLabel"></span>
+        <span class="skip-feedback-actions" id="skipFeedbackAsk">
+          <button type="button" id="skipFeedbackGood">Good</button>
+          <button type="button" id="skipFeedbackWrong">Wrong</button>
+          <button type="button" class="skip-feedback-close" id="skipFeedbackClose" aria-label="Close">&#x2715;</button>
+        </span>
+        <span class="skip-feedback-actions" id="skipFeedbackFix" hidden>
+          <button type="button" id="skipFeedbackRewind">Rewind 5s</button>
+          <button type="button" id="skipFeedbackEndHere">End is here</button>
+          <button type="button" class="skip-feedback-close" id="skipFeedbackCloseFix" aria-label="Close">&#x2715;</button>
+        </span>
+      </div>
+
       <button class="next-episode-card" id="nextEpisodeCard" type="button" aria-hidden="true">
         <span class="next-episode-thumb">
           <img id="nextEpisodeThumb" alt="">

@@ -132,6 +132,7 @@ open class MainActivity : AppCompatActivity() {
         LibraryDisplaySettingsStorage.initialize(applicationContext)
         ContinueWatchingPreferencesStorage.initialize(applicationContext)
         ResumePromptStorage.initialize(applicationContext)
+        com.nuvio.app.features.player.skip.SkipMarksStorage.initialize(applicationContext)
         ContinueWatchingEnrichmentStorage.initialize(applicationContext)
         EpisodeReleaseNotificationsStorage.initialize(applicationContext)
         WatchProgressStorage.initialize(applicationContext)

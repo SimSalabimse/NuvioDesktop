@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -1432,6 +1433,17 @@ private fun PlaybackSettingsSection(
                             onDismiss = { showTheIntroDbApiKeyDialog = false },
                         )
                     }
+                    SettingsGroupDivider(isTablet = isTablet)
+                    val importStatus by com.nuvio.app.features.player.skip.SkipImportStatus.status.collectAsState()
+                    SettingsNavigationRow(
+                        title = "Your TheIntroDB submissions",
+                        description = com.nuvio.app.features.player.skip.SkipImportStatus.describe(
+                            importStatus,
+                            kotlin.time.Clock.System.now().toEpochMilliseconds(),
+                        ) + ". They are used as your own skip times, ahead of everything else.",
+                        isTablet = isTablet,
+                        onClick = {},
+                    )
                 }
             }
         }

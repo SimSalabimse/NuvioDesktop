@@ -436,14 +436,17 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         } else null,
         openingProgress = p2pInitialLoadingProgress,
         skipPromptVisible = nativeSkipInterval != null && !playerControlsLocked,
-        skipPromptLabel = if (nativeSkipAction?.skipsToPostCredits == true) {
+        skipPromptLabel = (if (nativeSkipAction?.skipsToPostCredits == true) {
             stringResource(Res.string.player_skip_to_post_credits)
         } else {
             skipPromptLabel(nativeSkipInterval?.type)
-        },
+        }) + (nativeSkipInterval?.let { " " + skipButtonDetail(it) } ?: ""),
         skipPromptStartMs = ((nativeSkipInterval?.startTime ?: 0.0) * 1000).toLong().coerceAtLeast(0L),
         skipPromptEndMs = nativeSkipAction?.targetMs?.coerceAtLeast(0L) ?: 0L,
         skipPromptDismissed = skipIntervalDismissed,
+        skipFeedbackVisible = skipFeedbackInterval != null && !playerControlsLocked,
+        skipFeedbackLabel = skipFeedbackLabel(),
+        skipFeedbackWrong = skipFeedbackWrong,
         nextEpisodeVisible = nextEpisodeForControls != null && !playerControlsLocked,
         nextEpisodeHeaderLabel = stringResource(Res.string.player_next_episode),
         nextEpisodeTitle = nextEpisodeForControls?.let {
@@ -903,6 +906,7 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
     if (type.shouldLogPlayerControlsEvent()) {
         playerControlsLog.d { "event type=$type value=$value ${playerControlLogContext()}" }
     }
+    if (type.startsWith("skipFeedback") && handleSkipFeedbackAction(type)) return true
     when (type) {
         "cursorActivity" -> {
             if (!playerControlsLocked) {
@@ -968,6 +972,7 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
                 3 -> "preview"
                 else -> "intro"
             }
+            prefillSubmitIntroTimes(submitIntroSegmentType)
             submitIntroStatusMessage = null
         }
         "submitIntroStart" -> {
@@ -991,6 +996,7 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
             playerController?.seekTo(seekMs)
             scheduleProgressSyncAfterSeek()
             skipIntervalDismissed = true
+            offerSkipFeedback(interval)
         }
         "playNextEpisode" -> {
             if (nextEpisodeInfo?.hasAired == true && !nextEpisodeAutoPlaySearching && nextEpisodeAutoPlayCountdown == null) {
@@ -1258,6 +1264,17 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         }
         
         isSubmitIntroSubmitting = false
+        if (end > start) {
+            com.nuvio.app.features.player.skip.SkipMarks.record(
+                parentMetaId = parentMetaId,
+                season = season.takeIf { !parentMetaType.equals("movie", ignoreCase = true) },
+                episode = episode.takeIf { !parentMetaType.equals("movie", ignoreCase = true) },
+                type = submitIntroSegmentType,
+                startMs = (start * 1000).toLong(),
+                endMs = (end * 1000).toLong(),
+            )
+            skipIntervals = withUserSkipMarks(skipIntervals)
+        }
         if (submitted) {
             submittedSegmentTypesInSession.add(submitIntroSegmentType)
             submitIntroStartTimeSec = 0.0
@@ -1291,6 +1308,7 @@ private fun skipPromptLabel(type: String?): String =
         "movie-credits" -> stringResource(Res.string.player_skip_movie_credits)
         "outro", "ed", "mixed-ed", "credits" -> stringResource(Res.string.player_skip_outro)
         "recap" -> stringResource(Res.string.player_skip_recap)
+        "preview" -> stringResource(Res.string.player_skip_preview)
         else -> stringResource(Res.string.player_skip)
     }
 
@@ -1753,6 +1771,7 @@ private fun BoxScope.RenderPlaybackOverlays(
                 playerController?.seekTo(seekMs)
                 scheduleProgressSyncAfterSeek()
                 skipIntervalDismissed = true
+                offerSkipFeedback(interval)
             },
             onDismissSkipInterval = { skipIntervalDismissed = true },
             sliderEdgePadding = sliderEdgePadding,
@@ -1994,4 +2013,27 @@ private fun normalizeSegmentTypeForSubmit(type: String): String? {
         "preview" -> "preview"
         else -> null
     }
+}
+
+/** "1:12–2:41 · TheIntroDB" after the Skip button text. */
+private fun skipButtonDetail(interval: com.nuvio.app.features.player.skip.SkipInterval): String =
+    com.nuvio.app.features.player.skip.skipRangeLabel(interval.startTime, interval.endTime) +
+        " · " + com.nuvio.app.features.player.skip.skipSourceLabel(interval.provider)
+
+/**
+ * Fills Submit Timestamps with the times already known for [type] (own mark first, then the
+ * fetched times), so each segment type shows its own times.
+ */
+private fun PlayerScreenRuntime.prefillSubmitIntroTimes(type: String) {
+    val category = com.nuvio.app.features.player.skip.SkipMarks.canonicalType(type) ?: return
+    val known = skipIntervals
+        .filter { com.nuvio.app.features.player.skip.SkipMarks.canonicalType(it.type) == category }
+        .sortedByDescending { com.nuvio.app.features.player.skip.SkipMarks.isUserProvider(it.provider) }
+        .firstOrNull()
+    val start = known?.startTime ?: 0.0
+    val end = known?.endTime ?: 0.0
+    submitIntroStartTimeSec = start
+    submitIntroEndTimeSec = end
+    submitIntroStartTimeStr = formatPlayerControlsSeconds(start)
+    submitIntroEndTimeStr = formatPlayerControlsSeconds(end)
 }

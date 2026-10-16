@@ -15,6 +15,7 @@ internal object TheIntroDb {
     const val MEDIA_URL = "$API_BASE/media"
     const val SUBMIT_URL = "$API_BASE/submit"
     const val USER_STATS_URL = "$API_BASE/user/stats"
+    const val SUBMISSIONS_URL = "$API_BASE/submissions"
     const val PROVIDER = "theintrodb"
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -107,6 +108,66 @@ internal object TheIntroDb {
         }
     }
 
+    /** Why the last [listMySubmissions] call stopped early, or null when it went through. */
+    var lastListError: String? = null
+        private set
+
+    /** This account's submissions for one title (GET /v3/submissions with the Bearer key). */
+    suspend fun listMySubmissions(
+        apiKey: String,
+        tmdbId: Int,
+        mediaType: String,
+    ): List<TheIntroDbUserSubmission> {
+        lastListError = null
+        if (apiKey.isBlank() || tmdbId <= 0) return emptyList()
+        val type = if (mediaType.equals("movie", ignoreCase = true)) "movie" else "tv"
+        val collected = mutableListOf<TheIntroDbUserSubmission>()
+        var offset = 0
+        val pageSize = 100
+        repeat(10) {
+            val url = "$SUBMISSIONS_URL?tmdb_id=$tmdbId&type=$type&limit=$pageSize&offset=$offset"
+            val response = try {
+                httpRequestRaw(
+                    method = "GET",
+                    url = url,
+                    headers = mapOf(
+                        "Authorization" to "Bearer $apiKey",
+                        "Accept" to "application/json",
+                    ),
+                    body = "",
+                )
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                lastListError = "Couldn't reach TheIntroDB"
+                return collected
+            }
+            if (response.status == 401 || response.status == 403) {
+                lastListError = "TheIntroDB refused the API key (${response.status})"
+                return collected
+            }
+            if (response.status !in 200..299) {
+                lastListError = "TheIntroDB error ${response.status}"
+                return collected
+            }
+            if (response.body.isBlank()) return collected
+            val page = try {
+                json.decodeFromString<TheIntroDbSubmissionsPage>(response.body)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                return collected
+            }
+            collected += page.submissions
+            val next = offset + page.submissions.size
+            if (page.submissions.isEmpty() || page.submissions.size < pageSize || (page.total > 0 && next >= page.total)) {
+                return collected
+            }
+            offset = next
+        }
+        return collected
+    }
+
     suspend fun submitTimestamp(
         apiKey: String,
         tmdbId: Int,
@@ -194,8 +255,33 @@ internal fun TheIntroDbMediaResponse.movieSkipIntervals(): List<SkipInterval> {
     val firstCredits = creditIntervals.firstOrNull()
     val laterCredits = creditIntervals.drop(1).map { it.copy(type = "post-credits") }
     val introIntervals = intro.toTheIntroDbIntervals("intro")
-    return listOfNotNull(firstCredits) + laterCredits + introIntervals
+    // Every segment type TheIntroDB has gets its own Skip button, movies included.
+    return listOfNotNull(firstCredits) + laterCredits + introIntervals +
+        recap.toTheIntroDbIntervals("recap") + preview.toTheIntroDbIntervals("preview")
 }
+
+@Serializable
+internal data class TheIntroDbSubmissionsPage(
+    val submissions: List<TheIntroDbUserSubmission> = emptyList(),
+    val total: Int = 0,
+    val limit: Int = 0,
+    val offset: Int = 0,
+)
+
+@OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+@Serializable
+internal data class TheIntroDbUserSubmission(
+    val id: String? = null,
+    @SerialName("tmdb_id") val tmdbId: Int? = null,
+    val type: String? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
+    val segment: String? = null,
+    val status: String? = null,
+    @kotlinx.serialization.json.JsonNames("start_ms", "startMs") val startMs: Long? = null,
+    @kotlinx.serialization.json.JsonNames("end_ms", "endMs") val endMs: Long? = null,
+    @kotlinx.serialization.json.JsonNames("video_duration_ms", "videoDurationMs") val videoDurationMs: Long? = null,
+)
 
 private fun List<TheIntroDbSegment>?.toTheIntroDbIntervals(type: String): List<SkipInterval> {
     if (this.isNullOrEmpty()) return emptyList()

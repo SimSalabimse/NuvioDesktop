@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "0.1.30.1-alpha",
+      "date": "2026-10-16",
+      "new": [
+        "Good / Wrong after Skip: about 4 seconds after a skip lands, Nuvio asks if it was right, for 8 seconds. Good saves the times as your own mark and sends them to TheIntroDB. Wrong gives you Rewind 5s and End is here to fix the end.",
+        "Your own skip marks always win over TheIntroDB, IntroDB and the anime sources for that episode or movie.",
+        "Your earlier TheIntroDB submissions are imported as your own marks when you play a title with your TheIntroDB key set. The last import shows in Playback settings.",
+        "Skip Recap and Skip Preview buttons, for movies too.",
+        "Downloads: Unwatched only filter."
+      ],
+      "improved": [
+        "The Skip button shows the segment's times and where they came from, like \"Skip Intro 1:12–2:41 · TheIntroDB\".",
+        "Submit Timestamps fills in each segment type's own known times when you switch type, and what you submit is saved as your own mark.",
+        "Downloads show speed and time left while downloading, a check on watched items, a progress bar for part-watched ones, and which skip times are your own marks."
+      ],
+      "fixed": []
+    },
+    {
       "version": "0.1.30-alpha",
       "date": "2026-10-15",
       "new": [
