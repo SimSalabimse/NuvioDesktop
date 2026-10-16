@@ -1,6 +1,22 @@
 {
   "releases": [
     {
+      "version": "0.1.30.2-alpha",
+      "date": "2026-10-16",
+      "new": [
+        "Watch Party from the latest upstream Nuvio: watch together in sync with friends (experimental).",
+        "MDBList dynamic and liked lists in the library."
+      ],
+      "improved": [
+        "Updated to the latest upstream Nuvio Desktop, with a buffer bar in the player and the updated p2p streaming engine (0.1.5).",
+        "Skip buttons and Good / Wrong work in a Watch Party: a skip follows the party's control rules and is shared with the party."
+      ],
+      "fixed": [
+        "Player panel header buttons and rail panels stay in place.",
+        "Clearer error when the native player fails to load."
+      ]
+    },
+    {
       "version": "0.1.30.1-alpha",
       "date": "2026-10-16",
       "new": [
