@@ -1,6 +1,15 @@
 {
   "releases": [
     {
+      "version": "0.1.30.3-alpha",
+      "date": "2026-10-21",
+      "new": [],
+      "improved": [
+        "Windows player component is now always rebuilt when its code changes, so installers never ship an outdated player."
+      ],
+      "fixed": []
+    },
+    {
       "version": "0.1.30.2-alpha",
       "date": "2026-10-16",
       "new": [
