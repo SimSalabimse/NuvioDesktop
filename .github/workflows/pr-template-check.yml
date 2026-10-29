@@ -9,7 +9,11 @@ permissions:
 
 jobs:
   validate_pr_body:
+    # Upstream contribution template. This fork's PRs are internal (syncs, CI)
+    # and do not use that body, so the script reports missing sections on every
+    # pull request. Keep the report, but do not fail the workflow.
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - name: Validate required PR sections
         uses: actions/github-script@v7
