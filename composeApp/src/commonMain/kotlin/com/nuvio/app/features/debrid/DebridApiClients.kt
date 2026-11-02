@@ -89,12 +89,16 @@ internal object TorboxApiClient {
         )
     }
 
-    suspend fun createTorrent(apiKey: String, magnet: String): DebridApiResponse<TorboxEnvelopeDto<TorboxCreateTorrentDataDto>> {
+    suspend fun createTorrent(
+        apiKey: String,
+        magnet: String,
+        onlyIfCached: Boolean = true,
+    ): DebridApiResponse<TorboxEnvelopeDto<TorboxCreateTorrentDataDto>> {
         val boundary = "NuvioDebrid${magnet.hashCode().toUInt()}"
         val body = multipartFormBody(
             boundary = boundary,
             "magnet" to magnet,
-            "add_only_if_cached" to "true",
+            "add_only_if_cached" to onlyIfCached.toString(),
             "allow_zip" to "false",
         )
         return request(

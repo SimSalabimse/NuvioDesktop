@@ -143,6 +143,29 @@ object DirectDebridPlaybackResolver {
         return api.resolveClientStream(stream, apiKey, season, episode)
     }
 
+    private fun addTarget(stream: StreamItem): Triple<DebridProviderApi, String, String>? {
+        val credential = if (stream.needsLocalDebridResolve) {
+            localTorrentResolveCredential()
+        } else {
+            val provider = DebridProviders.byId(stream.clientResolve?.service) ?: return null
+            DebridServiceCredential(provider, DebridSettingsRepository.snapshot().apiKeyFor(provider.id))
+        } ?: return null
+        val apiKey = credential.apiKey.trim().takeIf { it.isNotBlank() } ?: return null
+        val api = DebridProviderApis.apiFor(credential.provider.id) ?: return null
+        val magnet = DebridMagnetBuilder.fromStream(stream)
+            ?: stream.clientResolve?.let { it.magnetUri?.takeIf(String::isNotBlank) ?: buildMagnetUri(it) }
+            ?: return null
+        return Triple(api, apiKey, magnet)
+    }
+
+    fun addToCacheProviderName(stream: StreamItem): String? =
+        addTarget(stream)?.first?.takeIf { it.supportsAddToCache }?.provider?.displayName
+
+    suspend fun addToCache(stream: StreamItem): Boolean {
+        val (api, apiKey, magnet) = addTarget(stream) ?: return false
+        return api.addToCache(apiKey, magnet)
+    }
+
     suspend fun resolveToPlayableStream(
         stream: StreamItem,
         season: Int?,
