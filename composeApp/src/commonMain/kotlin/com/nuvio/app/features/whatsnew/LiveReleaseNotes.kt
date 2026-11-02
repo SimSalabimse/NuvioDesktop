@@ -1,5 +1,6 @@
 package com.nuvio.app.features.whatsnew
 
+import com.nuvio.app.core.build.ForkRepository
 import com.nuvio.app.features.addons.httpRequestRaw
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withTimeoutOrNull
@@ -14,8 +15,8 @@ import kotlin.time.Clock
  * Never throws and never waits longer than [TIMEOUT_MS].
  */
 internal object LiveReleaseNotes {
-    const val OWNER = "SimSalabimse"
-    const val REPO = "NuvioDesktop"
+    const val OWNER = ForkRepository.OWNER
+    const val REPO = ForkRepository.REPO
     private const val TIMEOUT_MS = 4_000L
     private const val CACHE_TTL_MS = 6L * 60 * 60 * 1000
     private const val RETRY_AFTER_FAIL_MS = 30L * 60 * 1000

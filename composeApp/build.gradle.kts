@@ -390,25 +390,7 @@ fun newestDirectory(root: File): File? =
         ?.listFiles(File::isDirectory)
         ?.maxByOrNull { semanticVersionSortKey(it.name) }
 
-fun jpackageCompatibleVersion(version: String): String {
-    val versionCore = version.substringBefore('-').substringBefore('+').trim()
-    // Enhanced builds add a 4th part (0.1.30.1); installers only take three, so it is dropped here.
-    val parts = versionCore.split('.').filter { it.isNotBlank() }.let { if (it.size == 4) it.take(3) else it }
-    require(parts.isNotEmpty() && parts.size <= 3) {
-        "Desktop package version must use one to three numeric components: $version"
-    }
-    val numbers = parts.map { part ->
-        part.toIntOrNull() ?: error("Desktop package version component is not numeric: $version")
-    }.toMutableList()
-    require(numbers.all { it >= 0 }) {
-        "Desktop package version components must not be negative: $version"
-    }
-    while (numbers.size < 3) {
-        numbers += 0
-    }
-    numbers[0] = numbers[0].coerceAtLeast(1)
-    return numbers.joinToString(".")
-}
+fun jpackageCompatibleVersion(version: String): String = DesktopPackageVersion.map(version)
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)

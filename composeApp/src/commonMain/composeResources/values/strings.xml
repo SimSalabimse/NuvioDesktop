@@ -1785,6 +1785,7 @@
     <string name="tracking_removal_impact_history_and_rating">watched history and rating</string>
     <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">Update check failed</string>
+    <string name="updates_checksum_mismatch">Downloaded update did not match its checksum.</string>
     <string name="updates_download_failed">Download failed</string>
     <string name="updates_download_empty_body">Empty download body</string>
     <string name="updates_download_file_missing">Downloaded update file is missing.</string>

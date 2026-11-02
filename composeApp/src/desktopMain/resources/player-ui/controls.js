@@ -100,6 +100,7 @@ const subtitleDelayMinus = document.getElementById("subtitleDelayMinus");
 const subtitleDelayValue = document.getElementById("subtitleDelayValue");
 const subtitleDelayPlus = document.getElementById("subtitleDelayPlus");
 const subtitleDelayReset = document.getElementById("subtitleDelayReset");
+const autoSyncSection = document.getElementById("autoSyncSection");
 const autoSyncLabel = document.getElementById("autoSyncLabel");
 const autoSyncReload = document.getElementById("autoSyncReload");
 const autoSyncCapture = document.getElementById("autoSyncCapture");
@@ -314,6 +315,7 @@ let state = {
   showSources: false,
   showEpisodes: false,
   showExternalPlayer: false,
+  showAutoSync: false,
   durationMs: 0,
   positionMs: 0,
   bufferedPositionMs: 0,
@@ -1409,6 +1411,7 @@ const renderSubtitleStylePanel = () => {
   subtitleDelayLabel.textContent = state.subtitleDelayLabel || "Subtitle Delay";
   subtitleDelayValue.textContent = formatDelay(state.subtitleDelayMs);
   subtitleDelayReset.textContent = state.resetLabel || "Reset";
+  autoSyncSection.hidden = state.showAutoSync !== true;
   autoSyncLabel.textContent = state.autoSyncLabel || "Auto Sync";
   autoSyncReload.textContent = state.reloadSmallLabel || "Reload";
   autoSyncCapture.textContent = state.captureLineLabel || "Capture";

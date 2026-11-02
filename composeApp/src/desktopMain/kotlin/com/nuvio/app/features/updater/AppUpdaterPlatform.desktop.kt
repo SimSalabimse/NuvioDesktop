@@ -1,11 +1,13 @@
 package com.nuvio.app.features.updater
 
 import com.nuvio.app.core.build.AppVersionConfig
+import com.nuvio.app.core.build.ForkRepository
 import com.nuvio.app.core.storage.DesktopStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.updates_checksum_mismatch
 import nuvio.composeapp.generated.resources.updates_download_failed
 import nuvio.composeapp.generated.resources.updates_download_failed_http
 import nuvio.composeapp.generated.resources.updates_downloaded_file_missing
@@ -14,6 +16,7 @@ import org.jetbrains.compose.resources.getString
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URI
+import java.security.MessageDigest
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -53,8 +56,8 @@ actual object AppUpdaterPlatform {
         get() = currentOs != DesktopUpdaterOs.UNKNOWN && linuxInstallMethod != LinuxInstallMethod.FLATPAK
 
     actual val releaseSource: AppUpdateReleaseSource = AppUpdateReleaseSource(
-        owner = "NuvioMedia",
-        repo = "NuvioDesktop",
+        owner = ForkRepository.OWNER,
+        repo = ForkRepository.REPO,
         channelBranch = null,
         includePrereleases = true,
         userAgent = "NuvioDesktop",
@@ -142,9 +145,10 @@ actual object AppUpdaterPlatform {
 
     actual fun openInstallPermissionSettings() = Unit
 
-    actual fun installDownloadedUpdate(path: String): Result<Unit> = runCatching {
+    actual fun installDownloadedUpdate(path: String, sha256Digest: String?): Result<Unit> = runCatching {
         val updateFile = File(path)
         check(updateFile.exists()) { runBlocking { getString(Res.string.updates_downloaded_file_missing) } }
+        verifyDownloadedUpdateFile(updateFile, sha256Digest).getOrThrow()
 
         launchInstaller(updateFile)
         scheduleAppExit()
@@ -233,6 +237,25 @@ private fun desktopArchitectureFragments(): List<String> {
         arch.contains("64") -> listOf("x64", "x86_64", "amd64")
         else -> emptyList()
     }
+}
+
+internal fun verifyDownloadedUpdateFile(updateFile: File, listedDigest: String?): Result<Unit> = runCatching {
+    val expected = parseListedSha256(listedDigest) ?: return@runCatching
+    val actual = sha256Hex(updateFile)
+    check(actual == expected) { runBlocking { getString(Res.string.updates_checksum_mismatch) } }
+}
+
+internal fun sha256Hex(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().use { input ->
+        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+        while (true) {
+            val read = input.read(buffer)
+            if (read <= 0) break
+            digest.update(buffer, 0, read)
+        }
+    }
+    return digest.digest().joinToString("") { byte -> "%02x".format(byte) }
 }
 
 internal fun windowsInstallerCommand(updateFile: File): List<String> {

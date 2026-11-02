@@ -27,6 +27,7 @@ internal data class GitHubAssetDto(
     @SerialName("browser_download_url") val browserDownloadUrl: String,
     val size: Long? = null,
     @SerialName("content_type") val contentType: String? = null,
+    val digest: String? = null,
 )
 
 internal class NoChannelReleaseException : IllegalStateException()
@@ -36,6 +37,7 @@ internal data class AppUpdateAssetCandidate(
     val downloadUrl: String,
     val size: Long? = null,
     val contentType: String? = null,
+    val digest: String? = null,
 )
 
 internal fun selectBestUpdateAsset(
@@ -124,6 +126,7 @@ internal object AppUpdaterRepository {
                         downloadUrl = candidate.browserDownloadUrl,
                         size = candidate.size,
                         contentType = candidate.contentType,
+                        digest = candidate.digest,
                     )
                 },
                 selector = selector,
@@ -144,6 +147,7 @@ internal object AppUpdaterRepository {
                 assetName = asset.name,
                 assetUrl = asset.downloadUrl,
                 assetSizeBytes = asset.size,
+                assetDigest = asset.digest,
             )
         }
     }

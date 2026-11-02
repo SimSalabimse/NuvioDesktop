@@ -28,6 +28,7 @@ data class AppUpdate(
     val assetName: String,
     val assetUrl: String,
     val assetSizeBytes: Long?,
+    val assetDigest: String? = null,
 )
 
 data class AppUpdaterUiState(
@@ -111,11 +112,12 @@ class AppUpdaterController internal constructor(
             if (channel != preferences.channel.value) return@launch
 
             result.onSuccess { update ->
-                val remoteNewer = if (channel == UpdateChannel.ALL_RELEASES) {
-                    VersionUtils.isRemoteNewerLegacy(update.tag, AppUpdaterPlatform.currentVersionName)
-                } else {
-                    VersionUtils.isRemoteNewer(update.tag, AppUpdaterPlatform.currentVersionName)
-                }
+                val remoteNewer = isUpdateOffered(
+                    update = update,
+                    source = AppUpdaterPlatform.releaseSource,
+                    localVersion = AppUpdaterPlatform.currentVersionName,
+                    legacyComparison = channel == UpdateChannel.ALL_RELEASES,
+                )
                 val ignored = ignoredTag != null && ignoredTag == update.tag
                 val shouldShowDialog = remoteNewer && (force || !ignored)
 
@@ -260,7 +262,7 @@ class AppUpdaterController internal constructor(
             return
         }
 
-        AppUpdaterPlatform.installDownloadedUpdate(updatePath).onSuccess {
+        AppUpdaterPlatform.installDownloadedUpdate(updatePath, _uiState.value.update?.assetDigest).onSuccess {
             _uiState.update { state -> state.copy(showInstallPermissionDialog = false) }
         }.onFailure { error ->
             scope.launch {

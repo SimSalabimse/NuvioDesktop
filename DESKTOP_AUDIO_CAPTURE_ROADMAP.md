@@ -1,8 +1,8 @@
 # Desktop Auto Sync Audio Capture Roadmap
 
-## Current Status: STUB (Graceful Fallback)
+## Current Status: HIDDEN
 
-The Auto Sync button is fully wired in the UI and the SubtitleAutoSyncEngine algorithm is ready, but desktop returns empty audio samples (shows "could not capture audio" message).
+Desktop playback does not capture audio samples. `PlayerCapabilities.supportsAutoSyncAudioCapture` is false, and the Auto Sync control stays hidden until that flag is turned on. The subtitle sync algorithm is unchanged.
 
 ## Why Native Work Is Required
 
@@ -128,21 +128,18 @@ Most viable: implement custom lavfi filter that:
 
 ## Current Implementation
 
-**Status:** Graceful stub  
-**Behavior:** 
-- Auto Sync button is visible and wired
-- Pressing it triggers the capture flow
-- `getAudioCaptureDuration()` returns 0
-- `stopAudioEnergyCapture()` returns empty list
-- UI shows: "Could not capture audio data. Auto-sync may not be available on this platform."
-
-**No crashes, no fake success** - just honest "not available" messaging.
+**Status:** Control hidden  
+**Behavior:**
+- `supportsAutoSyncAudioCapture` is false on desktop
+- The player Auto Sync control is not shown while the flag is false
+- `startAudioEnergyCapture`, `stopAudioEnergyCapture`, and `getAudioCaptureDuration` are still no-ops
+- Set the flag to true only after those methods return real samples
 
 ## Recommendation
 
-1. **Keep graceful stub** for this PR (Enhanced branch)
-2. **File separate issue** for native desktop audio capture implementation
-3. **Mobile Enhanced reference:** Android already has `AudioEnergyCaptureProcessor` that taps ExoPlayer's audio pipeline - can be used as algorithm reference once MPV tap is available
+1. Keep the control hidden until desktop audio capture returns real samples
+2. Turn `supportsAutoSyncAudioCapture` back on in the desktop player capability when that capture exists
+3. Use the existing subtitle sync algorithm once samples are available
 
 ## References
 

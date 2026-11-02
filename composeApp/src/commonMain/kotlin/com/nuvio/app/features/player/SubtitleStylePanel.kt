@@ -184,14 +184,16 @@ fun SubtitleStylePanel(
             )
         }
 
-        SubtitleAutoSyncSection(
-            selectedAddonSubtitle = selectedAddonSubtitle,
-            state = subtitleAutoSyncState,
-            onAutomatic = onAutoSyncAutomatic,
-            onCapture = onAutoSyncCapture,
-            onCueSelected = onAutoSyncCueSelected,
-            onReload = onAutoSyncReload,
-        )
+        if (isAutoSyncControlShown(PlayerCapabilities.supportsAutoSyncAudioCapture)) {
+            SubtitleAutoSyncSection(
+                selectedAddonSubtitle = selectedAddonSubtitle,
+                state = subtitleAutoSyncState,
+                onAutomatic = onAutoSyncAutomatic,
+                onCapture = onAutoSyncCapture,
+                onCueSelected = onAutoSyncCueSelected,
+                onReload = onAutoSyncReload,
+            )
+        }
 
         SubtitleResetAction(
             label = stringResource(Res.string.compose_player_reset_defaults),

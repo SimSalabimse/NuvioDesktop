@@ -48,5 +48,5 @@ expect object AppUpdaterPlatform {
 
     fun openInstallPermissionSettings()
 
-    fun installDownloadedUpdate(path: String): Result<Unit>
+    fun installDownloadedUpdate(path: String, sha256Digest: String?): Result<Unit>
 }

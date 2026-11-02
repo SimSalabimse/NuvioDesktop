@@ -8,7 +8,7 @@
     Bring your own sources. Nuvio turns them into a library with artwork, ratings, subtitles, and your place saved on every screen.
   </p>
 
-  [Website](https://nuvio.tv) · [GitHub releases](https://github.com/NuvioMedia/NuvioDesktop/releases/latest) · [Support Nuvio](https://nuvio.tv/support)
+  [Website](https://nuvio.tv) · [GitHub releases](https://github.com/SimSalabimse/NuvioDesktop/releases/latest) · [Support Nuvio](https://nuvio.tv/support)
 
 </div>
 
@@ -20,7 +20,7 @@ Expect breaking changes with every update. Features, settings, stored data, and 
 
 ## Get Nuvio Desktop
 
-Download the latest build from [GitHub Releases](https://github.com/NuvioMedia/NuvioDesktop/releases/latest).
+Download the latest build from [GitHub Releases](https://github.com/SimSalabimse/NuvioDesktop/releases/latest).
 
 - Windows: MSI installer
 - macOS: DMG installer
@@ -29,7 +29,7 @@ Download the latest build from [GitHub Releases](https://github.com/NuvioMedia/N
 ## Build from source
 
 ```bash
-git clone https://github.com/NuvioMedia/NuvioDesktop.git
+git clone https://github.com/SimSalabimse/NuvioDesktop.git
 cd NuvioDesktop
 ```
 

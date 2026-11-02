@@ -55,5 +55,6 @@ actual object AppUpdaterPlatform {
         AndroidAppUpdaterPlatform.openUnknownSourcesSettings()
     }
 
-    actual fun installDownloadedUpdate(path: String): Result<Unit> = AndroidAppUpdaterPlatform.installDownloadedUpdate(path)
+    actual fun installDownloadedUpdate(path: String, sha256Digest: String?): Result<Unit> =
+        AndroidAppUpdaterPlatform.installDownloadedUpdate(path)
 }
