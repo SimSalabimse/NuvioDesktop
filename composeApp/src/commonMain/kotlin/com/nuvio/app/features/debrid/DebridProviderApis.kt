@@ -21,6 +21,10 @@ internal interface DebridProviderApi {
         season: Int?,
         episode: Int?,
     ): DirectDebridResolveResult
+
+    suspend fun addToCache(apiKey: String, magnet: String): Boolean = false
+
+    val supportsAddToCache: Boolean get() = false
 }
 
 internal object DebridProviderApis {
@@ -55,10 +59,24 @@ internal sealed interface DebridDeviceAuthorizationTokenResult {
     data class Failed(val message: String?) : DebridDeviceAuthorizationTokenResult
 }
 
-private class TorboxDebridProviderApi(
+internal class TorboxDebridProviderApi(
     private val fileSelector: TorboxFileSelector = TorboxFileSelector(),
+    private val createTorrent: suspend (apiKey: String, magnet: String, onlyIfCached: Boolean) -> DebridApiResponse<TorboxEnvelopeDto<TorboxCreateTorrentDataDto>> =
+        { apiKey, magnet, onlyIfCached ->
+            TorboxApiClient.createTorrent(apiKey, magnet, onlyIfCached)
+        },
 ) : DebridProviderApi {
     override val provider: DebridProvider = DebridProviders.Torbox
+
+    override val supportsAddToCache: Boolean get() = true
+
+    override suspend fun addToCache(apiKey: String, magnet: String): Boolean = try {
+        val response = createTorrent(apiKey, magnet, false)
+        response.isSuccessful && response.body?.success != false
+    } catch (error: Exception) {
+        if (error is CancellationException) throw error
+        false
+    }
 
     override suspend fun validateApiKey(apiKey: String): Boolean =
         TorboxApiClient.validateApiKey(apiKey)
@@ -264,7 +282,7 @@ private class RealDebridProviderApi(
     }
 }
 
-private fun buildMagnetUri(resolve: StreamClientResolve): String? {
+internal fun buildMagnetUri(resolve: StreamClientResolve): String? {
     val hash = resolve.infoHash?.takeIf { it.isNotBlank() } ?: return null
     return buildString {
         append("magnet:?xt=urn:btih:")
