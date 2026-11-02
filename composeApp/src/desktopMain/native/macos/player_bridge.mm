@@ -14,8 +14,10 @@
 #include <mpv/render_gl.h>
 
 #include <atomic>
+#include <clocale>
 #include <cmath>
 #include <dlfcn.h>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -150,6 +152,7 @@ static constexpr double kMaxVolumePercent = 200.0;
 - (NSString *)audioTracksJson;
 - (NSString *)subtitleTracksJson;
 - (void)selectAudioTrackId:(int)trackId;
+- (void)setAudioLanguages:(NSString *)languages;
 - (void)selectSubtitleTrackId:(int)trackId;
 - (void)addSubtitleUrl:(NSString *)url;
 - (void)removeExternalSubtitles;
@@ -164,6 +167,10 @@ static constexpr double kMaxVolumePercent = 200.0;
                                   subPos:(int)subPos
                                useLibass:(BOOL)useLibass
                                 stripSdh:(BOOL)stripSdh;
+- (void)applySubtitleAppearanceWithFont:(NSString *)font
+                              fontsDir:(NSString *)fontsDir
+                           shadowColor:(NSString *)shadowColor
+                          shadowOffset:(double)shadowOffset;
 - (void)handleScriptMessage:(NSDictionary *)message;
 - (void)startMpvEventDrain;
 - (void)applyVolumeSplit:(double)percent;
@@ -1135,6 +1142,9 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     NSTimeInterval _lastControlsViewportNudgeAt;
     std::atomic<double> _cachedDurationSeconds;
     std::atomic<double> _cachedPositionSeconds;
+    std::mutex _cachedPositionLock;
+    double _cachedPositionStamp;
+    uint64_t _cachedPositionGeneration;
     std::atomic<double> _cachedCacheAheadSeconds;
     std::atomic<double> _cachedSpeed;
     std::atomic_bool _cachedPaused;
@@ -1169,6 +1179,7 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
 
     _cachedDurationSeconds.store(0.0);
     _cachedPositionSeconds.store(initialPositionMs > 0 ? (double)initialPositionMs / 1000.0 : 0.0);
+    _cachedPositionStamp = CACurrentMediaTime();
     _cachedCacheAheadSeconds.store(0.0);
     _cachedSpeed.store(1.0);
     _cachedPaused.store(!playWhenReady);
@@ -1707,6 +1718,14 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
               playWhenReady:(BOOL)playWhenReady
            initialPositionMs:(long long)initialPositionMs
             decoderPriority:(int)decoderPriority {
+    // libmpv requires LC_NUMERIC=C: non-"C" locales that use comma decimals
+    // make mpv_create fail. The JVM formats numbers through java.util.Locale,
+    // so this C-level change does not affect Java number formatting.
+    if (setlocale(LC_NUMERIC, "C") == nullptr) {
+        @throw [NSException exceptionWithName:@"PlayerBridgeError"
+                                       reason:@"setlocale(LC_NUMERIC, \"C\") failed"
+                                     userInfo:nil];
+    }
     _mpv = mpv_create();
     if (!_mpv) {
         @throw [NSException exceptionWithName:@"PlayerBridgeError"
@@ -1814,8 +1833,10 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
                 return;
             }
 
+            uint64_t positionGeneration = [self cachedPositionGeneration];
             double duration = [self doubleProperty:"duration" fallback:0.0];
             double position = [self doubleProperty:"time-pos" fallback:0.0];
+            double positionReadAt = CACurrentMediaTime();
             double volumeLevel = [self volume];
             double cacheAhead = [self cacheAheadSecondsForPosition:position];
             double bufferedPosition = (double)([self bufferedPositionMs] / 1000.0);
@@ -1830,6 +1851,8 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
             NSString *primaries = [[self stringProperty:"video-params/primaries" fallback:@""] lowercaseString];
             [self updateCachedDuration:duration
                               position:position
+                        positionReadAt:positionReadAt
+                    positionGeneration:positionGeneration
                             cacheAhead:cacheAhead
                                 paused:paused
                                  loading:loading
@@ -2108,6 +2131,7 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     if (!_mpv) return;
     int flag = paused ? 1 : 0;
     mpv_set_property(_mpv, "pause", MPV_FORMAT_FLAG, &flag);
+    [self storeCachedPosition:[self estimatedPositionSeconds] at:CACurrentMediaTime()];
     _cachedPaused.store(paused);
 }
 
@@ -2127,7 +2151,7 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     std::string seconds = std::to_string((double)positionMs / 1000.0);
     const char *command[] = {"seek", seconds.c_str(), "absolute+keyframes", NULL};
     mpv_command(_mpv, command);
-    _cachedPositionSeconds.store(fmax((double)positionMs / 1000.0, 0.0));
+    [self storeCachedPosition:(double)positionMs / 1000.0 at:CACurrentMediaTime()];
 }
 
 - (void)seekByMilliseconds:(long long)offsetMs {
@@ -2135,14 +2159,14 @@ static void setMpvOptionString(mpv_handle *mpv, const char *name, const char *va
     std::string seconds = std::to_string((double)offsetMs / 1000.0);
     const char *command[] = {"seek", seconds.c_str(), "relative+keyframes", NULL};
     mpv_command(_mpv, command);
-    double nextPosition = fmax(_cachedPositionSeconds.load() + ((double)offsetMs / 1000.0), 0.0);
-    _cachedPositionSeconds.store(nextPosition);
+    [self storeCachedPosition:[self estimatedPositionSeconds] + ((double)offsetMs / 1000.0) at:CACurrentMediaTime()];
 }
 
 - (void)setSpeed:(double)speed {
     if (!_mpv) return;
     double clamped = fmax(0.25, fmin(4.0, speed));
     mpv_set_property(_mpv, "speed", MPV_FORMAT_DOUBLE, &clamped);
+    [self storeCachedPosition:[self estimatedPositionSeconds] at:CACurrentMediaTime()];
     _cachedSpeed.store(clamped);
 }
 
@@ -2319,7 +2343,34 @@ static void nuvioMpvWakeup(void *ctx) {
 }
 
 - (long long)positionMs {
-    return (long long)llround(fmax(_cachedPositionSeconds.load(), 0.0) * 1000.0);
+    return (long long)llround(fmax([self estimatedPositionSeconds], 0.0) * 1000.0);
+}
+
+- (void)storeCachedPosition:(double)seconds at:(double)stamp {
+    std::lock_guard<std::mutex> guard(_cachedPositionLock);
+    _cachedPositionSeconds.store(std::isfinite(seconds) ? fmax(seconds, 0.0) : 0.0);
+    _cachedPositionStamp = stamp;
+    _cachedPositionGeneration += 1;
+}
+
+- (uint64_t)cachedPositionGeneration {
+    std::lock_guard<std::mutex> guard(_cachedPositionLock);
+    return _cachedPositionGeneration;
+}
+
+- (double)estimatedPositionSeconds {
+    double position = 0.0;
+    double stamp = 0.0;
+    {
+        std::lock_guard<std::mutex> guard(_cachedPositionLock);
+        position = _cachedPositionSeconds.load();
+        stamp = _cachedPositionStamp;
+    }
+    if (!_cachedPaused.load() && !_cachedLoading.load() && !_cachedEnded.load()) {
+        position += fmin(fmax(CACurrentMediaTime() - stamp, 0.0), 1.0) * _cachedSpeed.load();
+    }
+    double duration = _cachedDurationSeconds.load();
+    return duration > 0.0 ? fmin(position, duration) : position;
 }
 
 - (double)rawPositionSeconds {
@@ -2388,18 +2439,23 @@ static void nuvioMpvWakeup(void *ctx) {
 
 - (void)updateCachedDuration:(double)duration
                     position:(double)position
+              positionReadAt:(double)positionReadAt
+          positionGeneration:(uint64_t)positionGeneration
                   cacheAhead:(double)cacheAhead
                       paused:(BOOL)paused
                      loading:(BOOL)loading
                        ended:(BOOL)ended
                        speed:(double)speed {
     _cachedDurationSeconds.store(std::isfinite(duration) ? fmax(duration, 0.0) : 0.0);
-    _cachedPositionSeconds.store(std::isfinite(position) ? fmax(position, 0.0) : 0.0);
     _cachedCacheAheadSeconds.store(std::isfinite(cacheAhead) ? fmax(cacheAhead, 0.0) : 0.0);
-    _cachedSpeed.store(std::isfinite(speed) ? fmax(0.25, fmin(4.0, speed)) : 1.0);
-    _cachedPaused.store(paused);
     _cachedLoading.store(loading);
     _cachedEnded.store(ended);
+    std::lock_guard<std::mutex> guard(_cachedPositionLock);
+    if (_cachedPositionGeneration != positionGeneration) return;
+    _cachedPositionSeconds.store(std::isfinite(position) ? fmax(position, 0.0) : 0.0);
+    _cachedPositionStamp = positionReadAt;
+    _cachedSpeed.store(std::isfinite(speed) ? fmax(0.25, fmin(4.0, speed)) : 1.0);
+    _cachedPaused.store(paused);
 }
 
 - (NSString *)audioTracksJson {
@@ -2414,6 +2470,12 @@ static void nuvioMpvWakeup(void *ctx) {
     if (!_mpv) return;
     int64_t id = trackId;
     mpv_set_property(_mpv, "aid", MPV_FORMAT_INT64, &id);
+}
+
+- (void)setAudioLanguages:(NSString *)languages {
+    if (!_mpv) return;
+    mpv_set_property_string(_mpv, "alang", languages.UTF8String);
+    mpv_set_property_string(_mpv, "aid", "auto");
 }
 
 - (void)selectSubtitleTrackId:(int)trackId {
@@ -2452,6 +2514,17 @@ static void nuvioMpvWakeup(void *ctx) {
     int clamped = MAX(-60000, MIN(60000, delayMs));
     double delaySeconds = (double)clamped / 1000.0;
     mpv_set_property(_mpv, "sub-delay", MPV_FORMAT_DOUBLE, &delaySeconds);
+}
+
+- (void)applySubtitleAppearanceWithFont:(NSString *)font
+                              fontsDir:(NSString *)fontsDir
+                           shadowColor:(NSString *)shadowColor
+                          shadowOffset:(double)shadowOffset {
+    if (!_mpv) return;
+    if (fontsDir.length > 0) [self setStringProperty:"sub-fonts-dir" value:fontsDir];
+    [self setStringProperty:"sub-font" value:font];
+    [self setStringProperty:"sub-shadow-color" value:shadowColor];
+    mpv_set_property(_mpv, "sub-shadow-offset", MPV_FORMAT_DOUBLE, &shadowOffset);
 }
 
 - (void)applySubtitleStyleWithTextColor:(NSString *)textColor
@@ -3524,6 +3597,21 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_audioTracksJson(
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_stringProperty(
+    JNIEnv *env,
+    jobject /* bridge */,
+    jlong handle,
+    jstring name
+) {
+    if (handle == 0 || name == nullptr) return env->NewStringUTF("");
+    MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
+    const char *chars = env->GetStringUTFChars(name, nullptr);
+    NSString *value = [player stringProperty:chars fallback:@""];
+    env->ReleaseStringUTFChars(name, chars);
+    return env->NewStringUTF(value.UTF8String);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_subtitleTracksJson(
     JNIEnv *env,
     jobject /* bridge */,
@@ -3546,6 +3634,21 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_selectAudioTrack(
     MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
     runOnMainAsync(^{
         [player selectAudioTrackId:(int)trackId];
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_setAudioLanguages(
+    JNIEnv *env,
+    jobject /* bridge */,
+    jlong handle,
+    jstring languages
+) {
+    if (handle == 0) return;
+    MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
+    NSString *value = [NSString stringWithUTF8String:jstringToString(env, languages).c_str()] ?: @"";
+    runOnMainAsync(^{
+        [player setAudioLanguages:value];
     });
 }
 
@@ -3649,5 +3752,28 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_applySubtitleStyle
                                           subPos:(int)subPos
                                        useLibass:useLibass == JNI_TRUE
                                         stripSdh:stripSdh == JNI_TRUE];
+    });
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_setSubtitleAppearance(
+    JNIEnv *env,
+    jobject /* bridge */,
+    jlong handle,
+    jstring font,
+    jstring fontsDir,
+    jstring shadowColor,
+    jfloat shadowOffset
+) {
+    if (handle == 0) return;
+    std::string fontName = jstringToString(env, font);
+    std::string dir = jstringToString(env, fontsDir);
+    std::string shadow = jstringToString(env, shadowColor);
+    MpvWebPlayer *player = (__bridge MpvWebPlayer *)(void *)(intptr_t)handle;
+    runOnMainAsync(^{
+        [player applySubtitleAppearanceWithFont:[NSString stringWithUTF8String:fontName.c_str()]
+                                       fontsDir:[NSString stringWithUTF8String:dir.c_str()]
+                                    shadowColor:[NSString stringWithUTF8String:shadow.c_str()]
+                                   shadowOffset:(double)shadowOffset];
     });
 }

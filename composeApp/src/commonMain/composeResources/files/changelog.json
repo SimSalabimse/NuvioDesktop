@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "0.1.34.1-alpha",
+      "date": "2026-11-02",
+      "new": [
+        "Updated to upstream Nuvio Desktop 0.1.34-alpha: Watch Party, player badges, engine failover, the subtitle style panel, Esc and Back fixes, and animated artwork."
+      ],
+      "improved": [
+        "Skip still prefers your own marks, including TheIntroDB imports, and the Good / Wrong prompt still follows a skip. Chapter skip times fill gaps around those marks."
+      ],
+      "fixed": []
+    },
+    {
       "version": "0.1.30.3-alpha",
       "date": "2026-10-21",
       "new": [],

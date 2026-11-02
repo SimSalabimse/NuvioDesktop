@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <clocale>
 #include <cmath>
 #include <condition_variable>
 #include <cctype>
@@ -1210,6 +1211,10 @@ public:
         return flagProperty("eof-reached", false);
     }
 
+    std::string mpvStringProperty(const char *name) {
+        return stringProperty(name, "");
+    }
+
     std::string audioTracksJson() {
         return tracksJsonForType("audio");
     }
@@ -1223,6 +1228,13 @@ public:
         if (!mpv) return;
         int64_t id = trackId;
         mpvApi().setProperty(mpv, "aid", MPV_FORMAT_INT64, &id);
+    }
+
+    void setAudioLanguages(const std::string &languages) {
+        std::lock_guard<std::mutex> lock(mpvMutex);
+        if (!mpv) return;
+        mpvApi().setPropertyString(mpv, "alang", languages.c_str());
+        mpvApi().setPropertyString(mpv, "aid", "auto");
     }
 
     void selectSubtitleTrackId(int trackId) {
@@ -1261,6 +1273,20 @@ public:
         int clamped = std::max(-60000, std::min(60000, delayMs));
         double delaySeconds = (double)clamped / 1000.0;
         mpvApi().setProperty(mpv, "sub-delay", MPV_FORMAT_DOUBLE, &delaySeconds);
+    }
+
+    void applySubtitleAppearance(
+        const std::string &font,
+        const std::string &fontsDir,
+        const std::string &shadowColor,
+        double shadowOffset
+    ) {
+        if (!fontsDir.empty()) setStringProperty("sub-fonts-dir", fontsDir);
+        setStringProperty("sub-font", font);
+        setStringProperty("sub-shadow-color", shadowColor);
+        std::lock_guard<std::mutex> lock(mpvMutex);
+        if (!mpv) return;
+        mpvApi().setProperty(mpv, "sub-shadow-offset", MPV_FORMAT_DOUBLE, &shadowOffset);
     }
 
     void applySubtitleStyle(
@@ -1705,6 +1731,12 @@ private:
         bool fastProfile = !nvidiaRtxSuperResolutionEnabled && unifiedMemoryGpu();
         {
             std::lock_guard<std::mutex> lock(mpvMutex);
+            // libmpv requires LC_NUMERIC=C: non-"C" locales that use comma
+            // decimals make mpv_create fail. The JVM formats numbers through
+            // java.util.Locale, so this C-level change does not affect Java.
+            if (setlocale(LC_NUMERIC, "C") == nullptr) {
+                throw std::runtime_error("setlocale(LC_NUMERIC, \"C\") failed.");
+            }
             mpv = api.create();
             if (!mpv) {
                 throw std::runtime_error("mpv_create failed.");
@@ -1903,11 +1935,6 @@ private:
         if (type == "controlsReady") {
             controlsWebReady.store(true);
             flushPendingControlsJsonIfReady();
-            syncControls();
-            return;
-        }
-        if (type == "selectAudioTrack") {
-            selectAudioTrackId((int)std::llround(value));
             syncControls();
             return;
         }
@@ -2867,6 +2894,12 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_audioTracksJson(JN
 }
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_stringProperty(JNIEnv *env, jobject, jlong handle, jstring name) {
+    auto player = playerFromHandle(handle);
+    return newJavaStringUtf8(env, player ? player->mpvStringProperty(jstringToUtf8(env, name).c_str()) : "");
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_subtitleTracksJson(JNIEnv *env, jobject, jlong handle) {
     auto player = playerFromHandle(handle);
     return newJavaStringUtf8(env, player ? player->subtitleTracksJson() : "[]");
@@ -2876,6 +2909,12 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_selectAudioTrack(JNIEnv *, jobject, jlong handle, jint trackId) {
     auto player = playerFromHandle(handle);
     if (player) player->selectAudioTrackId(trackId);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_setAudioLanguages(JNIEnv *env, jobject, jlong handle, jstring languages) {
+    auto player = playerFromHandle(handle);
+    if (player) player->setAudioLanguages(jstringToUtf8(env, languages));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2983,5 +3022,25 @@ Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_applySubtitleStyle
         subPos,
         useLibass == JNI_TRUE,
         stripSdh == JNI_TRUE
+    );
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_nuvio_app_features_player_desktop_NativePlayerBridge_setSubtitleAppearance(
+    JNIEnv *env,
+    jobject,
+    jlong handle,
+    jstring font,
+    jstring fontsDir,
+    jstring shadowColor,
+    jfloat shadowOffset
+) {
+    auto player = playerFromHandle(handle);
+    if (!player) return;
+    player->applySubtitleAppearance(
+        jstringToUtf8(env, font),
+        jstringToUtf8(env, fontsDir),
+        jstringToUtf8(env, shadowColor),
+        shadowOffset
     );
 }
