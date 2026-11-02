@@ -49,6 +49,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
         # Linux desktop compile and tests do not read the Git LFS macOS dylibs or Windows libmpv dll.
 
       - name: Install Linux desktop build dependencies
