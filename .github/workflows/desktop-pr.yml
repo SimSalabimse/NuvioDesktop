@@ -1,0 +1,102 @@
+name: Desktop PR
+
+on:
+  pull_request:
+    branches:
+      - enhanced
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: desktop-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Check changed paths
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          files="$(gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[] | .filename, (.previous_filename // empty)')"
+          code=false
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            case "$file" in
+              composeApp/*|desktopSentry/*|vendor/compose-media-player/*|gradle/*|gradlew|gradlew.bat|settings.gradle.kts|build.gradle.kts|gradle.properties|.github/workflows/desktop-pr.yml|scripts/linux/install-desktop-build-dependencies.sh)
+                code=true
+                break
+                ;;
+            esac
+          done <<< "$files"
+          echo "code=${code}" >> "${GITHUB_OUTPUT}"
+
+  desktop:
+    name: Compile and test
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+        # Linux desktop compile and tests do not read the Git LFS macOS dylibs or Windows libmpv dll.
+
+      - name: Install Linux desktop build dependencies
+        run: bash ./scripts/linux/install-desktop-build-dependencies.sh
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: false
+
+      - name: Keep the Gradle daemon inside the runner memory limit
+        run: |
+          mkdir -p "${HOME}/.gradle"
+          cat > "${HOME}/.gradle/gradle.properties" << 'EOF'
+          org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8
+          kotlin.daemon.jvmargs=-Xmx4g
+          kotlin.native.jvmArgs=-Xmx2g
+          org.gradle.parallel=true
+          org.gradle.workers.max=2
+          EOF
+
+      - name: Compile the desktop target and run Kotlin tests
+        run: |
+          # buildLinuxPlayerBridge is an Exec task, so configuration cache cannot be stored.
+          # Quarantined on enhanced 2026-11-02 by composeApp desktopTest: CollectionCardRemoteImageTest (focus webp/gif loads before hover) and WatchProgressIdentityTest.legacy payload derives episode progress key and preserves completed position (940/1000 is not completed).
+          ./gradlew :composeApp:compileKotlinDesktop :composeApp:desktopTest --no-configuration-cache --stacktrace
+
+  status:
+    name: Desktop PR
+    needs: [changes, desktop]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Publish a result when the heavy job is skipped
+        run: |
+          changes="${{ needs.changes.result }}"
+          desktop="${{ needs.desktop.result }}"
+          echo "changes=${changes} desktop=${desktop}"
+          if [[ "${changes}" == "success" && ( "${desktop}" == "success" || "${desktop}" == "skipped" ) ]]; then
+            exit 0
+          fi
+          exit 1

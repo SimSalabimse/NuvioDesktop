@@ -73,8 +73,9 @@ val buildNativeLinux by tasks.registering(Exec::class) {
     val nativeDir = layout.projectDirectory.dir("src/jvmMain/native/linux")
     enabled = Os.isFamily(Os.FAMILY_UNIX) && !Os.isFamily(Os.FAMILY_MAC)
     dependsOn(cleanLegacyLinuxNativeResource)
-    inputs.dir(nativeDir)
+    inputs.files(fileTree(nativeDir) { exclude("build/**") })
     outputs.dir(generatedNativeLibraryDir)
+    outputs.cacheIf { true }
     workingDir(nativeDir)
     environment("NATIVE_LIBS_OUTPUT_DIR", generatedNativeLibraryDir.get().asFile.absolutePath)
     commandLine("bash", "build.sh")
