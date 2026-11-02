@@ -92,7 +92,9 @@ internal object NativePlayerBridge {
     external fun speed(handle: Long): Float
     external fun audioTracksJson(handle: Long): String
     external fun subtitleTracksJson(handle: Long): String
+    external fun stringProperty(handle: Long, name: String): String
     external fun selectAudioTrack(handle: Long, trackId: Int)
+    external fun setAudioLanguages(handle: Long, languages: String)
     external fun selectSubtitleTrack(handle: Long, trackId: Int)
     external fun addSubtitleUrl(handle: Long, url: String)
     external fun clearExternalSubtitles(handle: Long)
@@ -126,6 +128,13 @@ internal object NativePlayerBridge {
         subPos: Int,
         useLibass: Boolean,
         stripSdh: Boolean,
+    )
+    external fun setSubtitleAppearance(
+        handle: Long,
+        font: String,
+        fontsDir: String,
+        shadowColor: String,
+        shadowOffset: Float,
     )
     external fun warmupWebView2(controlsPageUrl: String): Boolean
     external fun shutdownWebView2Warmup()
@@ -305,6 +314,8 @@ internal object NativePlayerBridge {
                 .replace("/* __NUVIO_PLAYER_FONT_FACES__ */", nativePlayerFontFaces())
                 .toByteArray(Charsets.UTF_8),
             "controls.js" to readResourceBytes("/player-ui/controls.js"),
+            "party.css" to readResourceBytes("/player-ui/party.css"),
+            "party.js" to readResourceBytes("/player-ui/party.js"),
             "loading-indicator.js" to readResourceBytes("/player-ui/loading-indicator.js"),
             "fonts/jetbrains_sans_regular.ttf" to readResourceBytes(
                 "/composeResources/nuvio.composeapp.generated.resources/font/jetbrains_sans_regular.ttf",

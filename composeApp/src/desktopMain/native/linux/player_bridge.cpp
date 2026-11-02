@@ -1888,6 +1888,12 @@ JNIEXPORT jstring JNICALL NP(audioTracksJson)(JNIEnv *env, jobject, jlong handle
     return utf8ToJstring(env, buildTracksJson(p->mpv, "audio"));
 }
 
+JNIEXPORT jstring JNICALL NP(stringProperty)(JNIEnv *env, jobject, jlong handle, jstring name) {
+    Player *p = asPlayer(handle);
+    if (!p) return utf8ToJstring(env, "");
+    return utf8ToJstring(env, mpvGetStr(p->mpv, jstringToUtf8(env, name)));
+}
+
 JNIEXPORT jstring JNICALL NP(subtitleTracksJson)(JNIEnv *env, jobject, jlong handle) {
     Player *p = asPlayer(handle);
     if (!p) return utf8ToJstring(env, "[]");
@@ -1900,6 +1906,14 @@ JNIEXPORT void JNICALL NP(selectAudioTrack)(JNIEnv *, jobject, jlong handle, jin
     int64_t id = trackId;
     if (trackId < 0) mpv_set_property_string(p->mpv, "aid", "no");
     else mpv_set_property(p->mpv, "aid", MPV_FORMAT_INT64, &id);
+}
+
+JNIEXPORT void JNICALL NP(setAudioLanguages)(JNIEnv *env, jobject, jlong handle, jstring languages) {
+    Player *p = asPlayer(handle);
+    if (!p) return;
+    std::string value = jstringToUtf8(env, languages);
+    mpv_set_property_string(p->mpv, "alang", value.c_str());
+    mpv_set_property_string(p->mpv, "aid", "auto");
 }
 
 JNIEXPORT void JNICALL NP(selectSubtitleTrack)(JNIEnv *, jobject, jlong handle, jint trackId) {
@@ -1941,7 +1955,7 @@ JNIEXPORT void JNICALL NP(setSubtitleDelayMs)(JNIEnv *, jobject, jlong handle, j
 }
 
 JNIEXPORT void JNICALL NP(applySubtitleStyle)(
-    JNIEnv *env, jobject, jlong handle, jstring textColor, jstring /*backgroundColor*/,
+    JNIEnv *env, jobject, jlong handle, jstring textColor, jstring backgroundColor,
     jstring outlineColor, jfloat outlineSize, jboolean bold, jfloat fontSize, jint subPos,
     jboolean useLibass, jboolean stripSdh) {
     Player *p = asPlayer(handle);
@@ -1952,6 +1966,11 @@ JNIEXPORT void JNICALL NP(applySubtitleStyle)(
                             useLibass == JNI_TRUE ? "scale" : "force");
     mpv_set_property_string(p->mpv, "sub-color", jstringToUtf8(env, textColor).c_str());
     mpv_set_property_string(p->mpv, "sub-border-color", jstringToUtf8(env, outlineColor).c_str());
+    std::string background = jstringToUtf8(env, backgroundColor);
+    if (background.empty()) background = "#00000000";
+    mpv_set_property_string(p->mpv, "sub-back-color", background.c_str());
+    mpv_set_property_string(p->mpv, "sub-border-style",
+                            background.rfind("#00", 0) == 0 ? "outline-and-shadow" : "opaque-box");
     std::string border = std::to_string(outlineSize);
     mpv_set_property_string(p->mpv, "sub-border-size", border.c_str());
     mpv_set_property_string(p->mpv, "sub-bold", bold == JNI_TRUE ? "yes" : "no");
@@ -1962,6 +1981,19 @@ JNIEXPORT void JNICALL NP(applySubtitleStyle)(
     // Strip captions written for deaf and hard-of-hearing viewers.
     mpv_set_property_string(p->mpv, "sub-filter-sdh", stripSdh == JNI_TRUE ? "yes" : "no");
     mpv_set_property_string(p->mpv, "sub-filter-sdh-harder", stripSdh == JNI_TRUE ? "yes" : "no");
+}
+
+JNIEXPORT void JNICALL NP(setSubtitleAppearance)(
+    JNIEnv *env, jobject, jlong handle, jstring font, jstring fontsDir, jstring shadowColor,
+    jfloat shadowOffset) {
+    Player *p = asPlayer(handle);
+    if (!p) return;
+    std::string dir = jstringToUtf8(env, fontsDir);
+    if (!dir.empty()) mpv_set_property_string(p->mpv, "sub-fonts-dir", dir.c_str());
+    mpv_set_property_string(p->mpv, "sub-font", jstringToUtf8(env, font).c_str());
+    mpv_set_property_string(p->mpv, "sub-shadow-color", jstringToUtf8(env, shadowColor).c_str());
+    std::string offset = std::to_string(shadowOffset);
+    mpv_set_property_string(p->mpv, "sub-shadow-offset", offset.c_str());
 }
 
 // ---- Phase 2 stubs: webview controls / window chrome / focus ------------
