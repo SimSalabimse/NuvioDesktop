@@ -1,9 +1,9 @@
 package com.nuvio.app.features.player
 
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.debrid.DebridSourceFallback
 import com.nuvio.app.features.debrid.DirectDebridPlayableResult
 import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
-import com.nuvio.app.features.debrid.toastMessage
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.downloads.DownloadItem
@@ -34,19 +34,15 @@ internal fun PlayerScreenRuntime.resolveDebridForPlayer(
 ): Boolean {
     if (!DirectDebridPlaybackResolver.shouldResolveToPlayableStream(stream)) return false
     scope.launch {
-        val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
-            stream = stream,
-            season = season,
-            episode = episode,
-        )
-        when (resolved) {
-            is DirectDebridPlayableResult.Success -> onResolved(resolved.stream)
-            else -> {
-                resolved.toastMessage()?.let { NuvioToastController.show(it) }
-                if (resolved == DirectDebridPlayableResult.Stale) {
-                    onStale()
-                }
-            }
+        val outcome = DebridSourceFallback.playable(stream, season, episode) {
+            (PlayerStreamsRepository.sourceState.value.groups + PlayerStreamsRepository.episodeStreamsState.value.groups)
+                .flatMap { it.streams }
+        }
+        val playable = outcome.stream
+        if (playable != null) {
+            onResolved(playable)
+        } else if (outcome.failure == DirectDebridPlayableResult.Stale) {
+            onStale()
         }
     }
     return true
