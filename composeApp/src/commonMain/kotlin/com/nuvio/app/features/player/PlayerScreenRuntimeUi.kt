@@ -387,6 +387,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         showSources = activeVideoId != null,
         showEpisodes = isSeries,
         showExternalPlayer = args.onOpenInExternalPlayer != null,
+        showAutoSync = isAutoSyncControlShown(PlayerCapabilities.supportsAutoSyncAudioCapture),
         durationMs = playbackSnapshot.durationMs,
         positionMs = displayedPositionMs,
         bufferedPositionMs = playbackSnapshot.bufferedPositionMs.coerceAtLeast(0L),

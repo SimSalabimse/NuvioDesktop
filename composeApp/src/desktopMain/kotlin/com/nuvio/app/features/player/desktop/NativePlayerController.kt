@@ -1534,6 +1534,8 @@ private fun PlayerControlsState.toControlsJson(isFullscreen: Boolean): String =
         append(',')
         appendJsonField("showExternalPlayer", showExternalPlayer)
         append(',')
+        appendJsonField("showAutoSync", showAutoSync)
+        append(',')
         appendJsonField("durationMs", durationMs)
         append(',')
         appendJsonField("positionMs", positionMs)

@@ -77,6 +77,26 @@ class AppUpdaterRepositoryTest {
     }
 
     @Test
+    fun listedAssetDigestIsKeptForInstallVerification() {
+        val digest = "sha256:" + "ab".repeat(32)
+        val response = """{
+            "tag_name": "0.1.35",
+            "assets": [{
+                "name": "Nuvio.msi",
+                "browser_download_url": "https://github.com/SimSalabimse/NuvioDesktop/releases/download/0.1.35/Nuvio.msi",
+                "digest": "$digest"
+            }]
+        }"""
+        val update = AppUpdaterRepository.selectUpdate(
+            responseBody = response,
+            channel = UpdateChannel.STABLE,
+            supportedAbis = emptyList(),
+            selector = AppUpdateAssetSelector(fileExtensions = listOf(".msi")),
+        )
+        assertEquals(digest, update?.assetDigest)
+    }
+
+    @Test
     fun apkSelectionPreservesDeviceAbiPreference() {
         val response = """{
             "tag_name": "1.1.0", "assets": [

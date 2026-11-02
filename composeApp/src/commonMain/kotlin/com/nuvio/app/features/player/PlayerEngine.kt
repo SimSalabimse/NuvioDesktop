@@ -226,6 +226,7 @@ data class PlayerControlsState(
     val showSources: Boolean = false,
     val showEpisodes: Boolean = false,
     val showExternalPlayer: Boolean = false,
+    val showAutoSync: Boolean = false,
     val durationMs: Long = 0L,
     val positionMs: Long = 0L,
     val bufferedPositionMs: Long = 0L,
