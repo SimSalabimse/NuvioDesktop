@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -34,15 +36,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.i18n.localizedByteUnit
+import com.nuvio.app.core.ui.DesktopPointerMenu
+import com.nuvio.app.core.ui.DesktopPointerMenuEntry
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.core.ui.secondaryClickAt
+import com.nuvio.app.isDesktop
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -78,6 +87,7 @@ fun DownloadsScreen(
 
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var downloadPointerMenu by remember { mutableStateOf<DownloadPointerMenuRequest?>(null) }
     val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
 
     val completedEpisodes = remember(uiState.items) {
@@ -127,7 +137,9 @@ fun DownloadsScreen(
         if (uiState.completedItems.isNotEmpty()) {
             item {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    modifier = Modifier
+                        .desktopDownloadsColumn()
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     androidx.compose.material3.FilterChip(
@@ -146,6 +158,11 @@ fun DownloadsScreen(
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
                 },
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onPointerMenu = if (isDesktop) {
+                    { item, offset -> downloadPointerMenu = DownloadPointerMenuRequest(item.id, offset) }
+                } else {
+                    null
+                },
             )
         } else {
             downloadsShowContent(
@@ -153,8 +170,32 @@ fun DownloadsScreen(
                 episodes = if (unwatchedOnly) completedEpisodes.filterNot { it.id in watchedIds } else completedEpisodes,
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onPointerMenu = if (isDesktop) {
+                    { item, offset -> downloadPointerMenu = DownloadPointerMenuRequest(item.id, offset) }
+                } else {
+                    null
+                },
             )
         }
+    }
+
+    val pointerMenu = downloadPointerMenu
+    val pointerMenuItem = pointerMenu?.let { request ->
+        uiState.items.firstOrNull { it.id == request.itemId }
+    }
+    if (isDesktop && pointerMenu != null && pointerMenuItem != null) {
+        DesktopPointerMenu(
+            anchorInRoot = pointerMenu.anchorInRoot,
+            onDismiss = { downloadPointerMenu = null },
+            entries = downloadPointerMenuEntries(
+                item = pointerMenuItem,
+                onOpen = { onOpenDownload(pointerMenuItem) },
+                onPause = { DownloadsRepository.pauseDownload(pointerMenuItem.id) },
+                onResume = { DownloadsRepository.resumeDownload(pointerMenuItem.id) },
+                onRetry = { DownloadsRepository.retryDownload(pointerMenuItem.id) },
+                onDelete = { downloadPendingDeletionId = pointerMenuItem.id },
+            ),
+        )
     }
 
     val pendingDeletionId = downloadPendingDeletionId
@@ -180,6 +221,7 @@ private fun LazyListScope.downloadsRootContent(
     onOpenDownload: (DownloadItem) -> Unit,
     onOpenShow: (showId: String, title: String) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onPointerMenu: ((DownloadItem, Offset) -> Unit)?,
 ) {
     val activeItems = uiState.activeItems
     val completedMovies = uiState.completedItems.filterNot(DownloadItem::isEpisode)
@@ -208,6 +250,9 @@ private fun LazyListScope.downloadsRootContent(
                 onResume = { DownloadsRepository.resumeDownload(item.id) },
                 onRetry = { DownloadsRepository.retryDownload(item.id) },
                 onDelete = { onDeleteDownload(item.id) },
+                onPointerMenu = onPointerMenu?.let { openMenu ->
+                    { offset -> openMenu(item, offset) }
+                },
             )
         }
     }
@@ -227,6 +272,9 @@ private fun LazyListScope.downloadsRootContent(
                 onResume = { DownloadsRepository.resumeDownload(item.id) },
                 onRetry = { DownloadsRepository.retryDownload(item.id) },
                 onDelete = { onDeleteDownload(item.id) },
+                onPointerMenu = onPointerMenu?.let { openMenu ->
+                    { offset -> openMenu(item, offset) }
+                },
             )
         }
     }
@@ -241,7 +289,7 @@ private fun LazyListScope.downloadsRootContent(
         ) { (item, episodes) ->
             Surface(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .desktopDownloadsColumn()
                     .padding(horizontal = 12.dp, vertical = 6.dp)
                     .clickable { onOpenShow(item.parentMetaId, item.title) },
                 shape = MaterialTheme.shapes.medium,
@@ -285,7 +333,7 @@ private fun LazyListScope.downloadsRootContent(
         item {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .desktopDownloadsColumn()
                     .padding(horizontal = 20.dp, vertical = 40.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -304,6 +352,7 @@ private fun LazyListScope.downloadsShowContent(
     episodes: List<DownloadItem>,
     onOpenDownload: (DownloadItem) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onPointerMenu: ((DownloadItem, Offset) -> Unit)?,
 ) {
     val showEpisodes = episodes
         .filter { it.parentMetaId == showId }
@@ -322,7 +371,7 @@ private fun LazyListScope.downloadsShowContent(
         item {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .desktopDownloadsColumn()
                     .padding(horizontal = 20.dp, vertical = 40.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -360,6 +409,9 @@ private fun LazyListScope.downloadsShowContent(
                 onResume = { DownloadsRepository.resumeDownload(item.id) },
                 onRetry = { DownloadsRepository.retryDownload(item.id) },
                 onDelete = { onDeleteDownload(item.id) },
+                onPointerMenu = onPointerMenu?.let { openMenu ->
+                    { offset -> openMenu(item, offset) }
+                },
             )
         }
     }
@@ -373,6 +425,7 @@ private fun DownloadRow(
     onResume: () -> Unit,
     onRetry: () -> Unit,
     onDelete: () -> Unit,
+    onPointerMenu: ((Offset) -> Unit)?,
 ) {
     val displayTitle = item.displayTitle()
     val displaySubtitle = downloadDisplaySubtitle(
@@ -386,12 +439,21 @@ private fun DownloadRow(
     val speedLine = if (item.status == DownloadStatus.Downloading) {
         speedAndEta(speeds[item.id], item.remainingBytesOrNull(), ::formatBytes)
     } else null
+    var rowPositionInRoot by remember { mutableStateOf(Offset.Zero) }
 
     Surface(
         modifier = Modifier
-            .fillMaxWidth()
+            .desktopDownloadsColumn()
             .padding(horizontal = 12.dp, vertical = 6.dp)
-            .clickable(enabled = item.isPlayable, onClick = onOpen),
+            .onGloballyPositioned { coordinates ->
+                rowPositionInRoot = coordinates.positionInRoot()
+            }
+            .clickable(enabled = item.isPlayable, onClick = onOpen)
+            .secondaryClickAt(
+                onPointerMenu?.let { openMenu ->
+                    { local -> openMenu(rowPositionInRoot + local) }
+                },
+            ),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
@@ -553,7 +615,9 @@ private fun downloadDisplaySubtitle(
 private fun SectionTitle(title: String) {
     Text(
         text = title,
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+        modifier = Modifier
+            .desktopDownloadsColumn()
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
@@ -576,6 +640,77 @@ private fun statusText(item: DownloadItem): String {
             formatBytes(item.totalBytes ?: item.downloadedBytes),
         )
         DownloadStatus.Failed -> item.errorMessage ?: stringResource(Res.string.downloads_status_failed)
+    }
+}
+
+private data class DownloadPointerMenuRequest(
+    val itemId: String,
+    val anchorInRoot: Offset,
+)
+
+internal const val DownloadsListMaxWidthDp = 720
+
+internal fun downloadsListWidthDp(availableWidthDp: Int, maxWidthDp: Int = DownloadsListMaxWidthDp): Int =
+    minOf(availableWidthDp.coerceAtLeast(0), maxWidthDp.coerceAtLeast(0))
+
+private fun Modifier.desktopDownloadsColumn(): Modifier {
+    if (!isDesktop) return this
+    return wrapContentWidth(Alignment.CenterHorizontally)
+        .widthIn(max = downloadsListWidthDp(Int.MAX_VALUE).dp)
+        .fillMaxWidth()
+}
+
+internal enum class DownloadPointerAction {
+    Play,
+    Pause,
+    Resume,
+    Retry,
+    Delete,
+}
+
+internal fun downloadPointerActions(status: DownloadStatus): List<DownloadPointerAction> =
+    when (status) {
+        DownloadStatus.Downloading -> listOf(DownloadPointerAction.Pause, DownloadPointerAction.Delete)
+        DownloadStatus.Paused -> listOf(DownloadPointerAction.Resume, DownloadPointerAction.Delete)
+        DownloadStatus.Failed -> listOf(DownloadPointerAction.Retry, DownloadPointerAction.Delete)
+        DownloadStatus.Completed -> listOf(DownloadPointerAction.Play, DownloadPointerAction.Delete)
+    }
+
+@Composable
+private fun downloadPointerMenuEntries(
+    item: DownloadItem,
+    onOpen: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onRetry: () -> Unit,
+    onDelete: () -> Unit,
+): List<DesktopPointerMenuEntry> = downloadPointerActions(item.status).map { action ->
+    when (action) {
+        DownloadPointerAction.Play -> DesktopPointerMenuEntry(
+            title = stringResource(Res.string.action_play),
+            icon = Icons.Rounded.PlayArrow,
+            onClick = onOpen,
+        )
+        DownloadPointerAction.Pause -> DesktopPointerMenuEntry(
+            title = stringResource(Res.string.compose_action_pause),
+            icon = Icons.Rounded.Pause,
+            onClick = onPause,
+        )
+        DownloadPointerAction.Resume -> DesktopPointerMenuEntry(
+            title = stringResource(Res.string.action_resume),
+            icon = Icons.Rounded.PlayArrow,
+            onClick = onResume,
+        )
+        DownloadPointerAction.Retry -> DesktopPointerMenuEntry(
+            title = stringResource(Res.string.action_retry),
+            icon = Icons.Rounded.Refresh,
+            onClick = onRetry,
+        )
+        DownloadPointerAction.Delete -> DesktopPointerMenuEntry(
+            title = stringResource(Res.string.action_delete),
+            icon = Icons.Rounded.Delete,
+            onClick = onDelete,
+        )
     }
 }
 

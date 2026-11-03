@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.MouseButton
@@ -31,10 +32,12 @@ class PosterCardClickTest {
     private var actions = 0
     private var clickAnchor: PosterZoomAnchor? = null
     private var actionAnchor: PosterZoomAnchor? = null
+    private var actionPointer: Offset? = null
 
     @After
     fun clearAnchor() {
         PosterZoomAnchorHolder.consume()
+        DesktopPointerMenuAnchor.consume()
         PosterZoomOverlayCoordinator.hide()
     }
 
@@ -88,10 +91,39 @@ class PosterCardClickTest {
             assertEquals(1, actions)
             assertEquals(0, clicks)
             assertPosterAnchor(actionAnchor)
+            assertNull(actionPointer)
         }
     }
 
-    private fun setContent(hoverScaleEnabled: Boolean? = null) {
+    @Test
+    fun desktopPointerMenuRightClickDoesNotLiftThePoster() {
+        setContent(desktopPointerMenu = true)
+
+        compose.onNodeWithTag("poster").performMouseInput { click(button = MouseButton.Secondary) }
+
+        compose.runOnIdle {
+            assertEquals(1, actions)
+            assertEquals(0, clicks)
+            assertNull(actionAnchor)
+            assertNotNull(actionPointer)
+        }
+    }
+
+    @Test
+    fun desktopPointerMenuLongPressDoesNotLiftThePoster() {
+        setContent(desktopPointerMenu = true)
+
+        compose.onNodeWithTag("poster").performTouchInput { longClick() }
+
+        compose.runOnIdle {
+            assertEquals(1, actions)
+            assertEquals(0, clicks)
+            assertNull(actionAnchor)
+            assertNotNull(actionPointer)
+        }
+    }
+
+    private fun setContent(hoverScaleEnabled: Boolean? = null, desktopPointerMenu: Boolean = false) {
         compose.setContent {
             CompositionLocalProvider(LocalPosterClickAnchor provides { clickAnchor = it }) {
                 val modifier = Modifier.size(100.dp, 150.dp).background(Color.Blue).testTag("poster")
@@ -99,6 +131,7 @@ class PosterCardClickTest {
                 val onLongClick = {
                     actions++
                     actionAnchor = PosterZoomAnchorHolder.consume()
+                    actionPointer = DesktopPointerMenuAnchor.consume()
                 }
                 Box(
                     if (hoverScaleEnabled == null) {
@@ -107,6 +140,7 @@ class PosterCardClickTest {
                             onLongClick = onLongClick,
                             zoomImageUrl = "poster.jpg",
                             zoomCornerRadius = 12.dp,
+                            desktopPointerMenu = desktopPointerMenu,
                         )
                     } else {
                         modifier.posterCardClickable(
@@ -115,6 +149,7 @@ class PosterCardClickTest {
                             zoomImageUrl = "poster.jpg",
                             zoomCornerRadius = 12.dp,
                             hoverScaleEnabled = hoverScaleEnabled,
+                            desktopPointerMenu = desktopPointerMenu,
                         )
                     },
                 )

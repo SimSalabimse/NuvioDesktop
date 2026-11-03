@@ -36,6 +36,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -70,8 +71,13 @@ import com.nuvio.app.core.sync.AppForegroundMonitor
 import com.nuvio.app.core.sync.AppVisibility
 import com.nuvio.app.core.sync.ProfileSettingsSync
 import com.nuvio.app.core.sync.SyncManager
+import com.nuvio.app.core.ui.ContinueWatchingPointerAction
+import com.nuvio.app.core.ui.DesktopPointerMenu
+import com.nuvio.app.core.ui.DesktopPointerMenuAnchor
+import com.nuvio.app.core.ui.DesktopPointerMenuEntry
 import com.nuvio.app.core.ui.DisintegrationRequestController
 import com.nuvio.app.core.ui.NativeTabBridge
+import com.nuvio.app.core.ui.continueWatchingPointerActions
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioContinueWatchingActionSheet
 import com.nuvio.app.core.ui.NuvioFloatingPrompt
@@ -294,6 +300,7 @@ internal fun MainAppContent(
         val posterOverlayHazeState = rememberHazeState()
         var selectedContinueWatchingForActions by remember { mutableStateOf<ContinueWatchingItem?>(null) }
         var selectedContinueWatchingZoomAnchor by remember { mutableStateOf<PosterZoomAnchor?>(null) }
+        var selectedContinueWatchingPointer by remember { mutableStateOf<Offset?>(null) }
         val libraryDisintegrationRequests = remember { DisintegrationRequestController<String>() }
         val continueWatchingDisintegrationRequests = remember { DisintegrationRequestController<String>() }
         var requestedSettingsPageName by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1306,9 +1313,15 @@ internal fun MainAppContent(
 
         val onContinueWatchingLongPress: (ContinueWatchingItem) -> Unit = { item ->
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-            val zoomAnchor = PosterZoomAnchorHolder.consume()
-            selectedContinueWatchingZoomAnchor = zoomAnchor
-            selectedContinueWatchingForActions = item
+            if (isDesktop) {
+                selectedContinueWatchingZoomAnchor = null
+                selectedContinueWatchingPointer = DesktopPointerMenuAnchor.consume() ?: Offset.Zero
+                selectedContinueWatchingForActions = item
+            } else {
+                selectedContinueWatchingPointer = null
+                selectedContinueWatchingZoomAnchor = PosterZoomAnchorHolder.consume()
+                selectedContinueWatchingForActions = item
+            }
         }
 
         AppUpdaterHost(
@@ -1948,7 +1961,61 @@ internal fun MainAppContent(
                 }
             }
 
-            selectedContinueWatchingForActions?.let { item ->
+            if (isDesktop) {
+                val menuItem = selectedContinueWatchingForActions
+                val pointer = selectedContinueWatchingPointer
+                if (menuItem != null && pointer != null) {
+                    val showManualPlayOption = StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState) &&
+                        canSelectContinueWatchingStreams(menuItem)
+                    val showDetailsOption = !menuItem.isCloudLibraryContinueWatchingItem()
+                    val dismissMenu = {
+                        selectedContinueWatchingForActions = null
+                        selectedContinueWatchingPointer = null
+                    }
+                    DesktopPointerMenu(
+                        anchorInRoot = pointer,
+                        onDismiss = dismissMenu,
+                        entries = continueWatchingPointerActions(
+                            showDetails = showDetailsOption,
+                            showManualPlay = showManualPlayOption,
+                            showStartFromBeginning = !menuItem.isNextUp && canPlayContinueWatching(menuItem),
+                        ).map { action ->
+                            when (action) {
+                                ContinueWatchingPointerAction.Details -> DesktopPointerMenuEntry(
+                                    title = stringResource(Res.string.cw_action_go_to_details),
+                                    icon = Icons.Default.Info,
+                                    onClick = {
+                                        navController.navigate(
+                                            DetailRoute(
+                                                type = menuItem.parentMetaType,
+                                                id = menuItem.parentMetaId,
+                                                title = menuItem.title,
+                                            ),
+                                        )
+                                    },
+                                )
+                                ContinueWatchingPointerAction.PlayManually -> DesktopPointerMenuEntry(
+                                    title = stringResource(Res.string.play_manually),
+                                    icon = Icons.Default.PlayArrow,
+                                    onClick = { onContinueWatchingPlayManually(menuItem) },
+                                )
+                                ContinueWatchingPointerAction.StartFromBeginning -> DesktopPointerMenuEntry(
+                                    title = stringResource(Res.string.cw_action_start_from_beginning),
+                                    icon = Icons.Default.Replay,
+                                    onClick = { onContinueWatchingStartFromBeginning(menuItem) },
+                                )
+                                ContinueWatchingPointerAction.Remove -> DesktopPointerMenuEntry(
+                                    title = stringResource(Res.string.cw_action_remove),
+                                    icon = Icons.Default.DeleteOutline,
+                                    onClick = { onContinueWatchingRemove(menuItem) },
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+
+            if (!isDesktop) selectedContinueWatchingForActions?.let { item ->
                 selectedContinueWatchingZoomAnchor?.let { anchor ->
                     key(item.videoId, anchor) {
                         val showManualPlayOption = StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState) && canSelectContinueWatchingStreams(item)
@@ -2020,7 +2087,9 @@ internal fun MainAppContent(
             }
 
             NuvioContinueWatchingActionSheet(
-                item = selectedContinueWatchingForActions.takeIf { selectedContinueWatchingZoomAnchor == null },
+                item = selectedContinueWatchingForActions.takeIf {
+                    selectedContinueWatchingZoomAnchor == null && selectedContinueWatchingPointer == null
+                },
                 showManualPlayOption = StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState) &&
                     selectedContinueWatchingForActions?.let(::canSelectContinueWatchingStreams) == true,
                 showDetailsOption = selectedContinueWatchingForActions?.isCloudLibraryContinueWatchingItem() != true,

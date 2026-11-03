@@ -718,6 +718,7 @@ private fun ContinueWatchingCard(
                 onLongClick = onLongClick,
                 zoomImageUrl = imageUrl,
                 zoomCornerRadius = cardMetrics.cornerRadius,
+                desktopPointerMenu = true,
             )
             .width(cardMetrics.width)
             .aspectRatio(PosterLandscapeAspectRatio)
@@ -898,7 +899,11 @@ private fun ContinueWatchingWideCard(
     val cornerRadius = rememberPosterCardStyleUiState().cornerRadiusDp.dp
     Row(
         modifier = Modifier
-            .posterCardClickable(onClick = onClick, onLongClick = onLongClick)
+            .posterCardClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                desktopPointerMenu = true,
+            )
             .width(layout.wideCardWidth)
             .height(layout.wideCardHeight)
             .clip(RoundedCornerShape(cornerRadius))
@@ -1048,6 +1053,7 @@ private fun ContinueWatchingPosterCard(
                     zoomImageUrl = imageUrl,
                     zoomCornerRadius = cornerRadius,
                     hoverScaleEnabled = false,
+                    desktopPointerMenu = true,
                 ),
         ) {
             val shouldBlurArtwork = item.shouldBlurContinueWatchingArtwork(
