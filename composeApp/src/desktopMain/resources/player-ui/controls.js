@@ -372,6 +372,7 @@ let isScrubbing = false;
 let scrubPositionMs = 0;
 let tapTimer = 0;
 let activeModal = "";
+let modalFocusReturn = null;
 let pressedButton = null;
 let focusedActionCommand = "";
 let sourceFilterId = "";
@@ -1045,6 +1046,13 @@ const openPlayerModal = modal => {
     setModalVisibility(modalElement, modalElement === targetModal);
   });
   renderChrome();
+  const previous = document.activeElement;
+  modalFocusReturn = previous && previous !== document.body ? previous : root;
+  window.requestAnimationFrame(() => {
+    if (activeModal !== modal) return;
+    const items = focusableControls(targetModal);
+    if (items.length) items[0].focus({ preventScroll: true });
+  });
 };
 
 const onEpisodesModalClosed = () => {
@@ -1504,6 +1512,13 @@ filterRows.forEach(filterRow => {
   filterRow.addEventListener("pointermove", drag);
   filterRow.addEventListener("pointerup", clearDrag);
   filterRow.addEventListener("pointercancel", clearDrag);
+  filterRow.addEventListener("wheel", event => {
+    const delta = PlayerOverlayInput.horizontalRowScrollDelta(event.deltaX, event.deltaY);
+    if (!delta || filterRow.scrollWidth <= filterRow.clientWidth + 1) return;
+    event.preventDefault();
+    event.stopPropagation();
+    filterRow.scrollLeft += delta;
+  }, { passive: false });
 });
 
 const normalizeItems = items =>
@@ -3504,6 +3519,14 @@ const stopSpeedBoost = () => {
 };
 
 root.addEventListener("contextmenu", event => {
+  const row = event.target && event.target.closest
+    ? event.target.closest("button.episode-row, button.source-row")
+    : null;
+  if (row && !row.disabled && PlayerOverlayInput.contextMenuActivatesRow(row.className)) {
+    event.preventDefault();
+    row.click();
+    return;
+  }
   event.preventDefault();
 });
 
@@ -3692,6 +3715,71 @@ root.addEventListener("wheel", event => {
   }
 }, { passive: false });
 
+const focusableControlSelector = [
+  "button:not([disabled])",
+  "input:not([disabled]):not([type='hidden'])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "a[href]",
+  "[tabindex]:not([tabindex='-1'])",
+].join(", ");
+
+function isShownFocusable(element) {
+  if (!element || element.disabled || element.hidden) return false;
+  if (element.closest("[hidden]")) return false;
+  const style = window.getComputedStyle(element);
+  if (style.display === "none" || style.visibility === "hidden") return false;
+  return element.offsetWidth > 0 || element.offsetHeight > 0;
+}
+
+function focusableControls(container) {
+  if (!container || !container.querySelectorAll) return [];
+  return Array.from(container.querySelectorAll(focusableControlSelector)).filter(isShownFocusable);
+}
+
+function shouldMoveFocus(element) {
+  if (!element || element === document.body || element === root) return false;
+  const modalEl = activeModal ? modalByName[activeModal] : null;
+  const inOpenPanel = Boolean(modalEl && modalEl.contains(element));
+  return PlayerOverlayInput.arrowMovesFocus({
+    tagName: element.tagName,
+    inOpenPanel,
+    isPanelControl: inOpenPanel && element.matches(focusableControlSelector),
+    isTextEntry: isTextEntryTarget(element),
+  });
+}
+
+function focusGroupFor(element) {
+  const modalEl = activeModal ? modalByName[activeModal] : null;
+  if (modalEl && modalEl.contains(element)) return modalEl;
+  return element.closest(".action-pill, .header-actions, .opening-actions, .skip-feedback-actions, .modal-actions, .panel-actions, .episode-stream-toolbar")
+    || element.parentElement;
+}
+
+function moveFocusFromArrow(element, code) {
+  const step = PlayerOverlayInput.focusStep(code);
+  const items = focusableControls(focusGroupFor(element));
+  const nextIndex = PlayerOverlayInput.wrappedIndex(items.length, items.indexOf(element), step);
+  if (nextIndex < 0) return;
+  const next = items[nextIndex];
+  if (next.closest(".action-pill")) {
+    setFocusedActionButton(next, { focus: true });
+  } else {
+    next.focus({ preventScroll: true });
+  }
+}
+
+function trapTabInOpenPanel(event) {
+  if (event.key !== "Tab" || event.altKey || event.metaKey || event.ctrlKey || !activeModal) return false;
+  const modalEl = modalByName[activeModal];
+  const items = focusableControls(modalEl);
+  event.preventDefault();
+  if (!items.length) return true;
+  const nextIndex = PlayerOverlayInput.tabTrapIndex(items.length, items.indexOf(document.activeElement), event.shiftKey);
+  if (nextIndex >= 0) items[nextIndex].focus({ preventScroll: true });
+  return true;
+}
+
 document.addEventListener("keyup", event => {
   if (event.key === "Alt" || event.key === "Control" || event.key === "Meta" || event.metaKey || event.ctrlKey || event.altKey) {
     clearSpaceHoldTimerAndStopSpeedBoost();
@@ -3701,6 +3789,7 @@ document.addEventListener("keyup", event => {
     if (clearSpaceHoldTimerAndStopSpeedBoost()) return;
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (activeModal || isTextEntryTarget(event.target)) return;
+    if (PlayerOverlayInput.activatesFocusedControl(event.target && event.target.tagName)) return;
     event.preventDefault();
     focusShortcutRoot();
     noteChromeActivity();
@@ -3712,10 +3801,17 @@ document.addEventListener("keydown", event => {
   if (event.key === "Escape" && activeModal) {
     clearSpaceHoldTimerAndStopSpeedBoost();
     event.preventDefault();
+    const returnTarget = modalFocusReturn;
+    modalFocusReturn = null;
     closePlayerModal(true);
-    focusShortcutRoot();
+    if (returnTarget && returnTarget.isConnected && !returnTarget.disabled && returnTarget !== root) {
+      returnTarget.focus({ preventScroll: true });
+    } else {
+      focusShortcutRoot();
+    }
     return;
   }
+  if (trapTabInOpenPanel(event)) return;
   if (event.key === "Escape") {
     clearSpaceHoldTimerAndStopSpeedBoost();
     event.preventDefault();
@@ -3743,6 +3839,17 @@ document.addEventListener("keydown", event => {
     return;
   }
   if (isTextEntryTarget(event.target)) {
+    return;
+  }
+  if (
+    (event.code === "Space" || event.key === "Enter") &&
+    PlayerOverlayInput.activatesFocusedControl(document.activeElement && document.activeElement.tagName)
+  ) {
+    return;
+  }
+  if (event.code.startsWith("Arrow") && shouldMoveFocus(document.activeElement)) {
+    event.preventDefault();
+    moveFocusFromArrow(document.activeElement, event.code);
     return;
   }
 

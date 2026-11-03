@@ -3020,13 +3020,13 @@ button:disabled {
 }
 
 button:focus-visible,
-.scrub:focus-visible {
+.scrub:focus-visible,
+input:focus-visible:not(.volume-slider),
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--theme-focus);
   outline-offset: 3px;
-}
-
-button.action:focus-visible {
-  outline: none;
 }
 
 .track-empty {
