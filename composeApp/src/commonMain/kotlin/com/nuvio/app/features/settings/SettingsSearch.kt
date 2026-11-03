@@ -41,7 +41,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioTokens
@@ -1105,6 +1116,33 @@ private fun addContinueWatchingRows(
     }
 }
 
+internal fun settingsSearchFieldInHeader(desktop: Boolean, rootPage: Boolean): Boolean =
+    desktop && rootPage
+
+internal fun settingsSearchListShowsField(
+    revealedByPull: Boolean,
+    queryPresent: Boolean,
+    fieldInHeader: Boolean,
+): Boolean = !fieldInHeader && (revealedByPull || queryPresent)
+
+internal fun Modifier.desktopSettingsSearchKeyFocus(
+    enabled: Boolean,
+    onFocusSearch: () -> Unit,
+): Modifier {
+    if (!enabled) return this
+    return onPreviewKeyEvent { event ->
+        val focusesSearch = event.type == KeyEventType.KeyDown &&
+            event.key == Key.F &&
+            event.isCtrlPressed &&
+            !event.isAltPressed &&
+            !event.isMetaPressed &&
+            !event.isShiftPressed
+        if (!focusesSearch) return@onPreviewKeyEvent false
+        onFocusSearch()
+        true
+    }
+}
+
 internal fun LazyListScope.settingsSearchRootContent(
     query: String,
     entries: @Composable () -> List<SettingsSearchEntry>,
@@ -1113,8 +1151,15 @@ internal fun LazyListScope.settingsSearchRootContent(
     animateSearchField: Boolean,
     onQueryChange: (String) -> Unit,
     onTargetClick: (SettingsSearchTarget) -> Unit,
+    fieldInHeader: Boolean = false,
 ) {
-    if (showSearchField || query.isNotBlank()) {
+    if (
+        settingsSearchListShowsField(
+            revealedByPull = showSearchField,
+            queryPresent = query.isNotBlank(),
+            fieldInHeader = fieldInHeader,
+        )
+    ) {
         item(key = "settings-search-field") {
             SettingsSearchRevealItem(animate = animateSearchField) {
                 SettingsSearchField(
@@ -1190,15 +1235,30 @@ private fun SettingsSearchRevealItem(
 }
 
 @Composable
+internal fun SettingsSearchHeaderField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    modifier: Modifier = Modifier,
+) {
+    SettingsSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        modifier = modifier.focusRequester(focusRequester),
+    )
+}
+
+@Composable
 private fun SettingsSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val tokens = MaterialTheme.nuvio
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         singleLine = true,
         shape = tokens.shapes.compactCard,
         leadingIcon = {

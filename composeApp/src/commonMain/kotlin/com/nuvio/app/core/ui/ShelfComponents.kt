@@ -43,6 +43,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
@@ -151,7 +153,12 @@ internal fun Modifier.nuvioDesktopDragScroll(
 ): Modifier {
     if (!isDesktop) return this
 
-    return pointerInput(state) {
+    return nuvioDesktopRowWheelScroll(
+        key = state,
+        canScrollBackward = { state.canScrollBackward },
+        canScrollForward = { state.canScrollForward },
+        dispatchRawDelta = state::dispatchRawDelta,
+    ).pointerInput(state) {
         awaitEachGesture {
             val down = awaitFirstDown(pass = PointerEventPass.Initial)
             var totalDx = 0f
@@ -192,7 +199,12 @@ internal fun Modifier.nuvioDesktopDragScroll(
 ): Modifier {
     if (!isDesktop) return this
 
-    return pointerInput(state) {
+    return nuvioDesktopRowWheelScroll(
+        key = state,
+        canScrollBackward = { state.value > 0 },
+        canScrollForward = { state.value < state.maxValue },
+        dispatchRawDelta = state::dispatchRawDelta,
+    ).pointerInput(state) {
         awaitEachGesture {
             val down = awaitFirstDown(pass = PointerEventPass.Initial)
             var totalDx = 0f
@@ -223,6 +235,75 @@ internal fun Modifier.nuvioDesktopDragScroll(
 
                 state.dispatchRawDelta(-delta.x)
                 change.consume()
+            }
+        }
+    }
+}
+
+internal data class RowWheelScroll(
+    val delta: Float,
+    val consume: Boolean,
+)
+
+internal fun mapRowWheelToHorizontal(
+    scrollX: Float,
+    scrollY: Float,
+    shiftPressed: Boolean,
+): Float {
+    if (shiftPressed) {
+        return if (scrollX != 0f) scrollX else scrollY
+    }
+    return if (scrollX != 0f && abs(scrollX) >= abs(scrollY)) scrollX else scrollY
+}
+
+internal fun rowWheelScroll(
+    scrollX: Float,
+    scrollY: Float,
+    shiftPressed: Boolean,
+    canScrollBackward: Boolean,
+    canScrollForward: Boolean,
+): RowWheelScroll {
+    val delta = mapRowWheelToHorizontal(scrollX, scrollY, shiftPressed)
+    if (delta == 0f) return RowWheelScroll(delta = 0f, consume = false)
+    val canScroll = if (delta > 0f) canScrollForward else canScrollBackward
+    return if (canScroll) {
+        RowWheelScroll(delta = delta, consume = true)
+    } else {
+        RowWheelScroll(delta = 0f, consume = false)
+    }
+}
+
+private fun Modifier.nuvioDesktopRowWheelScroll(
+    key: Any,
+    canScrollBackward: () -> Boolean,
+    canScrollForward: () -> Boolean,
+    dispatchRawDelta: (Float) -> Float,
+): Modifier = pointerInput(key) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(pass = PointerEventPass.Initial)
+            if (event.type != PointerEventType.Scroll) continue
+            var scrollX = 0f
+            var scrollY = 0f
+            var sawUnconsumed = false
+            for (change in event.changes) {
+                if (change.isConsumed) continue
+                sawUnconsumed = true
+                scrollX += change.scrollDelta.x
+                scrollY += change.scrollDelta.y
+            }
+            if (!sawUnconsumed) continue
+            val decision = rowWheelScroll(
+                scrollX = scrollX,
+                scrollY = scrollY,
+                shiftPressed = event.keyboardModifiers.isShiftPressed,
+                canScrollBackward = canScrollBackward(),
+                canScrollForward = canScrollForward(),
+            )
+            if (decision.delta == 0f) continue
+            val consumed = dispatchRawDelta(decision.delta)
+            if (consumed != 0f && decision.consume) {
+                event.changes.forEach { it.consume() }
             }
         }
     }
