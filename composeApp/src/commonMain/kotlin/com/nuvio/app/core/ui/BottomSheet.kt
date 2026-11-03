@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
@@ -29,10 +30,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.nuvio.app.isDesktop
+import kotlin.math.min
 
 private val SheetShape = RoundedCornerShape(NuvioTokens.Space.s28)
+
+internal enum class NuvioSheetPresentation {
+    BottomSheet,
+    CenteredDialog,
+}
+
+internal fun nuvioSheetPresentation(desktop: Boolean): NuvioSheetPresentation =
+    if (desktop) NuvioSheetPresentation.CenteredDialog else NuvioSheetPresentation.BottomSheet
+
+internal fun nuvioSheetShowsDragHandle(desktop: Boolean, requested: Boolean): Boolean =
+    requested && !desktop
+
+internal fun centeredSheetWidthPx(windowWidthPx: Int, sheetMaxWidthPx: Int, horizontalMarginPx: Int): Int {
+    if (windowWidthPx <= 0 || windowWidthPx == Int.MAX_VALUE) return sheetMaxWidthPx.coerceAtLeast(0)
+    val available = (windowWidthPx - horizontalMarginPx * 2).coerceAtLeast(0)
+    if (available <= 0) return windowWidthPx.coerceAtLeast(0)
+    return min(sheetMaxWidthPx.coerceAtLeast(0), available)
+}
+
+internal fun centeredSheetMaxHeightPx(windowHeightPx: Int, fullHeight: Boolean): Int {
+    if (windowHeightPx <= 0 || windowHeightPx == Int.MAX_VALUE) return windowHeightPx.coerceAtLeast(0)
+    val fraction = if (fullHeight) 0.92f else 0.9f
+    return (windowHeightPx * fraction).toInt().coerceAtLeast(0)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,8 +88,18 @@ fun NuvioModalBottomSheet(
             fullHeight = fullHeight,
             content = content,
         )
+    } else if (nuvioSheetPresentation(isDesktop) == NuvioSheetPresentation.CenteredDialog) {
+        DesktopCenteredSheet(
+            onDismissRequest = onDismissRequest,
+            modifier = modifier,
+            containerColor = containerColor,
+            contentColor = contentColor,
+            fullHeight = fullHeight,
+            content = content,
+        )
     } else {
         val tokens = MaterialTheme.nuvio
+        val dragHandle = nuvioSheetShowsDragHandle(isDesktop, showDragHandle)
         ModalBottomSheet(
             onDismissRequest = onDismissRequest,
             sheetState = sheetState,
@@ -75,11 +117,65 @@ fun NuvioModalBottomSheet(
                         .background(containerColor)
                         .border(tokens.borders.thin, SurfaceEdge, SheetShape),
                 ) {
-                    if (showDragHandle) {
+                    if (dragHandle) {
                         NuvioBottomSheetDragHandle(Modifier.align(Alignment.CenterHorizontally))
                     }
                     content()
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DesktopCenteredSheet(
+    onDismissRequest: () -> Unit,
+    modifier: Modifier,
+    containerColor: Color,
+    contentColor: Color,
+    fullHeight: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val density = LocalDensity.current
+    val sheetMaxPx = with(density) { tokens.components.sheetMaxWidth.roundToPx() }
+    val marginPx = with(density) { NuvioTokens.Space.s24.roundToPx() }
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+            usePlatformDefaultWidth = false,
+        ),
+    ) {
+        Layout(
+            modifier = modifier,
+            content = {
+                CompositionLocalProvider(LocalContentColor provides contentColor) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(SheetShape)
+                            .background(containerColor)
+                            .border(tokens.borders.thin, SurfaceEdge, SheetShape),
+                    ) {
+                        content()
+                    }
+                }
+            },
+        ) { measurables, constraints ->
+            val width = centeredSheetWidthPx(constraints.maxWidth, sheetMaxPx, marginPx)
+            val maxHeight = centeredSheetMaxHeightPx(constraints.maxHeight, fullHeight)
+            val boundedHeight = maxHeight > 0 && maxHeight != Int.MAX_VALUE
+            val childConstraints = Constraints(
+                minWidth = width,
+                maxWidth = width,
+                minHeight = if (fullHeight && boundedHeight) maxHeight else 0,
+                maxHeight = if (boundedHeight) maxHeight else constraints.maxHeight,
+            )
+            val placeable = measurables.first().measure(childConstraints)
+            layout(placeable.width, placeable.height) {
+                placeable.place(0, 0)
             }
         }
     }
