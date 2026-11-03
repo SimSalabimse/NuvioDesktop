@@ -2,8 +2,13 @@ package com.nuvio.app.features.settings
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,8 +41,11 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.isDesktop
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
@@ -164,7 +172,22 @@ internal fun SettingsSidebarItem(
 ) {
     val tokens = MaterialTheme.nuvio
     val primary = tokens.colors.accent
-    val background = if (selected) primary.copy(alpha = tokens.opacity.hover) else Color.Transparent
+    val interactionSource = remember { MutableInteractionSource() }
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val chrome = settingsRowPointerChrome(
+        desktop = isDesktop,
+        enabled = true,
+        hovered = hovered,
+        focused = focused,
+    )
+    val shape = RoundedCornerShape(NuvioTokens.Space.s10)
+    val background = when {
+        selected -> primary.copy(alpha = tokens.opacity.hover)
+        chrome == SettingsRowPointerChrome.Hover -> tokens.colors.overlayHover
+        chrome == SettingsRowPointerChrome.Focus -> tokens.colors.focusBackground
+        else -> Color.Transparent
+    }
     val iconChip = if (selected) primary.copy(alpha = tokens.opacity.selected) else Color.Transparent
     val contentColor = if (selected) tokens.colors.textPrimary else tokens.colors.textMuted
 
@@ -172,8 +195,19 @@ internal fun SettingsSidebarItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = tokens.spacing.listGap, vertical = NuvioTokens.Space.s2)
-            .background(background, RoundedCornerShape(NuvioTokens.Space.s10))
-            .clickable(onClick = onClick)
+            .background(background, shape)
+            .then(
+                if (chrome == SettingsRowPointerChrome.Focus) {
+                    Modifier.border(tokens.borders.hairline, tokens.colors.focusRing, shape)
+                } else {
+                    Modifier
+                },
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                onClick = onClick,
+            )
             .padding(horizontal = tokens.spacing.screenHorizontal, vertical = tokens.spacing.listGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -202,6 +236,56 @@ internal fun SettingsSidebarItem(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
         )
     }
+}
+
+internal enum class SettingsRowPointerChrome {
+    None,
+    Hover,
+    Focus,
+}
+
+internal fun settingsRowPointerChrome(
+    desktop: Boolean,
+    enabled: Boolean,
+    hovered: Boolean,
+    focused: Boolean,
+): SettingsRowPointerChrome {
+    if (!desktop || !enabled) return SettingsRowPointerChrome.None
+    if (focused) return SettingsRowPointerChrome.Focus
+    if (hovered) return SettingsRowPointerChrome.Hover
+    return SettingsRowPointerChrome.None
+}
+
+@Composable
+private fun Modifier.settingsPointerChrome(
+    interactionSource: MutableInteractionSource,
+    enabled: Boolean,
+): Modifier {
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val focused by interactionSource.collectIsFocusedAsState()
+    val chrome = settingsRowPointerChrome(
+        desktop = isDesktop,
+        enabled = enabled,
+        hovered = hovered,
+        focused = focused,
+    )
+    if (chrome == SettingsRowPointerChrome.None) return this
+    val tokens = MaterialTheme.nuvio
+    val shape = RoundedCornerShape(NuvioTokens.Space.s10)
+    val color = when (chrome) {
+        SettingsRowPointerChrome.Hover -> tokens.colors.overlayHover
+        SettingsRowPointerChrome.Focus -> tokens.colors.focusBackground
+        SettingsRowPointerChrome.None -> Color.Transparent
+    }
+    return this
+        .background(color, shape)
+        .then(
+            if (chrome == SettingsRowPointerChrome.Focus) {
+                Modifier.border(tokens.borders.hairline, tokens.colors.focusRing, shape)
+            } else {
+                Modifier
+            },
+        )
 }
 
 @Composable
@@ -245,11 +329,18 @@ internal fun SettingsNavigationRow(
     val iconSize = if (isTablet) 42.dp else 36.dp
     val verticalPadding = if (isTablet) 16.dp else 14.dp
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
+    val interactionSource = remember { MutableInteractionSource() }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
+            .settingsPointerChrome(interactionSource, enabled)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                enabled = enabled,
+                onClick = onClick,
+            )
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
             .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.medium),
         horizontalArrangement = Arrangement.Start,
@@ -325,11 +416,17 @@ internal fun SettingsSwitchRow(
 ) {
     val tokens = MaterialTheme.nuvio
     val verticalPadding = if (isTablet) 16.dp else 14.dp
+    val interactionSource = remember { MutableInteractionSource() }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .settingsPointerChrome(interactionSource, enabled)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = LocalIndication.current,
+                enabled = enabled,
+            ) { onCheckedChange(!checked) }
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
