@@ -4,12 +4,23 @@ internal data class SemanticVersion(
     val major: Long,
     val minor: Long,
     val patch: Long,
-    val prerelease: List<String>
+    val prerelease: List<String>,
+    val extra: List<Long> = emptyList(),
 ) : Comparable<SemanticVersion> {
+    val numbers: List<Long> = listOf(major, minor, patch) + extra
+
     override fun compareTo(other: SemanticVersion): Int {
         compareValues(major, other.major).takeIf { it != 0 }?.let { return it }
         compareValues(minor, other.minor).takeIf { it != 0 }?.let { return it }
         compareValues(patch, other.patch).takeIf { it != 0 }?.let { return it }
+
+        val extraSize = maxOf(extra.size, other.extra.size)
+        for (index in 0 until extraSize) {
+            compareValues(
+                extra.getOrElse(index) { 0L },
+                other.extra.getOrElse(index) { 0L },
+            ).takeIf { it != 0 }?.let { return it }
+        }
 
         if (prerelease.isEmpty() && other.prerelease.isEmpty()) return 0
         if (prerelease.isEmpty()) return 1
@@ -44,35 +55,70 @@ internal data class SemanticVersion(
 }
 
 internal object VersionUtils {
-    private val versionPattern = Regex(
-        "^(\\d+)\\.(\\d+)\\.(\\d+)" +
-            "(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?" +
-            "(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$"
-    )
-
     fun normalize(raw: String?): String {
         if (raw.isNullOrBlank()) return ""
         return raw.trim().removePrefix("v").removePrefix("V")
     }
 
     fun parse(raw: String?): SemanticVersion? {
-        val match = versionPattern.matchEntire(normalize(raw)) ?: return null
+        val normalized = normalize(raw)
+        if (normalized.isEmpty()) return null
+        val withoutBuild = normalized.substringBefore('+')
+        if (withoutBuild.isEmpty()) return null
+
+        val hyphen = withoutBuild.indexOf('-')
+        val core: String
+        val prereleaseText: String
+        if (hyphen < 0) {
+            core = withoutBuild
+            prereleaseText = ""
+        } else {
+            core = withoutBuild.substring(0, hyphen)
+            prereleaseText = withoutBuild.substring(hyphen + 1)
+            if (prereleaseText.isEmpty()) return null
+        }
+
+        val numberTokens = core.split('.')
+        if (numberTokens.size < 3) return null
+        val numbers = numberTokens.map { token ->
+            if (token.isEmpty() || token.any { !it.isDigit() }) return null
+            token.toLongOrNull() ?: return null
+        }
+        val prerelease = if (prereleaseText.isEmpty()) {
+            emptyList()
+        } else {
+            prereleaseText.split('.').also { identifiers ->
+                if (identifiers.any { identifier ->
+                        identifier.isEmpty() || identifier.any { character ->
+                            !character.isLetterOrDigit() && character != '-'
+                        }
+                    }
+                ) {
+                    return null
+                }
+            }
+        }
         return SemanticVersion(
-            major = match.groupValues[1].toLongOrNull() ?: return null,
-            minor = match.groupValues[2].toLongOrNull() ?: return null,
-            patch = match.groupValues[3].toLongOrNull() ?: return null,
-            prerelease = match.groupValues[4]
-                .takeIf(String::isNotEmpty)
-                ?.split('.')
-                .orEmpty()
+            major = numbers[0],
+            minor = numbers[1],
+            patch = numbers[2],
+            extra = numbers.drop(3),
+            prerelease = prerelease,
         )
     }
 
     fun isPrerelease(raw: String?): Boolean = parse(raw)?.prerelease?.isNotEmpty() == true
 
+    /**
+     * A remote build is newer only when it is strictly greater and it is on the
+     * same numbering line. Fork builds add a fourth numeric part (0.1.30.3-alpha).
+     * A shorter tag such as upstream 0.1.34 is a different line and is not an update,
+     * even though 34 is greater than 30.
+     */
     fun isRemoteNewer(remote: String?, local: String?): Boolean {
         val remoteVersion = parse(remote) ?: return false
         val localVersion = parse(local) ?: return false
+        if (remoteVersion.numbers.size < localVersion.numbers.size) return false
         return remoteVersion > localVersion
     }
 
