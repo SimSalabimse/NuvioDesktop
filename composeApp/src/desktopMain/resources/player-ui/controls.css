@@ -2150,15 +2150,24 @@ button:disabled {
   transform: scale(.96);
 }
 
+.player:not(.chrome-hidden):not(.modal-open):not(.error-active):not(.opening-active):not(.pip-mode) #submitIntroButton:not([hidden]) {
+  display: grid;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .panel-button.primary,
-.segment-button.selected {
+.segment-button.selected,
+.capture-button.selected {
   background: var(--theme-accent);
   color: var(--theme-on-accent);
   border-color: rgba(255, 255, 255, .18);
 }
 
 .panel-button.primary:hover:not(:disabled),
-.segment-button.selected:hover:not(:disabled) {
+.segment-button.selected:hover:not(:disabled),
+.capture-button.selected:hover:not(:disabled) {
   background: var(--theme-accent-strong);
 }
 
@@ -3058,7 +3067,7 @@ button.action:focus-visible {
 
 .time-field-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: end;
 }
