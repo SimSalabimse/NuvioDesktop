@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTes
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Locale
 import java.util.Properties
 import javax.inject.Inject
 
@@ -44,6 +45,16 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
 
     @get:Input
     abstract val desktopAppVersionCode: Property<Int>
+
+    @get:Input
+    abstract val requestedUpdateChannel: Property<String>
+
+    @get:Input
+    abstract val ciBranchName: Property<String>
+
+    @get:Optional
+    @get:InputFile
+    abstract val gitHeadFile: RegularFileProperty
 
     @get:Input
     abstract val supabaseUrl: Property<String>
@@ -225,6 +236,21 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 |}
                 """.trimMargin()
             )
+            val updateChannel = resolveDesktopUpdateChannel(
+                property = requestedUpdateChannel.get(),
+                branch = desktopBranchName(),
+            )
+            val updateChecksEnabled = updateChannel == "release"
+            resolve("DesktopUpdateConfig.kt").writeText(
+                """
+                |package com.nuvio.app.core.build
+                |
+                |object DesktopUpdateConfig {
+                |    const val UPDATE_CHANNEL = "$updateChannel"
+                |    const val UPDATE_CHECKS_ENABLED = $updateChecksEnabled
+                |}
+                """.trimMargin()
+            )
         }
 
         outDir.resolve("com/nuvio/app/features/settings").apply {
@@ -242,6 +268,26 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
                 """.trimMargin()
             )
         }
+    }
+
+    // Same rule as DesktopUpdateChannel.resolve. An unset property on any branch
+    // other than enhanced, including a pull-request packageReleaseDmg, is integration.
+    private fun resolveDesktopUpdateChannel(property: String?, branch: String?): String {
+        when (val explicit = property?.trim()?.lowercase(Locale.ROOT)) {
+            null, "" -> Unit
+            "release" -> return "release"
+            "integration" -> return "integration"
+            else -> return "integration"
+        }
+        return if (branch?.trim() == "enhanced") "release" else "integration"
+    }
+
+    private fun desktopBranchName(): String {
+        val ci = ciBranchName.orNull?.trim().orEmpty()
+        if (ci.isNotEmpty() && ci != "HEAD") return ci
+        val head = gitHeadFile.asFile.orNull?.takeIf { it.isFile }?.readText()?.trim().orEmpty()
+        val prefix = "ref: refs/heads/"
+        return if (head.startsWith(prefix)) head.removePrefix(prefix).trim() else ""
     }
 }
 
@@ -561,11 +607,28 @@ fun runtimeConfigBoolean(key: String, default: Boolean): Boolean =
 
 val generateRuntimeConfigs = tasks.register<GenerateRuntimeConfigsTask>("generateRuntimeConfigs") {
     outputDir.set(generatedRuntimeConfigDir)
-    localPropertiesFile.set(rootProject.layout.projectDirectory.file("local.properties"))
+    val localProperties = rootProject.layout.projectDirectory.file("local.properties")
+    if (localProperties.asFile.exists()) {
+        localPropertiesFile.set(localProperties)
+    }
     appVersionName.set(releaseAppVersionName)
     appVersionCode.set(releaseAppVersionCode)
     desktopAppVersionName.set(desktopReleaseVersionName)
     desktopAppVersionCode.set(desktopReleaseVersionCode)
+    requestedUpdateChannel.set(
+        providers.gradleProperty("nuvio.updateChannel")
+            .orElse(providers.environmentVariable("NUVIO_UPDATE_CHANNEL"))
+            .orElse(""),
+    )
+    ciBranchName.set(
+        providers.environmentVariable("GITHUB_HEAD_REF")
+            .orElse(providers.environmentVariable("GITHUB_REF_NAME"))
+            .orElse(""),
+    )
+    val gitHead = rootProject.layout.projectDirectory.file(".git/HEAD")
+    if (gitHead.asFile.isFile) {
+        gitHeadFile.set(gitHead)
+    }
     supabaseUrl.set(runtimeConfigValue("NUVIO_SUPABASE_URL", officialSupabaseUrl))
     supabaseAnonKey.set(runtimeConfigValue("NUVIO_SUPABASE_ANON_KEY", officialSupabaseAnonKey))
     supabaseFallbackUrl.set(runtimeConfigValue("NUVIO_SUPABASE_FALLBACK_URL"))

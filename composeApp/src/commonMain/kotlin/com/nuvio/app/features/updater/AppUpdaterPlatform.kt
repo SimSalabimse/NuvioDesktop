@@ -6,6 +6,7 @@ data class AppUpdateReleaseSource(
     val channelBranch: String? = null,
     val includePrereleases: Boolean = false,
     val userAgent: String,
+    val forkReleaseFeed: Boolean = false,
 )
 
 data class AppUpdateAssetSelector(
@@ -27,6 +28,18 @@ expect object AppUpdaterPlatform {
     val assetSelector: AppUpdateAssetSelector
 
     val currentVersionName: String
+
+    /**
+     * False for desktop integration and pull-request builds. Those builds do not
+     * contact a release feed and do not prompt.
+     */
+    val updateChecksEnabled: Boolean
+
+    /**
+     * When false, a finished download waits for an Install tap. Desktop never
+     * replaces the running build as a side effect of the download completing.
+     */
+    val installAfterDownload: Boolean
 
     fun getIgnoredTag(): String?
 
