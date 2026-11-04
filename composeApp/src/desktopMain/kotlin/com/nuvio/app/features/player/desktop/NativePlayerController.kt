@@ -326,6 +326,7 @@ internal class NativePlayerController(
                             .onFailure { error -> recordTerminalDisposeFailure(error, "superseded create", created) }
                         return@onSuccess
                     }
+                    StreamWindowSpike.onPlaybackStarted(resolvedSource)
                     SwingUtilities.invokeLater {
                         val shouldConfigure = synchronized(lifecycleLock) {
                             when {
@@ -811,6 +812,7 @@ internal class NativePlayerController(
     }
 
     fun dispose() {
+        StreamWindowSpike.onPlaybackInterrupted()
         host.resetCursorVisibility()
         val accepted = synchronized(lifecycleLock) {
             if (releaseRequested) {
@@ -940,11 +942,13 @@ internal class NativePlayerController(
     }
 
     override fun seekTo(positionMs: Long) {
+        StreamWindowSpike.onPlaybackInterrupted()
         log.d { "seekTo positionMs=$positionMs handle=$handle" }
         handle.takeIf { it != 0L }?.let { nativeSeekTo(it, positionMs) }
     }
 
     override fun trySeekTo(positionMs: Long): Boolean {
+        StreamWindowSpike.onPlaybackInterrupted()
         val current = handle.takeIf { it != 0L } ?: return false
         log.d { "trySeekTo positionMs=$positionMs handle=$current" }
         nativeSeekTo(current, positionMs)
@@ -952,6 +956,7 @@ internal class NativePlayerController(
     }
 
     override fun seekBy(offsetMs: Long) {
+        StreamWindowSpike.onPlaybackInterrupted()
         log.d { "seekBy offsetMs=$offsetMs handle=$handle" }
         handle.takeIf { it != 0L }?.let { NativePlayerBridge.seekBy(it, offsetMs) }
     }

@@ -629,6 +629,30 @@ val missingMacosPlayerBridgeMessage = """
 """.trimIndent()
 val missingMacosPlayerBridgeShellMessage = missingMacosPlayerBridgeMessage.replace("'", "'\"'\"'")
 val macosPlayerBridgeSourceFile = macosPlayerBridgeSource.asFile
+val macosStreamWindowSpikeSource = layout.projectDirectory.file("src/desktopMain/native/macos/stream_window_spike.mm")
+val macosStreamWindowSpikeSourceFile = macosStreamWindowSpikeSource.asFile
+val streamWindowSpikeRequested = System.getenv("NUVIO_STREAM_WINDOW_SPIKE") == "1" ||
+    providers.gradleProperty("nuvio.streamWindowSpike").orNull == "1"
+val streamWindowSpikeBlockedByReleaseTask = requestedGradleTasks.any { taskName ->
+    taskName.contains("package") ||
+        taskName.contains("release") ||
+        taskName.contains("notariz") ||
+        taskName.contains("distributable") ||
+        taskName.contains("dmg")
+}
+val streamWindowSpikeCompile = streamWindowSpikeRequested && !streamWindowSpikeBlockedByReleaseTask
+val streamWindowSpikeLinkFiles = listOf(
+    "libavformat.61.dylib",
+    "libavcodec.61.dylib",
+    "libavfilter.10.dylib",
+    "libavutil.59.dylib",
+).map { name -> File(bundledMacosLibmpvRuntimeDir, name) }
+val streamWindowSpikeCompileFlags = if (streamWindowSpikeCompile) "-DNUVIO_STREAM_WINDOW_SPIKE=1" else ""
+val streamWindowSpikeLinkLine = if (streamWindowSpikeCompile) {
+    streamWindowSpikeLinkFiles.joinToString(" ") { file -> shellQuote(file.absolutePath) }
+} else {
+    ""
+}
 val macosPlayerBridgeOutputFile = macosPlayerBridgeOutput.get().asFile
 val macosPlayerBridgeJavaHome = providers.systemProperty("java.home").get()
 if (isMacHost) {
@@ -655,10 +679,12 @@ val macosPlayerBridgeCommand = if (missingMacosPlayerBridgeInputs.isNotEmpty()) 
           -dynamiclib \
           -fobjc-arc \
           -ObjC++ \
+          ${streamWindowSpikeCompileFlags} \
           -arch ${shellQuote(macosPlayerBridgeArch)} \
           -isysroot "${'$'}{SDKROOT}" \
           -mmacosx-version-min=12.0 \
           ${shellQuote(macosPlayerBridgeSourceFile.absolutePath)} \
+          ${shellQuote(macosStreamWindowSpikeSourceFile.absolutePath)} \
           -o ${shellQuote(macosPlayerBridgeOutputFile.absolutePath)} \
           -I${shellQuote("$macosPlayerBridgeJavaHome/include")} \
           -I${shellQuote("$macosPlayerBridgeJavaHome/include/darwin")} \
@@ -678,7 +704,8 @@ val macosPlayerBridgeCommand = if (missingMacosPlayerBridgeInputs.isNotEmpty()) 
           -lswiftCompatibilityPacks \
           -lc++ \
           -Wl,-rpath,@loader_path \
-          ${shellQuote(bundledMacosLibmpvDylib.absolutePath)}
+          ${shellQuote(bundledMacosLibmpvDylib.absolutePath)} \
+          ${streamWindowSpikeLinkLine}
         """.trimIndent(),
     )
 }
@@ -686,8 +713,13 @@ val buildMacosPlayerBridge = tasks.register<Exec>("buildMacosPlayerBridge") {
     notCompatibleWithConfigurationCache("Builds a host-local player bridge against the bundled macOS libmpv runtime.")
     enabled = isMacHost
     inputs.file(macosPlayerBridgeSource)
+    inputs.file(macosStreamWindowSpikeSource)
     inputs.file(bundledMacosLibmpvDylib)
     inputs.dir(macosLibmpvHeaders)
+    inputs.property("nuvioStreamWindowSpike", streamWindowSpikeCompile)
+    if (streamWindowSpikeCompile) {
+        inputs.files(streamWindowSpikeLinkFiles)
+    }
     outputs.file(macosPlayerBridgeOutput)
     commandLine(macosPlayerBridgeCommand)
 }

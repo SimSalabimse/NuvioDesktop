@@ -131,6 +131,13 @@ internal object NativePlayerBridge {
     external fun shutdownWebView2Warmup()
     external fun setWindowsDisplaySleepInhibited(inhibited: Boolean): Boolean
 
+    /** Debug spike. Release bridges return false and do not open the URL. */
+    external fun streamWindowSpikeCompiled(): Boolean
+    external fun analyzeStreamWindow(url: String, startSec: Double, durationSec: Double): String
+    external fun abortStreamWindow()
+    external fun clearStreamWindowAbort()
+    external fun streamWindowSpikeBusy(): Boolean
+
     val controlsPageUrl: String by lazy {
         ensureLoaded()
         controlsPageAssets.url
