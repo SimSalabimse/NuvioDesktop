@@ -9,11 +9,12 @@ import kotlin.test.assertNull
 class CatalogStatusTest {
     @Test
     fun publicAndOwnStayOnSeparateLines() {
-        assertEquals("Public · not checked", publicCatalogLine(CatalogRead.NotChecked, emptyList()))
-        assertEquals("Public · none", publicCatalogLine(CatalogRead.None, emptyList()))
-        assertEquals("Public · unavailable", publicCatalogLine(CatalogRead.Unavailable, emptyList()))
+        assertEquals("Public · Not checked", publicCatalogLine(CatalogRead.NotChecked, emptyList()))
+        assertEquals("Public · None", publicCatalogLine(CatalogRead.None, emptyList()))
+        assertEquals("Public · Unavailable", publicCatalogLine(CatalogRead.Unavailable, emptyList()))
         assertEquals("Public · Intro, Credits", publicCatalogLine(CatalogRead.Listed, listOf("intro", "outro")))
-        assertEquals("Yours · not submitted", ownCatalogLine(CatalogRead.None, hasOwnChips = false))
+        assertEquals("Yours · Not submitted", ownCatalogLine(CatalogRead.None, hasOwnChips = false))
+        assertEquals("Yours · Unavailable", ownCatalogLine(CatalogRead.Unavailable, hasOwnChips = false))
         assertNull(ownCatalogLine(CatalogRead.None, hasOwnChips = true))
         assertEquals("Yours · Not checked", ownCatalogLine(CatalogRead.NotChecked, hasOwnChips = false))
     }
@@ -27,7 +28,7 @@ class CatalogStatusTest {
             userRecap = null,
             durationMs = 1_200_000L,
         )
-        assertEquals("Public · not checked", lines.publicLine)
+        assertEquals("Public · Not checked", lines.publicLine)
         assertEquals("Yours · Not checked", lines.ownLine)
     }
 
@@ -70,9 +71,27 @@ class CatalogStatusTest {
             },
         )
         assertEquals(2, rows.size)
-        assertEquals("Public · not checked", rows[0].publicLine)
+        assertEquals(1, rows[0].season)
+        assertEquals(1, rows[0].episode)
+        assertEquals("Public · Not checked", rows[0].publicLine)
         assertEquals("Yours · Intro", rows[0].ownLine)
         assertEquals("Public · Intro", rows[1].publicLine)
-        assertEquals("Yours · not submitted", rows[1].ownLine)
+        assertEquals("Yours · Not submitted", rows[1].ownLine)
+    }
+
+    @Test
+    fun seasonsGetTheirOwnSectionInOrder() {
+        val rows = seasonOverviewRows(
+            episodes = listOf(
+                SeasonEpisodeRef(2, 1, "Return", "S2 E1"),
+                SeasonEpisodeRef(1, 3, "Harbour", "S1 E3"),
+                SeasonEpisodeRef(1, 1, "Cold open", "S1 E1"),
+            ),
+            marksFor = { emptyMap() },
+        )
+        val sections = seasonOverviewSections(rows)
+        assertEquals(listOf(1, 2), sections.map { it.season })
+        assertEquals(listOf(3, 1), sections[0].rows.map { it.episode })
+        assertEquals(listOf(1), sections[1].rows.map { it.episode })
     }
 }

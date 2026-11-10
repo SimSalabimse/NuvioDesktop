@@ -1775,7 +1775,6 @@ fun MetaDetailsScreen(
                                 )
                             }
                             SeasonOverviewSheet(
-                                seasonLabel = stringResource(Res.string.episodes_season, overviewSeason),
                                 rows = seasonOverviewRows(
                                     episodes = overviewEpisodes.map { video ->
                                         SeasonEpisodeRef(

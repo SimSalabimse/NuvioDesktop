@@ -20,12 +20,12 @@ internal data class CatalogLabels(
     val recap: String = "Recap",
     val credits: String = "Credits",
     val preview: String = "Preview",
-    val publicNotChecked: String = "Public · not checked",
-    val publicNone: String = "Public · none",
-    val publicUnavailable: String = "Public · unavailable",
+    val publicNotChecked: String = "Public · Not checked",
+    val publicNone: String = "Public · None",
+    val publicUnavailable: String = "Public · Unavailable",
     val ownNotChecked: String = "Yours · Not checked",
-    val ownNotSubmitted: String = "Yours · not submitted",
-    val ownUnavailable: String = "Yours · unavailable",
+    val ownNotSubmitted: String = "Yours · Not submitted",
+    val ownUnavailable: String = "Yours · Unavailable",
     val ownReady: String = "Yours · Ready",
     val ownNoRecap: String = "Yours · No recap found",
 )
@@ -70,7 +70,7 @@ internal data class DownloadSkipLines(
 )
 
 /**
- * Two lines for a download. Public stays "not checked" until a catalogue read exists.
+ * Two lines for a download. Public stays "Not checked" until a catalogue read exists.
  * The own line uses the recap token: a missing token is Not checked, a completed miss is
  * No recap found, and a same-cut mark is Ready.
  */
@@ -122,11 +122,25 @@ private fun ownMarkLine(marks: Map<String, SkipMark>, labels: CatalogLabels): St
 }
 
 internal data class SeasonOverviewRow(
+    val season: Int,
+    val episode: Int,
     val code: String,
     val title: String,
     val publicLine: String,
     val ownLine: String?,
 )
+
+internal data class SeasonOverviewSection(
+    val season: Int,
+    val rows: List<SeasonOverviewRow>,
+)
+
+/** Episodes grouped under one header per season, in season order. */
+internal fun seasonOverviewSections(rows: List<SeasonOverviewRow>): List<SeasonOverviewSection> =
+    rows.groupBy { it.season }
+        .entries
+        .sortedBy { it.key }
+        .map { (season, sectionRows) -> SeasonOverviewSection(season, sectionRows) }
 
 internal fun seasonOverviewRows(
     episodes: List<SeasonEpisodeRef>,
@@ -138,6 +152,8 @@ internal fun seasonOverviewRows(
     val (publicRead, publicTypes) = publicFor(episode)
     val ownRead = if (marks.isEmpty()) CatalogRead.None else CatalogRead.Listed
     SeasonOverviewRow(
+        season = episode.season,
+        episode = episode.episode,
         code = episode.code,
         title = episode.title,
         publicLine = publicCatalogLine(publicRead, publicTypes, labels),

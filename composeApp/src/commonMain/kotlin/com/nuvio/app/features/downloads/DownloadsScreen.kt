@@ -169,7 +169,6 @@ fun DownloadsScreen(
             it.parentMetaId == selectedShowId && (it.seasonNumber ?: 0) == season
         }
         com.nuvio.app.features.details.components.SeasonOverviewSheet(
-            seasonLabel = stringResource(Res.string.episodes_season, season),
             rows = com.nuvio.app.features.details.seasonOverviewRows(
                 episodes = seasonEpisodes.map { item ->
                     com.nuvio.app.features.details.SeasonEpisodeRef(
