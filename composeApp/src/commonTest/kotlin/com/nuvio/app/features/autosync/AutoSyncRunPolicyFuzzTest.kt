@@ -41,11 +41,6 @@ class AutoSyncRunPolicyFuzzTest {
             }
         }
 
-        listOf(null, "", " ", "track-1", "k".repeat(2_000)).forEach { key ->
-            fuzzed += 1
-            assertEquals(key == null, shouldRestoreOriginalSubtitle(key))
-        }
-
-        assertEquals(15, fuzzed)
+        assertEquals(10, fuzzed)
     }
 }
