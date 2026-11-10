@@ -20,7 +20,3 @@ internal fun AutoSyncCandidateScope.alternativeCandidates(
 
 internal val AutoSyncCandidateScope.usesAlternativeProvider: Boolean
     get() = this == AutoSyncCandidateScope.STARTUP_SEARCH
-
-internal fun shouldRestoreOriginalSubtitle(
-    activeSidecarSubtitleKey: String?,
-): Boolean = activeSidecarSubtitleKey == null

@@ -13,8 +13,6 @@
     <string name="action_back">Voltar</string>
     <string name="action_cancel">Cancelar</string>
     <string name="action_close">Fechar</string>
-    <string name="action_collapse">Recolher</string>
-    <string name="action_expand">Expandir</string>
     <string name="action_delete">Excluir</string>
     <string name="action_delete_confirm_message">Tem certeza de que deseja excluir?</string>
     <string name="action_delete_confirm_title">Excluir?</string>
@@ -33,8 +31,6 @@
     <string name="action_retry">Tentar novamente</string>
     <string name="action_save">Salvar</string>
     <string name="action_saving">Salvando…</string>
-    <string name="action_switch">Alternar</string>
-    <string name="action_validate">Validar</string>
     <string name="addon_installing">Instalando</string>
     <string name="addon_title">Addons</string>
     <string name="addons_badge_active">Ativo</string>
@@ -52,8 +48,6 @@
     <string name="addons_appstore_empty_title">Deixe o Nuvio do seu jeito.</string>
     <string name="addons_appstore_input_placeholder">URL do addon</string>
     <string name="addons_appstore_install_button">Adicionar addon</string>
-    <string name="store_empty_unavailable_title">Ainda não há nada aqui</string>
-    <string name="store_empty_unavailable_message">Os addons que você usa ainda não têm nada para mostrar aqui.</string>
     <string name="addons_empty_subtitle">Adicione uma URL de manifesto para começar a carregar catálogos, metadados, streams ou legendas no Nuvio.</string>
     <string name="addons_empty_title">Nenhum addon instalado ainda.</string>
     <string name="addons_error_enter_url">Insira uma URL de addon.</string>
@@ -93,7 +87,6 @@
     <string name="collections_editor_cover_none">Nenhuma</string>
     <string name="collections_editor_cover">Capa</string>
     <string name="collections_editor_create_collection">Criar Coleção</string>
-    <string name="collections_editor_done">Concluído</string>
     <string name="collections_editor_edit_collection">Editar Coleção</string>
     <string name="collections_editor_edit_folder">Editar Pasta</string>
     <string name="collections_editor_folder_editor_help">Defina a identidade da pasta, apresentação e fontes de catálogo com a mesma estrutura do editor principal de coleções.</string>
@@ -256,11 +249,8 @@
     <string name="collections_editor_trakt_sort_popular">Populares</string>
     <string name="collections_editor_trakt_sort_percentage">Porcentagem</string>
     <string name="collections_editor_trakt_sort_votes">Votos</string>
-    <string name="collections_editor_trakt_enter_name_url_or_id">Introduz o nome, URL ou ID de uma lista do Trakt</string>
-    <string name="collections_editor_trakt_enter_id_or_url">Introduz o ID ou URL de uma lista do Trakt</string>
     <string name="collections_editor_trakt_load_failed">Não foi possível carregar a lista do Trakt</string>
     <string name="collections_editor_trakt_no_lists_found">Nenhuma lista do Trakt encontrada</string>
-    <string name="collections_editor_trakt_resolved_subtitle">Lista do Trakt resolvida</string>
     <string name="collections_editor_trakt_fallback_title">Lista do Trakt %1$d</string>
     <string name="collections_editor_tmdb_genre_action">Ação</string>
     <string name="collections_editor_tmdb_genre_adventure">Aventura</string>
@@ -428,7 +418,6 @@
     <string name="compose_player_capture_line">Capturar</string>
     <string name="compose_player_close">Fechar player</string>
     <string name="compose_player_color">Cor</string>
-    <string name="compose_player_currently_playing">Reproduzindo agora</string>
     <string name="compose_player_episode_code_episode_only">E%1$d</string>
     <string name="compose_player_episode_code_full">T%1$d E%2$d</string>
     <string name="compose_player_episode_title_format">T%1$d E%2$d • %3$s</string>
@@ -487,8 +476,6 @@
     <string name="compose_search_discover_title">Descobrir</string>
     <string name="compose_search_empty_failed_message">Addons instalados falharam ao retornar resultados de busca válidos.</string>
     <string name="compose_search_empty_failed_title">Busca falhou</string>
-    <string name="compose_search_empty_no_active_addons_message">Instale e valide pelo menos um addon antes de buscar.</string>
-    <string name="compose_search_empty_no_active_addons_title">Nenhum addon ativo</string>
     <string name="compose_search_empty_no_results_message">Catálogos pesquisáveis instalados não retornaram correspondências para esta consulta.</string>
     <string name="compose_search_empty_no_results_title">Nenhum resultado encontrado</string>
     <string name="compose_search_empty_no_search_catalogs_message">Seus addons instalados não expõem busca de catálogo.</string>
@@ -532,9 +519,6 @@
     <string name="compose_settings_root_check_updates_description">Baixar a versão mais recente</string>
     <string name="compose_settings_root_check_updates_title">Verificar atualizações</string>
     <string name="compose_settings_root_content_discovery_description">Gerenciar addons e fontes de descoberta.</string>
-    <string name="compose_settings_root_content_discovery_description_appstore">Gerencie addons e escolha o que aparece no Nuvio.</string>
-    <string name="compose_settings_root_downloads_description">Gerencie seus filmes e episódios baixados.</string>
-    <string name="compose_settings_root_downloads_description_appstore">Gerencie o que você salvou neste dispositivo.</string>
     <string name="compose_settings_root_downloads_title">Downloads</string>
     <string name="compose_settings_root_general_section">GERAL</string>
     <string name="compose_settings_root_integrations_description">Gerenciar integrações disponíveis</string>
@@ -543,7 +527,6 @@
     <string name="compose_settings_root_streams_description">Apresentação dos resultados de streams e regras dos URLs de emblemas.</string>
     <string name="compose_settings_root_switch_profile_description">Mude para um perfil diferente.</string>
     <string name="compose_settings_root_switch_profile_title">Alternar Perfil</string>
-    <string name="compose_settings_root_trakt_description">Abrir tela de conexão do Trakt</string>
     <string name="compose_settings_root_tracking_description">Conecte provedores de rastreamento e escolha qual deles gerencia sua Biblioteca e Continuar assistindo.</string>
     <string name="settings_search_empty">Nenhuma configuração encontrada.</string>
     <string name="settings_search_placeholder">Buscar configurações...</string>
@@ -603,19 +586,15 @@
     <string name="settings_licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="settings_licenses_attributions_exoplayer_body">Usado para reprodução em builds para Android.</string>
     <string name="settings_licenses_attributions_exoplayer_license">Licenciado sob a Apache License, Version 2.0.</string>
-    <string name="compose_trakt_list_picker_loading">Carregando suas listas do Trakt…</string>
-    <string name="compose_trakt_list_picker_subtitle">Escolha onde salvar este título no Trakt</string>
     <string name="compose_tracking_list_picker_loading">Carregando listas…</string>
     <string name="compose_tracking_list_picker_subtitle">Escolha onde salvar este título</string>
     <string name="action_donate">Doar</string>
-    <string name="action_support_nuvio">Apoiar o Nuvio</string>
     <string name="cw_action_go_to_details">Ir para detalhes</string>
     <string name="cw_action_remove">Remover</string>
     <string name="cw_action_start_from_beginning">Começar do início</string>
     <string name="detail_btn_play">Reproduzir</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
     <string name="detail_comments_badge_review">Avaliação</string>
-    <string name="detail_comments_badge_spoiler">Spoiler</string>
     <string name="detail_comments_empty">Nenhuma avaliação do Trakt disponível ainda.</string>
     <string name="detail_comments_likes">%1$d curtidas</string>
     <string name="detail_comments_spoiler_card">Este comentário contém spoilers.</string>
@@ -791,7 +770,6 @@
     <string name="settings_custom_poster_description">Forneça um padrão de URL de pôster de um serviço externo. Se um marcador não tiver valor para um determinado título, o pôster original será usado no lugar.</string>
     <string name="settings_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
     <string name="settings_custom_poster_active">Fonte de pôster personalizada ativa</string>
-    <string name="settings_custom_poster_none">Nenhum padrão configurado</string>
     <string name="settings_custom_poster_save">Salvar</string>
     <string name="settings_custom_poster_clear">Limpar</string>
     <!-- Custom Poster URL - Screen Toggles -->
@@ -834,7 +812,6 @@
     <string name="settings_continue_watching_up_next_title">Próximo a Partir do Episódio Mais Avançado</string>
     <string name="settings_continue_watching_use_episode_thumbnails_description">Preferir thumbnails de episódios quando disponíveis.</string>
     <string name="settings_continue_watching_use_episode_thumbnails_title">Preferir Thumbnails de Episódios em Continuar Assistindo</string>
-    <string name="settings_content_discovery_section_home">PÁGINA INICIAL</string>
     <string name="settings_content_discovery_section_sources">FONTES</string>
     <string name="settings_content_discovery_section_search">BUSCA</string>
     <string name="settings_content_discovery_recent_searches">Buscas recentes</string>
@@ -926,9 +903,7 @@
     <string name="settings_fusion_badge_preview_empty">Nenhuma imagem de emblema ao estilo Fusion neste URL.</string>
     <string name="settings_fusion_badge_group_title">Grupo %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Outros emblemas Fusion</string>
-    <string name="settings_debrid_key_valid">Chave de API validada.</string>
     <string name="settings_debrid_key_invalid">Não foi possível validar esta chave de API.</string>
-    <string name="settings_mdb_add_api_key_first">Adicione sua chave de API do MDBList abaixo antes de ativar as classificações.</string>
     <string name="settings_mdb_api_key_description">Necessária para buscar classificações do MDBList</string>
     <string name="settings_mdb_api_key_label">Chave de API</string>
     <string name="settings_mdb_api_key_title">Chave de API</string>
@@ -941,8 +916,6 @@
     <string name="settings_meta_actions_description">Controles de reprodução e salvamento.</string>
     <string name="settings_meta_cast">Elenco</string>
     <string name="settings_meta_cast_description">Lista do elenco principal.</string>
-    <string name="settings_meta_cinematic_background">Fundo Cinematográfico</string>
-    <string name="settings_meta_cinematic_background_description">Backdrop desfocado atrás do conteúdo, similar à tela de stream.</string>
     <string name="settings_meta_background_mode">Modo de plano de fundo</string>
     <string name="settings_meta_background_mode_description">Escolha como a arte aparece atrás das páginas de metadados.</string>
     <string name="settings_meta_poster_transition">Transição do pôster</string>
@@ -998,8 +971,6 @@
     <string name="settings_notifications_test_for_title">Enviar uma notificação de teste local para %1$s.</string>
     <string name="settings_notifications_test_requires_saved_show">Salve uma série na sua biblioteca primeiro para testar notificações.</string>
     <string name="settings_notifications_test_title">Notificação de teste</string>
-    <string name="community_section_title">Comunidade</string>
-    <string name="community_section_description">Veja as pessoas que constroem e apoiam o Nuvio em Mobile, TV e Web.</string>
     <string name="community_membership_title">Assinatura de Apoiador do Nuvio</string>
     <string name="community_membership_description">Apoiar o Nuvio ajuda a cobrir custos de infraestrutura e o desenvolvimento contínuo, mantendo a experiência principal gratuita para todos.</string>
     <string name="community_view_supporter_membership">Ver assinatura de apoiador</string>
@@ -1023,7 +994,6 @@
     <string name="community_tab_supporters">Apoiadores</string>
     <string name="community_open_github">Abrir no GitHub</string>
     <string name="community_github_profile_unavailable">Perfil do GitHub indisponível</string>
-    <string name="community_no_message_attached">Nenhuma mensagem anexada.</string>
     <string name="community_loading_contributors">Carregando contribuidores...</string>
     <string name="community_loading_supporters">Carregando apoiadores...</string>
     <string name="community_load_contributors_failed">Não foi possível carregar contribuidores</string>
@@ -1034,7 +1004,6 @@
     <string name="community_error_unable_load_supporters">Não foi possível carregar apoiadores.</string>
     <string name="community_error_contributors_request_failed">Não foi possível carregar contribuidores no momento.</string>
     <string name="community_error_supporters_request_failed">Não foi possível carregar apoiadores no momento.</string>
-    <string name="community_total_commits">%1$d commits no total</string>
     <string name="community_month_jan">Jan</string>
     <string name="community_month_feb">Fev</string>
     <string name="community_month_mar">Mar</string>
@@ -1068,7 +1037,6 @@
     <string name="settings_playback_decoder_prefer_app">Preferir decodificadores do app (FFmpeg)</string>
     <string name="settings_playback_decoder_prefer_device">Preferir decodificadores do dispositivo</string>
     <string name="settings_playback_decoder_priority">Prioridade do Decodificador</string>
-    <string name="settings_playback_dialog_close">Toque fora para fechar</string>
     <string name="settings_playback_dialog_save_close">Toque fora para salvar &amp; fechar</string>
     <string name="settings_playback_duration_day_one">%1$d dia</string>
     <string name="settings_playback_duration_days">%1$d dias</string>
@@ -1079,7 +1047,6 @@
     <string name="settings_playback_external_player">Player Externo</string>
     <string name="settings_playback_external_player_app">App de Player Externo</string>
     <string name="settings_playback_external_player_description_android">Abrir nova reprodução com o app de vídeo padrão do Android ou seletor do sistema.</string>
-    <string name="settings_playback_external_player_description_ios">Abrir nova reprodução com o player instalado selecionado.</string>
     <string name="settings_playback_external_player_forward_subtitles">Enviar legendas para o leitor externo</string>
     <string name="settings_playback_external_player_forward_subtitles_description">Obtém legendas dos addons no teu idioma preferido e envia-as para o leitor externo.</string>
     <string name="settings_playback_external_player_send_skip_segments">Enviar timestamps de intro e encerramento</string>
@@ -1109,13 +1076,6 @@
     <string name="settings_playback_option_original_hint">Requer que o enriquecimento do TMDB esteja ativado</string>
     <string name="settings_playback_option_forced">Forçada</string>
     <string name="settings_playback_option_none">Nenhuma</string>
-    <string name="settings_playback_addon_subtitle_startup_all">Todas as legendas</string>
-    <string name="settings_playback_addon_subtitle_startup_all_description">Busca todas antes de iniciar, mais lento</string>
-    <string name="settings_playback_addon_subtitle_startup_fast">Início rápido</string>
-    <string name="settings_playback_addon_subtitle_startup_fast_description">Início imediato, mas pode causar um breve reinício do player.</string>
-    <string name="settings_playback_addon_subtitle_startup_mode">Carregamento de legendas</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred">Idiomas preferidos</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred_description">Busca idiomas preferidos antes de iniciar</string>
     <string name="settings_playback_prefer_binge_group">Preferir Grupo de Maratona (Próximo Episódio)</string>
     <string name="settings_playback_prefer_binge_group_description">Tentar o mesmo perfil de fonte primeiro (mesmo addon/grupo de qualidade) antes das regras normais de reprodução automática.</string>
     <string name="settings_playback_reuse_binge_group">Reutilizar Grupo de Maratona</string>
@@ -1212,7 +1172,6 @@
     <string name="settings_playback_stream_selection_mode_regex_description">Reproduzir primeira fonte cujo texto corresponda ao seu padrão regex.</string>
     <string name="settings_playback_stream_timeout">Tempo Limite para Seleção de Stream</string>
     <string name="settings_playback_stream_timeout_description">Tempo de espera para addons antes de selecionar.</string>
-    <string name="settings_playback_threshold_minutes">Minutos de Limite</string>
     <string name="settings_playback_threshold_mode">Modo de Limite para Próximo Episódio</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">Minutos antes do fim</string>
     <string name="settings_playback_threshold_mode_percentage">Porcentagem</string>
@@ -1281,7 +1240,6 @@
     <string name="settings_tmdb_section_modules">MÓDULOS</string>
     <string name="settings_tmdb_section_title">ENRIQUECIMENTO DO TMDB</string>
     <string name="settings_trakt_approval_redirect">Após a aprovação, você será redirecionado de volta automaticamente.</string>
-    <string name="settings_trakt_authentication">AUTENTICAÇÃO</string>
     <string name="settings_trakt_comments">Comentários</string>
     <string name="settings_trakt_comments_description">Mostrar avaliações do Trakt nas páginas de metadados</string>
     <string name="settings_trakt_connect">Conectar Trakt</string>
@@ -1289,7 +1247,6 @@
     <string name="settings_trakt_default_user">Usuário Trakt</string>
     <string name="settings_trakt_disconnect">Desconectar</string>
     <string name="settings_trakt_failed_open_browser">Falha ao abrir navegador</string>
-    <string name="settings_trakt_features">RECURSOS</string>
     <string name="settings_trakt_finish_sign_in">Conclua o login do Trakt no seu navegador</string>
     <string name="settings_trakt_intro_description">Sincronize sua watchlist, progresso de exibição, continuar assistindo, scrobbles e listas pessoais com o Trakt.</string>
     <string name="settings_trakt_missing_credentials">Credenciais do Trakt ausentes em local.properties (TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET).</string>
@@ -1358,10 +1315,7 @@
     <string name="settings_simkl_sync_info_library_statuses">Séries colocadas nas listas 'Em espera' ou 'Abandonadas' do Simkl são ocultadas de 'Continuar assistindo'. Elas permanecem ocultas enquanto estiverem em qualquer uma dessas listas.</string>
     <string name="settings_simkl_sync_info_docs">Ler o guia de sincronização do Simkl</string>
     <string name="settings_simkl_authorization_revoked">A autorização do Simkl foi revogada. Conecte novamente.</string>
-    <string name="settings_tracking_not_connected">Não conectado</string>
     <string name="tracking_source_simkl">Simkl</string>
-    <string name="tracking_library_source_simkl_selected">Watchlist do Simkl selecionada</string>
-    <string name="tracking_watch_progress_simkl_selected">Fonte de progresso de visualização definida para Simkl</string>
     <string name="tracking_watch_progress_dialog_subtitle">Escolha o serviço que o Nuvio lê para retomar e para o Continuar assistindo. O scrobbling permanece ativo para todos os serviços conectados.</string>
     <string name="trakt_library_source_title">Fonte da Biblioteca</string>
     <string name="trakt_library_source_subtitle">Escolha qual biblioteca usar para salvar e visualizar sua coleção</string>
@@ -1369,16 +1323,11 @@
     <string name="trakt_library_source_dialog_subtitle">Escolha onde salvar e gerenciar seus itens da biblioteca</string>
     <string name="trakt_library_source_trakt">Trakt</string>
     <string name="trakt_library_source_nuvio">Biblioteca do Nuvio</string>
-    <string name="trakt_library_source_trakt_selected">Biblioteca do Trakt selecionada</string>
-    <string name="trakt_library_source_nuvio_selected">Biblioteca do Nuvio selecionada</string>
     <string name="trakt_watch_progress_title">Progresso de Exibição</string>
     <string name="trakt_watch_progress_subtitle">Escolha qual fonte de progresso controla retomar e continuar assistindo</string>
     <string name="trakt_watch_progress_dialog_title">Progresso de Exibição</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Escolha se retomar e continuar assistindo devem usar Trakt ou Nuvio Sync enquanto o scrobble do Trakt permanece ativo.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
-    <string name="trakt_watch_progress_trakt_selected">Fonte de progresso de exibição definida como Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Fonte de progresso de exibição definida como Nuvio Sync</string>
     <string name="trakt_more_like_this_source_title">Fonte dos títulos semelhantes</string>
     <string name="trakt_more_like_this_source_subtitle">Escolhe a origem das recomendações nas páginas de detalhes.</string>
     <string name="trakt_more_like_this_source_dialog_title">Fonte dos títulos semelhantes</string>
@@ -1519,7 +1468,6 @@
     <string name="lang_zulu">Zulu</string>
     <string name="action_clear">Limpar</string>
     <string name="action_continue">Continuar</string>
-    <string name="action_ignore">Ignorar</string>
     <string name="action_install">Instalar</string>
     <string name="action_later">Depois</string>
     <string name="action_no">Não</string>
@@ -1559,7 +1507,6 @@
     <string name="discover_empty_no_catalogs_title">Nenhum catálogo de descoberta</string>
     <string name="discover_empty_no_results_message">O catálogo e filtros selecionados não retornaram nenhum item.</string>
     <string name="discover_empty_no_results_title">Nenhum título encontrado</string>
-    <string name="discover_empty_no_active_addons_message">Instale e valide pelo menos um addon antes de navegar pelos catálogos de descoberta.</string>
     <string name="discover_select_catalog">Selecionar Catálogo</string>
     <string name="discover_select_genre">Selecionar Gênero</string>
     <string name="discover_select_type">Selecionar Tipo</string>
@@ -1575,7 +1522,6 @@
     <string name="home_continue_watching_watched">%1$s assistido</string>
     <string name="home_continue_watching_hours_minutes_left">Faltam %1$dh %2$dm</string>
     <string name="home_continue_watching_minutes_left">Faltam %1$dm</string>
-    <string name="home_empty_no_active_addons_message">Instale e valide pelo menos um addon antes de carregar linhas de catálogo na Página Inicial.</string>
     <string name="home_empty_no_rows_message">Addons instalados não expõem atualmente catálogos compatíveis com board sem extras obrigatórios.</string>
     <string name="home_empty_no_rows_title">Nenhuma linha da página inicial disponível</string>
     <string name="home_load_failed_title">Não foi possível carregar o Início</string>
@@ -1598,8 +1544,6 @@
     <string name="meta_section_trailers_description">Rail de trailer e atalhos de reprodução.</string>
     <string name="network_back_online">Online novamente</string>
     <string name="network_cannot_reach_servers">Não foi possível alcançar os servidores</string>
-    <string name="network_error_empty_response_body">Corpo da resposta vazio</string>
-    <string name="network_error_request_failed_http">O pedido falhou com HTTP %1$d</string>
     <string name="network_no_internet_connection">Sem conexão com a internet</string>
     <string name="person_age">(idade %1$d)</string>
     <string name="person_born">Nascido %1$s%2$s</string>
@@ -1665,9 +1609,6 @@
     <string name="streams_empty_load_failed_title">Não foi possível carregar streams</string>
     <string name="playback_unavailable">Reprodução indisponível</string>
     <string name="playback_unavailable_message">A reprodução não está disponível para este título com sua configuração atual.</string>
-    <string name="streams_empty_no_addons_message">Instale um addon primeiro para carregar streams para este título.</string>
-    <string name="streams_empty_no_stream_addon_message">Seus addons instalados não fornecem streams para este tipo de título.</string>
-    <string name="streams_empty_no_stream_addon_title">Nenhum addon de stream disponível</string>
     <string name="streams_empty_no_streams_message">Nenhum dos seus addons instalados retornou streams para este título.</string>
     <string name="streams_episode_badge">T%1$d E%2$d</string>
     <string name="streams_episode_fallback_title">Episódio</string>
@@ -1708,7 +1649,6 @@
     <string name="trailer_close">Fechar trailer</string>
     <string name="trailer_unable_to_play">Não foi possível reproduzir o trailer</string>
     <string name="trakt_lists_load_failed">Falha ao carregar listas do Trakt</string>
-    <string name="trakt_lists_update_failed">Falha ao atualizar listas do Trakt</string>
     <string name="tracking_lists_update_failed">Falha ao atualizar listas de rastreamento</string>
     <string name="tracking_list_status_rewritten">O %1$s colocou este título em %2$s em vez de %3$s</string>
     <string name="tracking_remove_confirmation_title">Remover de %1$s?</string>
@@ -1716,11 +1656,8 @@
     <string name="tracking_removal_impact_history">histórico de visualização</string>
     <string name="tracking_removal_impact_rating">avaliação</string>
     <string name="tracking_removal_impact_history_and_rating">histórico de visualização e avaliação</string>
-    <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">Falha na verificação de atualização</string>
     <string name="updates_download_failed">Download falhou</string>
-    <string name="updates_download_empty_body">Corpo da transferência vazio</string>
-    <string name="updates_download_file_missing">O arquivo de atualização transferido está ausente.</string>
     <string name="updates_downloading_progress">Baixando %1$d%</string>
     <string name="updates_debug_test_complete">Teste de banner concluído</string>
     <string name="updates_debug_test_description">Pré-visualize o banner e o progresso simulado de download.</string>
@@ -1728,8 +1665,6 @@
     <string name="updates_install_failed">Não foi possível iniciar a instalação</string>
     <string name="updates_latest_version">Você está usando a versão mais recente.</string>
     <string name="updates_message_allow_installs">Ative instalações de apps para o Nuvio, então volte e continue.</string>
-    <string name="updates_message_downloading">Baixando atualização...</string>
-    <string name="updates_message_no_updates">Nenhuma atualização encontrada.</string>
     <string name="updates_message_ready">Uma nova versão está pronta para instalar.</string>
     <string name="updates_not_available">Atualizações no app não estão disponíveis nesta build.</string>
     <string name="updates_no_release_notes">Nenhuma nota de versão foi fornecida.</string>
@@ -1737,7 +1672,6 @@
     <string name="updates_release_notes">Notas de lançamento</string>
     <string name="updates_title_allow_installs">Permitir instalações para continuar</string>
     <string name="updates_title_available">Atualização disponível</string>
-    <string name="updates_title_status">Status da atualização</string>
     <string name="addon_already_installed">Esse addon já está instalado.</string>
     <string name="addon_invalid_url">Insira uma URL de addon válida</string>
     <string name="addon_load_manifest_failed">Não foi possível carregar o manifesto</string>
@@ -1762,17 +1696,12 @@
     <string name="downloads_live_downloading_with_total">Baixando %1$s • %2$s / %3$s</string>
     <string name="downloads_live_failed">Download falhou</string>
     <string name="downloads_live_paused">Pausado %1$s</string>
-    <string name="library_remove_confirm">Remover</string>
-    <string name="library_remove_from_list_message">Remover %1$s de %2$s?</string>
-    <string name="library_remove_message">Remover %1$s da sua biblioteca?</string>
-    <string name="library_remove_title">Remover da Biblioteca?</string>
     <string name="media_movie">Filme</string>
     <string name="notifications_channel_episode_releases_description">Alertas quando um novo episódio de uma série salva é lançado.</string>
     <string name="notifications_test_preview_body">Pré-visualização de alerta de lançamento de episódio.</string>
     <string name="notifications_test_send_failed">Falha ao enviar notificação de teste.</string>
     <string name="notifications_test_sent_for">Notificação de teste enviada para %1$s.</string>
     <string name="player_unable_to_play_stream">Não foi possível reproduzir esta stream.</string>
-    <string name="player_engine_unavailable_rebuild">O motor do leitor MPV não está disponível. Recompila a app.</string>
     <string name="profile_pin_changed_requires_refresh">O PIN deste perfil mudou. Conecte-se uma vez para atualizar o bloqueio neste dispositivo.</string>
     <string name="profile_pin_clear_failed">Não foi possível remover o bloqueio por PIN. Tente novamente.</string>
     <string name="profile_pin_clear_requires_internet">Conecte-se à internet para remover o bloqueio por PIN.</string>
@@ -1781,13 +1710,10 @@
     <string name="profile_pin_set_requires_internet">Conecte-se à internet para definir um PIN.</string>
     <string name="profile_primary_addons_required">Este perfil usa addons primários.</string>
     <string name="streams_failed_to_load_scraper">Falha ao carregar %1$s</string>
-    <string name="stream_default_name">Stream</string>
     <string name="source_embedded">Incorporada</string>
     <string name="trakt_authorization_denied">Autorização negada</string>
     <string name="trakt_authorization_expired_reconnect">Sua autorização do Trakt não é mais válida. Reconecte sua conta do Trakt.</string>
     <string name="trakt_complete_sign_in_browser">Conclua o login do Trakt no seu navegador</string>
-    <string name="trakt_connected">Ligado ao Trakt</string>
-    <string name="trakt_disconnected">Desligado do Trakt</string>
     <string name="trakt_invalid_callback">Callback do Trakt inválido</string>
     <string name="trakt_invalid_callback_state">Estado de callback do Trakt inválido</string>
     <string name="trakt_invalid_token_response">Resposta de token do Trakt inválida</string>
@@ -1796,16 +1722,6 @@
     <string name="trakt_missing_auth_code">Trakt não retornou um código de autorização</string>
     <string name="trakt_missing_credentials">Credenciais do Trakt ausentes</string>
     <string name="trakt_progress_load_failed">Falha ao carregar progresso do Trakt</string>
-    <string name="trakt_public_list">Lista pública do Trakt</string>
-    <string name="trakt_public_list_enter_valid_id_or_url">Introduz um ID ou URL válido de uma lista do Trakt</string>
-    <string name="trakt_public_list_items_count">%1$d itens</string>
-    <string name="trakt_public_list_likes_count">%1$d gostos</string>
-    <string name="trakt_public_list_missing_credentials">Credenciais do Trakt ausente em local.properties (TRAKT_CLIENT_ID).</string>
-    <string name="trakt_public_list_missing_id">ID da lista do Trakt ausente</string>
-    <string name="trakt_public_list_missing_numeric_id">A lista do Trakt não incluía um ID numérico</string>
-    <string name="trakt_public_list_not_found_or_not_public">Lista do Trakt não encontrada ou não pública</string>
-    <string name="trakt_public_list_rate_limit_reached">Limite de pedidos do Trakt atingido</string>
-    <string name="trakt_public_list_request_failed">O pedido ao Trakt falhou</string>
     <string name="trakt_sign_in_complete_failed">Falha ao concluir login do Trakt</string>
     <string name="trakt_user_fallback">Usuário Trakt</string>
     <string name="trakt_watchlist">Watchlist</string>
@@ -1819,29 +1735,9 @@
     <string name="trakt_error_add_list_failed">Falha ao adicionar à lista do Trakt</string>
     <string name="trakt_error_missing_ids">IDs compatíveis do Trakt ausentes</string>
     <string name="trakt_error_empty_response">Corpo de resposta vazio</string>
-    <string name="tmdb_sources_collection_fallback_title">Coleção TMDB %1$d</string>
-    <string name="tmdb_sources_collection_not_found">Coleção TMDB não encontrada</string>
-    <string name="tmdb_sources_company_fallback_title">Produtora TMDB %1$d</string>
-    <string name="tmdb_sources_company_not_found">Produtora TMDB não encontrada</string>
-    <string name="tmdb_sources_director_fallback_title">Realização TMDB %1$d</string>
-    <string name="tmdb_sources_discover_no_data">A exploração do TMDB não devolveu dados</string>
-    <string name="tmdb_sources_discover_title">Explorar TMDB</string>
-    <string name="tmdb_sources_invalid_id_or_url">Introduz um ID ou URL válido do TMDB.</string>
-    <string name="tmdb_sources_list_fallback_title">Lista TMDB %1$d</string>
-    <string name="tmdb_sources_list_not_found">Lista TMDB não encontrada</string>
-    <string name="tmdb_sources_load_failed">Não foi possível carregar a fonte TMDB</string>
-    <string name="tmdb_sources_missing_collection_id">ID da coleção TMDB ausente</string>
-    <string name="tmdb_sources_missing_list_id">ID da lista TMDB ausente</string>
-    <string name="tmdb_sources_missing_person_id">ID da pessoa TMDB ausente</string>
-    <string name="tmdb_sources_network_fallback_title">Canal/Plataforma TMDB %1$d</string>
-    <string name="tmdb_sources_network_not_found">Canal/plataforma TMDB não encontrado</string>
-    <string name="tmdb_sources_person_credits_not_found">Créditos da pessoa no TMDB não encontrados</string>
-    <string name="tmdb_sources_person_fallback_title">Pessoa TMDB %1$d</string>
-    <string name="tmdb_sources_person_not_found">Pessoa TMDB não encontrada</string>
     <string name="generic_trailer">Trailer</string>
     <string name="generic_unknown">Desconhecido</string>
     <string name="generic_addon">Addon</string>
-    <string name="action_saved">Salvo</string>
     <string name="action_play_episode">Reproduzir %1$s</string>
     <string name="action_resume_episode">Retomar %1$s</string>
     <string name="collections_import_error_empty_json">JSON está vazio.</string>
@@ -1904,14 +1800,6 @@
     <string name="downloads_enqueue_replaced">Download anterior substituído</string>
     <string name="downloads_enqueue_started">Download iniciado</string>
     <string name="downloads_enqueue_unsupported_format">Formato de stream não suportado para downloads</string>
-    <string name="downloads_error_empty_body">Corpo da resposta vazio</string>
-    <string name="downloads_error_finalize_failed">Falha ao finalizar o arquivo de transferência</string>
-    <string name="downloads_error_http_failed">Solicitação falhou com HTTP %1$d</string>
-    <string name="downloads_error_not_initialized">Sistema de download não está inicializado</string>
-    <string name="downloads_error_open_partial_failed">Falha ao abrir o arquivo parcial da transferência</string>
-    <string name="downloads_error_partial_not_open">O arquivo parcial da transferência não está aberto</string>
-    <string name="downloads_error_request_failed">Solicitação de download falhou</string>
-    <string name="downloads_error_write_partial_failed">Falha ao escrever no arquivo parcial da transferência</string>
     <string name="home_catalog_default_title">%1$s - %2$s</string>
     <string name="library_empty_message">Títulos salvos aparecerão aqui após você tocar em Salvar em uma tela de detalhes.</string>
     <string name="library_empty_title">Sua biblioteca está vazia</string>
@@ -2003,7 +1891,6 @@
     <string name="unit_bytes_mb">MB</string>
     <string name="unit_bytes_gb">GB</string>
     <!-- PlayerControls a11y -->
-    <string name="player_action_submit_intro">Enviar introdução</string>
     <string name="player_action_video_settings">Configurações de vídeo</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">A biblioteca na nuvem não está disponível para %1$s.</string>
@@ -2137,14 +2024,9 @@
     <string name="settings_debrid_rule_excluded_release_groups_desc">Oculta os grupos de release selecionados.</string>
     <!-- Submit intro/recap/outro dialog -->
     <string name="submit_intro_title">Enviar tempos</string>
-    <string name="submit_intro_segment_type">TIPO DE SEGMENTO</string>
     <string name="submit_intro_segment_intro">Introdução</string>
     <string name="submit_intro_segment_recap">Recapitulação</string>
     <string name="submit_intro_segment_outro">Encerramento</string>
-    <string name="submit_intro_start_time">TEMPO INICIAL (MM:SS)</string>
-    <string name="submit_intro_end_time">TEMPO FINAL (MM:SS)</string>
-    <string name="submit_intro_submit">Enviar</string>
-    <string name="submit_intro_capture">Capturar</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">Descodificador por hardware</string>
     <string name="settings_playback_ios_audio_output_dialog">Saída de áudio</string>
@@ -2153,7 +2035,6 @@
     <!-- Collection editor -->
     <string name="collections_editor_resolved_trakt_list">Lista do Trakt resolvida</string>
     <string name="collections_editor_tmdb_discover">Explorar TMDB</string>
-    <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>
     <!-- Collection editor error messages -->
     <string name="collections_editor_trakt_input_required">Introduz o nome, URL ou ID de uma lista do Trakt</string>
     <string name="collections_editor_tmdb_invalid_id_error">Introduz um ID ou URL válido do TMDB.</string>
@@ -2170,17 +2051,13 @@
     <!-- Cloud library -->
     <string name="cloud_library_playback_disabled">A biblioteca na nuvem está desativada.</string>
     <!-- IntroDB settings -->
-    <string name="settings_playback_introdb_invalid_api_key">Chave API inválida ou falha na ligação</string>
     <string name="addons_manifest_missing_field">Campo ausente no manifesto: \"%1$s\"</string>
     <string name="collections_editor_tmdb_collection_title_format">Coleção TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Realização TMDB %1$s</string>
-    <string name="collections_editor_tmdb_discover_title">Explorar TMDB</string>
-    <string name="collections_editor_tmdb_invalid_id_or_url">Introduz um ID ou URL válido do TMDB.</string>
     <string name="collections_editor_tmdb_list_title_format">Lista TMDB %1$s</string>
     <string name="collections_editor_tmdb_network_title_format">Canal/Plataforma TMDB %1$s</string>
     <string name="collections_editor_tmdb_person_title_format">Pessoa TMDB %1$s</string>
     <string name="collections_editor_tmdb_production_title_format">Produtora TMDB %1$s</string>
-    <string name="collections_editor_tmdb_source_load_failed">Não foi possível carregar a fonte TMDB</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
     <string name="collections_tmdb_collection_not_found">Coleção TMDB não encontrada</string>
     <string name="collections_tmdb_company_not_found">Produtora TMDB não encontrada</string>
@@ -2235,19 +2112,13 @@
     <string name="plugins_empty_repos_title">Ainda não existem repositórios de plugins instalados.</string>
     <string name="plugins_enable_globally_desc">Utiliza fornecedores de plugins durante a descoberta de streams.</string>
     <string name="plugins_enable_globally_title">Ativar fornecedores de plugins globalmente</string>
-    <string name="plugins_error_already_installed">Esse repositório de plugins já está instalado.</string>
     <string name="plugins_error_enter_repo_url">Introduz o URL de um repositório de plugins.</string>
     <string name="plugins_error_enter_valid_url">Introduz um URL de plugin válido.</string>
-    <string name="plugins_error_install_failed">Não foi possível instalar o repositório de plugins</string>
     <string name="plugins_error_provider_not_found">Fornecedor não encontrado</string>
-    <string name="plugins_error_refresh_failed">Não foi possível atualizar o repositório</string>
     <string name="plugins_error_unavailable_build">Os plugins não estão disponíveis nesta versão.</string>
     <string name="plugins_group_by_repo_desc">Em Streams, mostra um fornecedor por repositório em vez de um por fonte.</string>
     <string name="plugins_group_by_repo_title">Agrupar fornecedores de plugins por repositório</string>
     <string name="plugins_input_manifest_placeholder">URL do manifesto do plugin</string>
-    <string name="plugins_manifest_error_name_missing">O nome do manifesto está ausente.</string>
-    <string name="plugins_manifest_error_no_providers">O manifesto não tem fornecedores.</string>
-    <string name="plugins_manifest_error_version_missing">A versão do manifesto está ausente.</string>
     <string name="plugins_manifest_name_missing">O nome do manifesto está ausente.</string>
     <string name="plugins_manifest_no_providers">O manifesto não tem fornecedores.</string>
     <string name="plugins_manifest_version_missing">A versão do manifesto está ausente.</string>
@@ -2279,12 +2150,10 @@
     <string name="trakt_connected_status">Ligado ao Trakt</string>
     <string name="trakt_disconnected_status">Desligado do Trakt</string>
     <string name="unit_bytes_tb">TB</string>
-    <string name="updates_apk_asset_missing">Nenhum recurso APK encontrado na versão</string>
     <string name="updates_download_failed_http">A transferência falhou com HTTP %1$d</string>
     <string name="updates_downloaded_file_missing">O arquivo de atualização transferido está ausente.</string>
     <string name="updates_empty_download_body">Corpo da transferência vazio</string>
     <string name="updates_github_api_error">Erro da API de versões do GitHub: %1$d</string>
-    <string name="updates_no_channel_release">Ainda não foi publicada nenhuma atualização.</string>
     <string name="updates_channel_title">Canal de atualizações</string>
     <string name="updates_channel_description">Escolha o tipo de atualizações do app a receber</string>
     <string name="updates_channel_stable">Estável</string>
@@ -2292,7 +2161,6 @@
     <string name="updates_channel_stable_description">Destinado ao uso diário.</string>
     <string name="updates_channel_beta_description">Atualizações antecipadas que podem conter bugs, quebrar recursos ou se comportar de forma inesperada.</string>
     <string name="updates_waiting_for_stable">Você receberá a próxima versão estável assim que estiver disponível</string>
-    <string name="updates_release_missing_title">A versão não tem etiqueta nem nome</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Estreia a %1$s</string>
     <string name="cw_airs_today">Estreia hoje</string>
@@ -2301,9 +2169,6 @@
         <item quantity="one">No ar em %1$d dia</item>
         <item quantity="other">No ar em %1$d dias</item>
     </plurals>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Hoje</string>
-    <string name="cw_airs_tomorrow_short">Amanhã</string>
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">Em %1$d dia</item>
         <item quantity="other">Em %1$d dias</item>
@@ -2343,10 +2208,7 @@
     <string name="settings_p2p_clear_cache_done">%1$s de dados inativos de torrent foram limpos</string>
     <string name="settings_p2p_clear_cache_failed">Não foi possível limpar o cache de torrent</string>
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
-    <string name="player_torrent_buffered_status">%1$s em buffer · %2$s · %3$s</string>
-    <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
-    <string name="player_torrent_connecting_peers">A ligar aos peers…</string>
     <string name="player_torrent_starting_engine">A iniciar motor P2P…</string>
     <string name="player_torrent_fetching_metadata">Obtendo metadados do torrent…</string>
     <string name="player_torrent_preparing_stream">Preparando stream de torrent…</string>
@@ -2392,7 +2254,6 @@
     <string name="settings_playback_legacy_layout">Layout clássico</string>
     <string name="settings_playback_legacy_layout_description">Usar os controles originais do player.</string>
     <string name="compose_player_via">Via %1$s</string>
-    <string name="compose_player_episode_code">T%1$d E%2$d</string>
     <string name="compose_player_more_actions">Mais controles</string>
     <string name="compose_player_fewer_actions">Menos controles</string>
     <string name="compose_player_speed">Velocidade de reprodução</string>

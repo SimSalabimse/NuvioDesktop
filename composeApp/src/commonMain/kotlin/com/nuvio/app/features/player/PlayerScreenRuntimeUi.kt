@@ -2035,16 +2035,6 @@ private fun calculateExistingSegmentTypes(skipIntervals: List<SkipInterval>, sub
     return submittedInSession.toList()
 }
 
-private fun normalizeSegmentTypeForSubmit(type: String): String? {
-    return when (type.lowercase()) {
-        "intro", "op", "mixed-op" -> "intro"
-        "credits", "outro", "ed", "mixed-ed", "ending", "movie-credits" -> "credits"
-        "recap" -> "recap"
-        "preview" -> "preview"
-        else -> null
-    }
-}
-
 /** "1:12–2:41 · TheIntroDB" after the Skip button text. */
 private fun skipButtonDetail(interval: com.nuvio.app.features.player.skip.SkipInterval): String =
     com.nuvio.app.features.player.skip.skipRangeLabel(interval.startTime, interval.endTime) +

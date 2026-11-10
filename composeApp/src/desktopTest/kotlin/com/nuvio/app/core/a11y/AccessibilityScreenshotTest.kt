@@ -18,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasContentDescription
@@ -102,6 +105,9 @@ class AccessibilityScreenshotTest {
 
                 capture("poster-before") { PosterTitleBefore() }
                 capture("poster-after") { PosterTitleAfter() }
+                if (shot.name == "large-text") {
+                    assertPosterWordsStayWhole(onNodeWithTag("shot").fetchSemanticsNode())
+                }
                 capture("season") { SeasonOverviewContent(sampleRows(), Modifier.width(640.dp).padding(24.dp)) }
                 capture("settings") { SettingsSample() }
                 capture("details-header") { HeaderSample() }
@@ -138,6 +144,22 @@ private data class Shot(
 )
 
 private const val LongTitle = "The Extraordinary Adventures of a Very Long Programme Title"
+private val PosterWords = LongTitle.split(" ").toSet()
+
+private fun assertPosterWordsStayWhole(node: SemanticsNode) {
+    val texts = mutableListOf<String>()
+    fun walk(current: SemanticsNode) {
+        current.config.getOrNull(SemanticsProperties.Text)?.forEach { texts += it.text }
+        current.children.forEach(::walk)
+    }
+    walk(node)
+    assertTrue(texts.isNotEmpty(), "Poster title was not in the semantics tree")
+    texts.forEach { block ->
+        block.split(Regex("\\s+")).filter { it.isNotEmpty() && it != "…" }.forEach { token ->
+            assertTrue(token in PosterWords, "Poster title broke '$token' out of '$block'")
+        }
+    }
+}
 
 @Composable
 private fun FocusBefore() {

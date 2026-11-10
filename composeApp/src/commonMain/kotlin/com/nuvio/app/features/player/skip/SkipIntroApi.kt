@@ -154,6 +154,3 @@ internal object SkipIntroApi {
         }
     }
 }
-
-internal fun introDbMovieSegmentsUrl(baseUrl: String, imdbId: String): String =
-    "${baseUrl.trimEnd('/')}/segments?imdb_id=$imdbId&is_movie=true"

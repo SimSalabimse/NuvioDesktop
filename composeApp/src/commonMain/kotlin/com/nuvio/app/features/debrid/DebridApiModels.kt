@@ -175,13 +175,6 @@ internal data class PremiumizeDeviceTokenDto(
 )
 
 @Serializable
-internal data class PremiumizeApiEnvelopeDto(
-    val status: String? = null,
-    val message: String? = null,
-    val code: String? = null,
-)
-
-@Serializable
 internal data class PremiumizeAccountInfoDto(
     val status: String? = null,
     val message: String? = null,

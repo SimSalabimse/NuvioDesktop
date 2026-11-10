@@ -13,8 +13,6 @@
     <string name="action_back">واپس</string>
     <string name="action_cancel">منسوخ کریں</string>
     <string name="action_close">بند کریں</string>
-    <string name="action_collapse">سمیٹیں</string>
-    <string name="action_expand">پھیلائیں</string>
     <string name="action_delete">حذف کریں</string>
     <string name="action_delete_confirm_message">کیا آپ واقعی اسے حذف کرنا چاہتے ہیں؟</string>
     <string name="action_delete_confirm_title">حذف کریں؟</string>
@@ -33,8 +31,6 @@
     <string name="action_retry">دوبارہ کوشش کریں</string>
     <string name="action_save">محفوظ کریں</string>
     <string name="action_saving">محفوظ کیا جا رہا ہے…</string>
-    <string name="action_switch">تبدیل کریں</string>
-    <string name="action_validate">تصدیق کریں</string>
     <string name="addon_installing">انسٹال ہو رہا ہے</string>
     <string name="addon_title">Addons</string>
     <string name="addons_badge_active">فعال</string>
@@ -52,8 +48,6 @@
     <string name="addons_appstore_empty_title">Nuvio کو اپنی پسند کے مطابق بنائیں۔</string>
     <string name="addons_appstore_input_placeholder">Addon URL</string>
     <string name="addons_appstore_install_button">Addon شامل کریں</string>
-    <string name="store_empty_unavailable_title">ابھی یہاں کچھ نہیں ہے</string>
-    <string name="store_empty_unavailable_message">آپ کے موجودہ Addons کے پاس یہاں دکھانے کے لیے کچھ نہیں ہے۔</string>
     <string name="addons_empty_subtitle">Nuvio میں کیٹلاگز، میٹاڈیٹا، اسٹریمز یا سب ٹائٹلز لوڈ کرنے کے لیے Manifest URL شامل کریں۔</string>
     <string name="addons_empty_title">ابھی کوئی Addon انسٹال نہیں ہے۔</string>
     <string name="addons_error_enter_url">Addon URL درج کریں۔</string>
@@ -93,7 +87,6 @@
     <string name="collections_editor_cover_none">کوئی نہیں</string>
     <string name="collections_editor_cover">کور</string>
     <string name="collections_editor_create_collection">کلیکشن بنائیں</string>
-    <string name="collections_editor_done">مکمل</string>
     <string name="collections_editor_edit_collection">کلیکشن میں ترمیم کریں</string>
     <string name="collections_editor_edit_folder">فولڈر میں ترمیم کریں</string>
     <string name="collections_editor_folder_editor_help">فولڈر کی شناخت، ظاہری شکل اور کیٹلاگ ذرائع کو مرکزی کلیکشن ایڈیٹر جیسی ساخت کے ساتھ ترتیب دیں۔</string>
@@ -256,11 +249,8 @@
     <string name="collections_editor_trakt_sort_popular">مقبولیت</string>
     <string name="collections_editor_trakt_sort_percentage">فیصد</string>
     <string name="collections_editor_trakt_sort_votes">ووٹ</string>
-    <string name="collections_editor_trakt_enter_name_url_or_id">Trakt فہرست کا نام، URL یا ID درج کریں</string>
-    <string name="collections_editor_trakt_enter_id_or_url">Trakt فہرست کا ID یا URL درج کریں</string>
     <string name="collections_editor_trakt_load_failed">Trakt فہرست لوڈ نہیں ہو سکی</string>
     <string name="collections_editor_trakt_no_lists_found">کوئی Trakt فہرست نہیں ملی</string>
-    <string name="collections_editor_trakt_resolved_subtitle">شناخت شدہ Trakt فہرست</string>
     <string name="collections_editor_trakt_fallback_title">Trakt فہرست %1$d</string>
     <string name="collections_editor_tmdb_genre_action">ایکشن</string>
     <string name="collections_editor_tmdb_genre_adventure">ایڈونچر</string>
@@ -427,7 +417,6 @@
     <string name="compose_player_capture_line">کیپچر کریں</string>
     <string name="compose_player_close">پلیئر بند کریں</string>
     <string name="compose_player_color">رنگ</string>
-    <string name="compose_player_currently_playing">ابھی چل رہا ہے</string>
     <string name="compose_player_episode_code_episode_only">E%1$d</string>
     <string name="compose_player_episode_code_full">S%1$d E%2$d</string>
     <string name="compose_player_episode_title_format">S%1$d E%2$d • %3$s</string>
@@ -486,8 +475,6 @@
     <string name="compose_search_discover_title">Discover</string>
     <string name="compose_search_empty_failed_message">انسٹال شدہ Addons درست تلاش کے نتائج فراہم نہیں کر سکے۔</string>
     <string name="compose_search_empty_failed_title">تلاش ناکام رہی</string>
-    <string name="compose_search_empty_no_active_addons_message">تلاش کرنے سے پہلے کوئی Addon فعال یا شامل کریں۔</string>
-    <string name="compose_search_empty_no_active_addons_title">کوئی فعال Addon نہیں</string>
     <string name="compose_search_empty_no_results_message">انسٹال شدہ قابلِ تلاش کیٹلاگز میں اس تلاش کے لیے کوئی نتیجہ نہیں ملا۔</string>
     <string name="compose_search_empty_no_results_title">کوئی نتیجہ نہیں ملا</string>
     <string name="compose_search_empty_no_search_catalogs_message">آپ کے فعال Addons کیٹلاگ تلاش کو سپورٹ نہیں کرتے۔</string>
@@ -531,9 +518,6 @@
     <string name="compose_settings_root_check_updates_description">تازہ ترین ریلیز ڈاؤن لوڈ کریں</string>
     <string name="compose_settings_root_check_updates_title">اپ ڈیٹس تلاش کریں</string>
     <string name="compose_settings_root_content_discovery_description">ایڈ آنز اور مواد دریافت کرنے کے ذرائع کا نظم کریں۔</string>
-    <string name="compose_settings_root_content_discovery_description_appstore">ایڈ آنز کا نظم کریں اور منتخب کریں کہ Nuvio میں کیا دکھائی دے۔</string>
-    <string name="compose_settings_root_downloads_description">اپنی ڈاؤن لوڈ کردہ فلموں اور اقساط کا نظم کریں۔</string>
-    <string name="compose_settings_root_downloads_description_appstore">اس ڈیوائس پر محفوظ کردہ مواد کا نظم کریں۔</string>
     <string name="compose_settings_root_downloads_title">ڈاؤن لوڈز</string>
     <string name="compose_settings_root_general_section">عمومی</string>
     <string name="compose_settings_root_integrations_description">دستیاب انٹیگریشنز کا نظم کریں</string>
@@ -542,7 +526,6 @@
     <string name="compose_settings_root_streams_description">اسٹریم کے نتائج کی نمائش اور Badge URL کے قواعد۔</string>
     <string name="compose_settings_root_switch_profile_description">دوسرا پروفائل منتخب کریں۔</string>
     <string name="compose_settings_root_switch_profile_title">پروفائل بدلیں</string>
-    <string name="compose_settings_root_trakt_description">Trakt سے منسلک ہونے کی اسکرین کھولیں</string>
     <string name="compose_settings_root_tracking_description">ٹریکنگ پرووائیڈرز منسلک کریں اور منتخب کریں کہ آپ کی لائبریری اور «دیکھنا جاری رکھیں» کے لیے کون سا استعمال ہو۔</string>
     <string name="settings_search_empty">کوئی ترتیبات نہیں ملیں۔</string>
     <string name="settings_search_placeholder">ترتیبات تلاش کریں...</string>
@@ -602,19 +585,15 @@
     <string name="settings_licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="settings_licenses_attributions_exoplayer_body">Android builds پر پلے بیک کے لیے استعمال ہوتا ہے۔</string>
     <string name="settings_licenses_attributions_exoplayer_license">Apache License، Version 2.0 کے تحت لائسنس یافتہ۔</string>
-    <string name="compose_trakt_list_picker_loading">آپ کی Trakt لسٹس لوڈ ہو رہی ہیں…</string>
-    <string name="compose_trakt_list_picker_subtitle">منتخب کریں کہ یہ عنوان Trakt پر کہاں محفوظ کرنا ہے</string>
     <string name="compose_tracking_list_picker_loading">لسٹس لوڈ ہو رہی ہیں…</string>
     <string name="compose_tracking_list_picker_subtitle">منتخب کریں کہ یہ عنوان کہاں محفوظ کرنا ہے</string>
     <string name="action_donate">عطیہ دیں</string>
-    <string name="action_support_nuvio">Nuvio کو سپورٹ کریں</string>
     <string name="cw_action_go_to_details">تفصیلات دیکھیں</string>
     <string name="cw_action_remove">ہٹائیں</string>
     <string name="cw_action_start_from_beginning">شروع سے چلائیں</string>
     <string name="detail_btn_play">چلائیں</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
     <string name="detail_comments_badge_review">جائزہ</string>
-    <string name="detail_comments_badge_spoiler">اسپوائلر</string>
     <string name="detail_comments_empty">ابھی کوئی Trakt جائزہ دستیاب نہیں۔</string>
     <string name="detail_comments_likes">%1$d لائکس</string>
     <string name="detail_comments_spoiler_card">اس تبصرے میں اسپوائلرز موجود ہیں۔</string>
@@ -787,7 +766,6 @@
     <string name="settings_custom_poster_description">کسی بیرونی سروس سے پوسٹر حاصل کرنے کے لیے URL پیٹرن فراہم کریں۔ اگر کسی عنوان کے لیے کسی placeholder کی ویلیو موجود نہ ہو تو اصل پوسٹر استعمال کیا جائے گا۔</string>
     <string name="settings_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
     <string name="settings_custom_poster_active">حسبِ ضرورت پوسٹر سورس فعال ہے</string>
-    <string name="settings_custom_poster_none">کوئی پیٹرن ترتیب نہیں دیا گیا</string>
     <string name="settings_custom_poster_save">محفوظ کریں</string>
     <string name="settings_custom_poster_clear">صاف کریں</string>
     <string name="settings_custom_poster_apply_to">کسٹم پوسٹرز ان جگہوں پر لاگو کریں</string>
@@ -829,7 +807,6 @@
     <string name="settings_continue_watching_up_next_title">سب سے آگے دیکھی گئی قسط کے بعد والی قسط</string>
     <string name="settings_continue_watching_use_episode_thumbnails_description">دستیاب ہونے پر قسط کے thumbnails کو ترجیح دیں۔</string>
     <string name="settings_continue_watching_use_episode_thumbnails_title">دیکھنا جاری رکھیں میں قسط کے thumbnails کو ترجیح دیں</string>
-    <string name="settings_content_discovery_section_home">ہوم</string>
     <string name="settings_content_discovery_section_sources">ذرائع</string>
     <string name="settings_content_discovery_section_search">تلاش</string>
     <string name="settings_content_discovery_recent_searches">حالیہ تلاشیں</string>
@@ -921,9 +898,7 @@
     <string name="settings_fusion_badge_preview_empty">اس URL میں کوئی Fusion-style Badge تصویر نہیں۔</string>
     <string name="settings_fusion_badge_group_title">گروپ %1$d</string>
     <string name="settings_fusion_badge_other_group_title">دیگر Fusion بیجز</string>
-    <string name="settings_debrid_key_valid">API key کی تصدیق ہو گئی۔</string>
     <string name="settings_debrid_key_invalid">اس API key کی تصدیق نہیں ہو سکی۔</string>
-    <string name="settings_mdb_add_api_key_first">ریٹنگز فعال کرنے سے پہلے نیچے اپنی MDBList API Key شامل کریں۔</string>
     <string name="settings_mdb_api_key_description">MDBList سے ریٹنگز حاصل کرنے کے لیے ضروری ہے</string>
     <string name="settings_mdb_api_key_label">API Key</string>
     <string name="settings_mdb_api_key_title">API Key</string>
@@ -936,8 +911,6 @@
     <string name="settings_meta_actions_description">چلانے اور محفوظ کرنے کے کنٹرولز۔</string>
     <string name="settings_meta_cast">اداکار</string>
     <string name="settings_meta_cast_description">مرکزی اداکاروں کی فہرست۔</string>
-    <string name="settings_meta_cinematic_background">سنیماٹک پس منظر</string>
-    <string name="settings_meta_cinematic_background_description">مواد کے پیچھے دھندلا پس منظر، Stream اسکرین کی طرح۔</string>
     <string name="settings_meta_background_mode">پس منظر کا انداز</string>
     <string name="settings_meta_background_mode_description">منتخب کریں کہ Metadata صفحات کے پیچھے artwork کیسے دکھائی جائے۔</string>
     <string name="settings_meta_poster_transition">پوسٹر ٹرانزیشن</string>
@@ -993,8 +966,6 @@
     <string name="settings_notifications_test_for_title">%1$s کے لیے مقامی ٹیسٹ نوٹیفکیشن بھیجیں۔</string>
     <string name="settings_notifications_test_requires_saved_show">نوٹیفکیشنز ٹیسٹ کرنے کے لیے پہلے کوئی سیریز اپنی لائبریری میں محفوظ کریں۔</string>
     <string name="settings_notifications_test_title">ٹیسٹ نوٹیفکیشن</string>
-    <string name="community_section_title">کمیونٹی</string>
-    <string name="community_section_description">ان لوگوں کو دیکھیں جو Mobile، TV اور Web پر Nuvio بنانے اور سپورٹ کرنے میں حصہ لے رہے ہیں۔</string>
     <string name="community_membership_title">Nuvio سپورٹر رکنیت</string>
     <string name="community_membership_description">Nuvio کو سپورٹ کرنے سے infrastructure اور مسلسل development کے اخراجات پورے کرنے میں مدد ملتی ہے، جبکہ بنیادی تجربہ سب کے لیے مفت رہتا ہے۔</string>
     <string name="community_view_supporter_membership">سپورٹر رکنیت دیکھیں</string>
@@ -1018,7 +989,6 @@
     <string name="community_tab_supporters">سپورٹرز</string>
     <string name="community_open_github">GitHub کھولیں</string>
     <string name="community_github_profile_unavailable">GitHub پروفائل دستیاب نہیں</string>
-    <string name="community_no_message_attached">کوئی پیغام منسلک نہیں۔</string>
     <string name="community_loading_contributors">شراکت کنندگان لوڈ ہو رہے ہیں...</string>
     <string name="community_loading_supporters">سپورٹرز لوڈ ہو رہے ہیں...</string>
     <string name="community_load_contributors_failed">شراکت کنندگان لوڈ نہیں ہو سکے</string>
@@ -1029,7 +999,6 @@
     <string name="community_error_unable_load_supporters">سپورٹرز لوڈ نہیں ہو سکے۔</string>
     <string name="community_error_contributors_request_failed">اس وقت شراکت کنندگان لوڈ نہیں ہو سکے۔</string>
     <string name="community_error_supporters_request_failed">اس وقت سپورٹرز لوڈ نہیں ہو سکے۔</string>
-    <string name="community_total_commits">کل %1$d commits</string>
     <string name="community_month_jan">جنوری</string>
     <string name="community_month_feb">فروری</string>
     <string name="community_month_mar">مارچ</string>
@@ -1063,7 +1032,6 @@
     <string name="settings_playback_decoder_prefer_app">App Decoders کو ترجیح دیں (FFmpeg)</string>
     <string name="settings_playback_decoder_prefer_device">Device Decoders کو ترجیح دیں</string>
     <string name="settings_playback_decoder_priority">Decoder کی ترجیح</string>
-    <string name="settings_playback_dialog_close">بند کرنے کے لیے باہر ٹیپ کریں</string>
     <string name="settings_playback_dialog_save_close">محفوظ کرکے بند کرنے کے لیے باہر ٹیپ کریں</string>
     <string name="settings_playback_duration_day_one">%1$d دن</string>
     <string name="settings_playback_duration_days">%1$d دن</string>
@@ -1074,7 +1042,6 @@
     <string name="settings_playback_external_player">بیرونی پلیئر</string>
     <string name="settings_playback_external_player_app">بیرونی پلیئر ایپ</string>
     <string name="settings_playback_external_player_description_android">نیا playback Android کی default video app یا system chooser میں کھولیں۔</string>
-    <string name="settings_playback_external_player_description_ios">نیا playback منتخب installed player میں کھولیں۔</string>
     <string name="settings_playback_external_player_forward_subtitles">سب ٹائٹلز External Player کو بھیجیں</string>
     <string name="settings_playback_external_player_forward_subtitles_description">اپنی پسندیدہ زبان میں Addon subtitles حاصل کریں اور انہیں External Player کو بھیجیں۔</string>
     <string name="settings_playback_external_player_send_skip_segments">Intro اور Outro Timestamps بھیجیں</string>
@@ -1104,13 +1071,6 @@
     <string name="settings_playback_option_original_hint">TMDB enrichment فعال ہونا ضروری ہے</string>
     <string name="settings_playback_option_forced">Forced</string>
     <string name="settings_playback_option_none">کوئی نہیں</string>
-    <string name="settings_playback_addon_subtitle_startup_all">تمام Addon subtitles</string>
-    <string name="settings_playback_addon_subtitle_startup_all_description">پلے بیک سے پہلے تمام Addon subtitles پہلے سے حاصل کرکے منسلک کریں۔ آغاز سب سے سست ہوگا۔</string>
-    <string name="settings_playback_addon_subtitle_startup_fast">تیز آغاز</string>
-    <string name="settings_playback_addon_subtitle_startup_fast_description">پلے بیک فوراً شروع کریں۔ Addon subtitles منتخب کرنے پر پلیئر ایک بار دوبارہ لوڈ ہو سکتا ہے۔</string>
-    <string name="settings_playback_addon_subtitle_startup_mode">Addon سب ٹائٹل لوڈنگ</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred">پسندیدہ زبانیں</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred_description">پلے بیک سے پہلے Addon subtitles حاصل کریں اور پسندیدہ/ثانوی زبان کے tracks منسلک کریں۔</string>
     <string name="settings_playback_prefer_binge_group">Binge Group کو ترجیح دیں (اگلی قسط)</string>
     <string name="settings_playback_prefer_binge_group_description">عام Auto-play rules سے پہلے اسی source profile یعنی اسی Addon/Quality group کو آزمایا جائے گا۔</string>
     <string name="settings_playback_reuse_binge_group">Binge Group دوبارہ استعمال کریں</string>
@@ -1205,7 +1165,6 @@
     <string name="settings_playback_stream_selection_mode_regex_description">وہ پہلا Source چلائیں جس کا متن آپ کے Regex Pattern سے match کرے۔</string>
     <string name="settings_playback_stream_timeout">Stream Selection کا وقت</string>
     <string name="settings_playback_stream_timeout_description">Source منتخب کرنے سے پہلے Addons کا انتظار کتنی دیر کرنا ہے۔</string>
-    <string name="settings_playback_threshold_minutes">Threshold منٹ</string>
     <string name="settings_playback_threshold_mode">اگلی قسط کا Threshold طریقہ</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">اختتام سے پہلے منٹ</string>
     <string name="settings_playback_threshold_mode_percentage">فیصد</string>
@@ -1251,7 +1210,6 @@
     <string name="settings_tmdb_section_modules">ماڈیولز</string>
     <string name="settings_tmdb_section_title">TMDB سے اضافی معلومات</string>
     <string name="settings_trakt_approval_redirect">منظوری کے بعد آپ خودکار طور پر واپس آ جائیں گے۔</string>
-    <string name="settings_trakt_authentication">Authentication</string>
     <string name="settings_trakt_comments">تبصرے</string>
     <string name="settings_trakt_comments_description">Metadata صفحات پر Trakt reviews دکھائیں</string>
     <string name="settings_trakt_connect">Trakt کنیکٹ کریں</string>
@@ -1259,7 +1217,6 @@
     <string name="settings_trakt_default_user">Trakt صارف</string>
     <string name="settings_trakt_disconnect">Disconnect کریں</string>
     <string name="settings_trakt_failed_open_browser">Browser نہیں کھولا جا سکا</string>
-    <string name="settings_trakt_features">خصوصیات</string>
     <string name="settings_trakt_finish_sign_in">Connection approval مکمل کریں</string>
     <string name="settings_trakt_intro_description">اپنی Watchlist، watch progress، Continue Watching، scrobbles اور ذاتی فہرستیں Trakt کے ساتھ Sync کریں۔</string>
     <string name="settings_trakt_missing_credentials">local.properties میں TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET موجود نہیں۔</string>
@@ -1323,10 +1280,7 @@
     <string name="settings_simkl_sync_info_library_statuses">Simkl کی On Hold یا Dropped lists میں موجود Shows، Continue Watching سے چھپا دیے جاتے ہیں۔ جب تک وہ ان lists میں رہیں گے، چھپے رہیں گے۔</string>
     <string name="settings_simkl_sync_info_docs">Simkl Sync guide پڑھیں</string>
     <string name="settings_simkl_authorization_revoked">Simkl authorization منسوخ ہو گئی ہے۔ دوبارہ کنیکٹ کریں۔</string>
-    <string name="settings_tracking_not_connected">کنیکٹ نہیں ہے</string>
     <string name="tracking_source_simkl">Simkl</string>
-    <string name="tracking_library_source_simkl_selected">Simkl واچ لسٹ منتخب ہے</string>
-    <string name="tracking_watch_progress_simkl_selected">دیکھنے کی پیش رفت کا ذریعہ Simkl پر سیٹ ہے</string>
     <string name="tracking_watch_progress_dialog_subtitle">وہ سروس منتخب کریں جس سے Nuvio وہیں سے جاری رکھنے اور دیکھنا جاری رکھیں کے لیے معلومات پڑھتا ہے۔ Scrobbling ہر منسلک سروس کے لیے فعال رہے گی۔</string>
     <string name="trakt_library_source_title">لائبریری کا ماخذ</string>
     <string name="trakt_library_source_subtitle">منتخب کریں کہ Nuvio آپ کی لائبریری کے لیے کون سا ماخذ استعمال کرے</string>
@@ -1334,16 +1288,11 @@
     <string name="trakt_library_source_dialog_subtitle">وہ سروس منتخب کریں جسے Nuvio آپ کی لائبریری کے لیے استعمال کرے۔ پلے بیک ہر منسلک سروس پر Scrobble ہوتا رہے گا۔</string>
     <string name="trakt_library_source_trakt">Trakt</string>
     <string name="trakt_library_source_nuvio">Nuvio لائبریری</string>
-    <string name="trakt_library_source_trakt_selected">Trakt لائبریری منتخب کر لی گئی</string>
-    <string name="trakt_library_source_nuvio_selected">Nuvio لائبریری منتخب کر لی گئی</string>
     <string name="trakt_watch_progress_title">دیکھنے کی پیش رفت</string>
     <string name="trakt_watch_progress_subtitle">منتخب کریں کہ دوبارہ وہیں سے شروع کرنے اور دیکھنا جاری رکھنے کے لیے کون سا ماخذ استعمال ہو</string>
     <string name="trakt_watch_progress_dialog_title">دیکھنے کی پیش رفت</string>
-    <string name="trakt_watch_progress_dialog_subtitle">منتخب کریں کہ دوبارہ وہیں سے شروع کرنے اور دیکھنا جاری رکھنے کے لیے Trakt یا Nuvio Sync استعمال ہو، جبکہ Trakt scrobbling فعال رہے۔</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
-    <string name="trakt_watch_progress_trakt_selected">دیکھنے کی پیش رفت کا ماخذ Trakt مقرر کر دیا گیا</string>
-    <string name="trakt_watch_progress_nuvio_selected">دیکھنے کی پیش رفت کا ماخذ Nuvio Sync مقرر کر دیا گیا</string>
     <string name="trakt_more_like_this_source_title">اسی جیسی مزید تجاویز کا ماخذ</string>
     <string name="trakt_more_like_this_source_subtitle">منتخب کریں کہ تفصیلات کے صفحات پر تجاویز کہاں سے آئیں</string>
     <string name="trakt_more_like_this_source_dialog_title">اسی جیسی مزید تجاویز کا ماخذ</string>
@@ -1480,7 +1429,6 @@
     <string name="lang_zulu">زولو</string>
     <string name="action_clear">صاف کریں</string>
     <string name="action_continue">جاری رکھیں</string>
-    <string name="action_ignore">نظر انداز کریں</string>
     <string name="action_install">انسٹال کریں</string>
     <string name="action_later">بعد میں</string>
     <string name="action_no">نہیں</string>
@@ -1516,7 +1464,6 @@
     <string name="discover_empty_no_catalogs_title">کوئی Discover کیٹلاگ نہیں</string>
     <string name="discover_empty_no_results_message">منتخب کیٹلاگ اور فلٹرز سے کوئی آئٹم نہیں ملا۔</string>
     <string name="discover_empty_no_results_title">کوئی عنوان نہیں ملا</string>
-    <string name="discover_empty_no_active_addons_message">Discover براؤز کرنے سے پہلے کوئی Addon فعال یا شامل کریں۔</string>
     <string name="discover_select_catalog">کیٹلاگ منتخب کریں</string>
     <string name="discover_select_genre">Genre منتخب کریں</string>
     <string name="discover_select_type">قسم منتخب کریں</string>
@@ -1532,7 +1479,6 @@
     <string name="home_continue_watching_watched">%1$s دیکھا جا چکا</string>
     <string name="home_continue_watching_hours_minutes_left">%1$d گھنٹے %2$d منٹ باقی</string>
     <string name="home_continue_watching_minutes_left">%1$d منٹ باقی</string>
-    <string name="home_empty_no_active_addons_message">ہوم پر کیٹلاگز دیکھنے کے لیے کوئی Addon فعال یا شامل کریں۔</string>
     <string name="home_empty_no_rows_message">آپ کے فعال Addons ایسے کیٹلاگز فراہم نہیں کرتے جو Home پر دکھائے جا سکیں۔</string>
     <string name="home_empty_no_rows_title">Home کا کوئی مواد دستیاب نہیں</string>
     <string name="home_load_failed_title">Home لوڈ نہیں ہو سکا</string>
@@ -1555,8 +1501,6 @@
     <string name="meta_section_trailers_description">Trailers کی قطار اور playback shortcuts۔</string>
     <string name="network_back_online">کنکشن دوبارہ بحال ہو گیا</string>
     <string name="network_cannot_reach_servers">سرورز سے رابطہ نہیں ہو سکا</string>
-    <string name="network_error_empty_response_body">جواب کا متن خالی ہے</string>
-    <string name="network_error_request_failed_http">درخواست HTTP %1$d کے ساتھ ناکام ہوئی</string>
     <string name="network_no_internet_connection">انٹرنیٹ کنکشن نہیں ہے</string>
     <string name="person_age">(عمر %1$d سال)</string>
     <string name="person_born">پیدائش %1$s%2$s</string>
@@ -1622,9 +1566,6 @@
     <string name="streams_empty_load_failed_title">اسٹریمز لوڈ نہیں ہو سکیں</string>
     <string name="playback_unavailable">پلے بیک دستیاب نہیں</string>
     <string name="playback_unavailable_message">آپ کے موجودہ سیٹ اپ کے ساتھ اس عنوان کے لیے پلے بیک دستیاب نہیں ہے۔</string>
-    <string name="streams_empty_no_addons_message">اس عنوان کے لیے اسٹریمز لوڈ کرنے سے پہلے ایک Addon انسٹال کریں۔</string>
-    <string name="streams_empty_no_stream_addon_message">آپ کے انسٹال شدہ Addons اس قسم کے عنوان کے لیے اسٹریمز فراہم نہیں کرتے۔</string>
-    <string name="streams_empty_no_stream_addon_title">کوئی Stream Addon دستیاب نہیں</string>
     <string name="streams_empty_no_streams_message">آپ کے کسی بھی انسٹال شدہ Addon نے اس عنوان کے لیے اسٹریم فراہم نہیں کی۔</string>
     <string name="streams_episode_badge">S%1$d E%2$d</string>
     <string name="streams_episode_fallback_title">قسط</string>
@@ -1663,7 +1604,6 @@
     <string name="trailer_close">ٹریلر بند کریں</string>
     <string name="trailer_unable_to_play">ٹریلر نہیں چلایا جا سکا</string>
     <string name="trakt_lists_load_failed">Trakt فہرستیں لوڈ نہیں ہو سکیں</string>
-    <string name="trakt_lists_update_failed">Trakt فہرستیں اپ ڈیٹ نہیں ہو سکیں</string>
     <string name="tracking_lists_update_failed">ٹریکنگ لسٹس اپ ڈیٹ نہیں ہو سکیں</string>
     <string name="tracking_list_status_rewritten">%1$s نے اس عنوان کو %3$s کے بجائے %2$s میں شامل کیا</string>
     <string name="tracking_remove_confirmation_title">%1$s سے ہٹائیں؟</string>
@@ -1671,11 +1611,8 @@
     <string name="tracking_removal_impact_history">دیکھنے کی ہسٹری</string>
     <string name="tracking_removal_impact_rating">ریٹنگ</string>
     <string name="tracking_removal_impact_history_and_rating">دیکھنے کی ہسٹری اور ریٹنگ</string>
-    <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">اپ ڈیٹس کی جانچ ناکام ہو گئی</string>
     <string name="updates_download_failed">ڈاؤن لوڈ ناکام ہو گیا</string>
-    <string name="updates_download_empty_body">ڈاؤن لوڈ کی Response body خالی ہے</string>
-    <string name="updates_download_file_missing">ڈاؤن لوڈ کی گئی اپ ڈیٹ فائل موجود نہیں ہے۔</string>
     <string name="updates_downloading_progress">ڈاؤن لوڈ ہو رہا ہے: %1$d%</string>
     <string name="updates_debug_test_complete">بینر کا ٹیسٹ مکمل ہو گیا</string>
     <string name="updates_debug_test_description">بینر اور ڈاؤن لوڈ کی فرضی پیش رفت کا پیش منظر دیکھیں۔</string>
@@ -1683,8 +1620,6 @@
     <string name="updates_install_failed">انسٹالیشن شروع نہیں ہو سکی</string>
     <string name="updates_latest_version">آپ تازہ ترین ورژن استعمال کر رہے ہیں۔</string>
     <string name="updates_message_allow_installs">Nuvio کو ایپس انسٹال کرنے کی اجازت دیں، پھر واپس آ کر جاری رکھیں۔</string>
-    <string name="updates_message_downloading">اپ ڈیٹ ڈاؤن لوڈ ہو رہی ہے...</string>
-    <string name="updates_message_no_updates">کوئی اپ ڈیٹ نہیں ملی۔</string>
     <string name="updates_message_ready">نیا ورژن انسٹال کرنے کے لیے تیار ہے۔</string>
     <string name="updates_not_available">اس build میں ایپ کے اندر اپ ڈیٹس دستیاب نہیں ہیں۔</string>
     <string name="updates_no_release_notes">ریلیز نوٹس فراہم نہیں کیے گئے۔</string>
@@ -1692,7 +1627,6 @@
     <string name="updates_release_notes">ریلیز نوٹس</string>
     <string name="updates_title_allow_installs">جاری رکھنے کے لیے انسٹالیشن کی اجازت دیں</string>
     <string name="updates_title_available">اپ ڈیٹ دستیاب ہے</string>
-    <string name="updates_title_status">اپ ڈیٹ کی حالت</string>
     <string name="addon_already_installed">یہ Addon پہلے سے انسٹال ہے۔</string>
     <string name="addon_invalid_url">درست Addon URL درج کریں</string>
     <string name="addon_load_manifest_failed">Manifest لوڈ نہیں ہو سکا</string>
@@ -1717,17 +1651,12 @@
     <string name="downloads_live_downloading_with_total">%1$s ڈاؤن لوڈ ہو رہا ہے • %2$s / %3$s</string>
     <string name="downloads_live_failed">ڈاؤن لوڈ ناکام ہو گیا</string>
     <string name="downloads_live_paused">%1$s روکا گیا</string>
-    <string name="library_remove_confirm">ہٹائیں</string>
-    <string name="library_remove_from_list_message">%1$s کو %2$s سے ہٹائیں؟</string>
-    <string name="library_remove_message">%1$s کو اپنی لائبریری سے ہٹائیں؟</string>
-    <string name="library_remove_title">لائبریری سے ہٹائیں؟</string>
     <string name="media_movie">فلم</string>
     <string name="notifications_channel_episode_releases_description">محفوظ کی گئی سیریز کی نئی قسط جاری ہونے پر اطلاع دیں۔</string>
     <string name="notifications_test_preview_body">قسط جاری ہونے کی اطلاع کا پری ویو۔</string>
     <string name="notifications_test_send_failed">ٹیسٹ نوٹیفکیشن نہیں بھیجا جا سکا۔</string>
     <string name="notifications_test_sent_for">%1$s کے لیے ٹیسٹ نوٹیفکیشن بھیج دیا گیا۔</string>
     <string name="player_unable_to_play_stream">یہ اسٹریم نہیں چلائی جا سکی۔</string>
-    <string name="player_engine_unavailable_rebuild">MPV player engine دستیاب نہیں۔ براہِ کرم ایپ کو دوبارہ build کریں۔</string>
     <string name="profile_pin_changed_requires_refresh">اس پروفائل کا PIN بدل گیا ہے۔ اس ڈیوائس پر لاک تازہ کرنے کے لیے ایک بار آن لائن کنیکٹ کریں۔</string>
     <string name="profile_pin_clear_failed">PIN Lock نہیں ہٹایا جا سکا۔ دوبارہ کوشش کریں۔</string>
     <string name="profile_pin_clear_requires_internet">PIN Lock ہٹانے کے لیے انٹرنیٹ سے کنیکٹ کریں۔</string>
@@ -1736,13 +1665,10 @@
     <string name="profile_pin_set_requires_internet">PIN سیٹ کرنے کے لیے انٹرنیٹ سے کنیکٹ کریں۔</string>
     <string name="profile_primary_addons_required">یہ پروفائل Primary Addons استعمال کرتا ہے۔</string>
     <string name="streams_failed_to_load_scraper">%1$s لوڈ نہیں ہو سکا</string>
-    <string name="stream_default_name">اسٹریم</string>
     <string name="source_embedded">ایمبیڈڈ</string>
     <string name="trakt_authorization_denied">اجازت مسترد کر دی گئی</string>
     <string name="trakt_authorization_expired_reconnect">آپ کی Trakt اجازت اب درست نہیں رہی۔ اپنے Trakt اکاؤنٹ کو دوبارہ منسلک کریں۔</string>
     <string name="trakt_complete_sign_in_browser">اپنے براؤزر میں Trakt سائن اِن مکمل کریں</string>
-    <string name="trakt_connected">Trakt سے منسلک ہے</string>
-    <string name="trakt_disconnected">Trakt سے منقطع ہے</string>
     <string name="trakt_invalid_callback">غلط Trakt callback</string>
     <string name="trakt_invalid_callback_state">غلط Trakt callback state</string>
     <string name="trakt_invalid_token_response">غلط Trakt token response</string>
@@ -1751,16 +1677,6 @@
     <string name="trakt_missing_auth_code">Trakt نے authorization code واپس نہیں کیا</string>
     <string name="trakt_missing_credentials">Trakt credentials موجود نہیں</string>
     <string name="trakt_progress_load_failed">Trakt کی پیش رفت لوڈ نہیں ہو سکی</string>
-    <string name="trakt_public_list">عوامی Trakt فہرست</string>
-    <string name="trakt_public_list_enter_valid_id_or_url">درست Trakt List ID یا URL درج کریں</string>
-    <string name="trakt_public_list_items_count">%1$d آئٹمز</string>
-    <string name="trakt_public_list_likes_count">%1$d لائکس</string>
-    <string name="trakt_public_list_missing_credentials">local.properties میں Trakt credentials موجود نہیں (TRAKT_CLIENT_ID)۔</string>
-    <string name="trakt_public_list_missing_id">Trakt List ID موجود نہیں</string>
-    <string name="trakt_public_list_missing_numeric_id">Trakt فہرست میں عددی ID موجود نہیں</string>
-    <string name="trakt_public_list_not_found_or_not_public">Trakt فہرست نہیں ملی یا عوامی نہیں ہے</string>
-    <string name="trakt_public_list_rate_limit_reached">Trakt کی rate limit پوری ہو گئی</string>
-    <string name="trakt_public_list_request_failed">Trakt درخواست ناکام رہی</string>
     <string name="trakt_sign_in_complete_failed">Trakt سائن اِن مکمل نہیں ہو سکا</string>
     <string name="trakt_user_fallback">Trakt صارف</string>
     <string name="trakt_watchlist">واچ لسٹ</string>
@@ -1774,29 +1690,9 @@
     <string name="trakt_error_add_list_failed">Trakt فہرست میں شامل نہیں ہو سکا</string>
     <string name="trakt_error_missing_ids">مطابقت رکھنے والی Trakt IDs موجود نہیں</string>
     <string name="trakt_error_empty_response">Response body خالی ہے</string>
-    <string name="tmdb_sources_collection_fallback_title">TMDB کلیکشن %1$d</string>
-    <string name="tmdb_sources_collection_not_found">TMDB کلیکشن نہیں ملا</string>
-    <string name="tmdb_sources_company_fallback_title">TMDB پروڈکشن %1$d</string>
-    <string name="tmdb_sources_company_not_found">TMDB کمپنی نہیں ملی</string>
-    <string name="tmdb_sources_director_fallback_title">TMDB ہدایت کار %1$d</string>
-    <string name="tmdb_sources_discover_no_data">TMDB Discover سے کوئی ڈیٹا نہیں ملا</string>
-    <string name="tmdb_sources_discover_title">TMDB Discover</string>
-    <string name="tmdb_sources_invalid_id_or_url">درست TMDB ID یا URL درج کریں۔</string>
-    <string name="tmdb_sources_list_fallback_title">TMDB فہرست %1$d</string>
-    <string name="tmdb_sources_list_not_found">TMDB فہرست نہیں ملی</string>
-    <string name="tmdb_sources_load_failed">TMDB ماخذ لوڈ نہیں ہو سکا</string>
-    <string name="tmdb_sources_missing_collection_id">TMDB Collection ID موجود نہیں</string>
-    <string name="tmdb_sources_missing_list_id">TMDB List ID موجود نہیں</string>
-    <string name="tmdb_sources_missing_person_id">TMDB Person ID موجود نہیں</string>
-    <string name="tmdb_sources_network_fallback_title">TMDB نیٹ ورک %1$d</string>
-    <string name="tmdb_sources_network_not_found">TMDB نیٹ ورک نہیں ملا</string>
-    <string name="tmdb_sources_person_credits_not_found">TMDB شخص کے credits نہیں ملے</string>
-    <string name="tmdb_sources_person_fallback_title">TMDB شخص %1$d</string>
-    <string name="tmdb_sources_person_not_found">TMDB شخص نہیں ملا</string>
     <string name="generic_trailer">ٹریلر</string>
     <string name="generic_unknown">نامعلوم</string>
     <string name="generic_addon">Addon</string>
-    <string name="action_saved">محفوظ ہو گیا</string>
     <string name="action_play_episode">%1$s چلائیں</string>
     <string name="action_resume_episode">%1$s وہیں سے جاری رکھیں</string>
     <string name="collections_import_error_empty_json">JSON خالی ہے۔</string>
@@ -1859,14 +1755,6 @@
     <string name="downloads_enqueue_replaced">پچھلا ڈاؤن لوڈ تبدیل کر دیا گیا</string>
     <string name="downloads_enqueue_started">ڈاؤن لوڈ شروع ہو گیا</string>
     <string name="downloads_enqueue_unsupported_format">اس Stream format کو ڈاؤن لوڈ کے لیے سپورٹ نہیں کیا جاتا</string>
-    <string name="downloads_error_empty_body">Response body خالی ہے</string>
-    <string name="downloads_error_finalize_failed">ڈاؤن لوڈ فائل مکمل نہیں کی جا سکی</string>
-    <string name="downloads_error_http_failed">درخواست HTTP %1$d کے ساتھ ناکام ہوئی</string>
-    <string name="downloads_error_not_initialized">ڈاؤن لوڈ سسٹم initialize نہیں ہوا</string>
-    <string name="downloads_error_open_partial_failed">جزوی ڈاؤن لوڈ فائل نہیں کھولی جا سکی</string>
-    <string name="downloads_error_partial_not_open">جزوی ڈاؤن لوڈ فائل کھلی نہیں ہے</string>
-    <string name="downloads_error_request_failed">ڈاؤن لوڈ کی درخواست ناکام ہوئی</string>
-    <string name="downloads_error_write_partial_failed">جزوی ڈاؤن لوڈ فائل میں لکھا نہیں جا سکا</string>
     <string name="home_catalog_default_title">%1$s - %2$s</string>
     <string name="library_empty_message">Details اسکرین پر Save دبانے کے بعد محفوظ کیے گئے عنوانات یہاں ظاہر ہوں گے۔</string>
     <string name="library_empty_title">آپ کی لائبریری خالی ہے</string>
@@ -1956,7 +1844,6 @@
     <string name="unit_bytes_mb">MB</string>
     <string name="unit_bytes_gb">GB</string>
     <!-- PlayerControls a11y -->
-    <string name="player_action_submit_intro">انٹرو جمع کریں</string>
     <string name="player_action_video_settings">ویڈیو ترتیبات</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">%1$s کے لیے Cloud Library دستیاب نہیں ہے۔</string>
@@ -2090,14 +1977,9 @@
     <string name="settings_debrid_rule_excluded_release_groups_desc">منتخب Release Groups چھپائیں۔</string>
     <!-- Submit intro/recap/outro dialog -->
     <string name="submit_intro_title">ٹائم اسٹیمپس جمع کریں</string>
-    <string name="submit_intro_segment_type">حصے کی قسم</string>
     <string name="submit_intro_segment_intro">انٹرو</string>
     <string name="submit_intro_segment_recap">خلاصہ</string>
     <string name="submit_intro_segment_outro">اختتامی حصہ</string>
-    <string name="submit_intro_start_time">آغاز کا وقت (MM:SS)</string>
-    <string name="submit_intro_end_time">اختتام کا وقت (MM:SS)</string>
-    <string name="submit_intro_submit">جمع کریں</string>
-    <string name="submit_intro_capture">کیپچر کریں</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">ہارڈویئر Decoder</string>
     <string name="settings_playback_ios_audio_output_dialog">آڈیو آؤٹ پٹ</string>
@@ -2106,7 +1988,6 @@
     <!-- Collection editor -->
     <string name="collections_editor_resolved_trakt_list">شناخت شدہ Trakt فہرست</string>
     <string name="collections_editor_tmdb_discover">TMDB Discover</string>
-    <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>
     <!-- Collection editor error messages -->
     <string name="collections_editor_trakt_input_required">Trakt فہرست کا نام، URL یا ID درج کریں</string>
     <string name="collections_editor_tmdb_invalid_id_error">درست TMDB ID یا URL درج کریں۔</string>
@@ -2123,17 +2004,13 @@
     <!-- Cloud library -->
     <string name="cloud_library_playback_disabled">Cloud Library غیر فعال ہے۔</string>
     <!-- IntroDB settings -->
-    <string name="settings_playback_introdb_invalid_api_key">غلط API Key یا connection ناکام رہا</string>
     <string name="addons_manifest_missing_field">Manifest میں %1$s فیلڈ موجود نہیں ہے</string>
     <string name="collections_editor_tmdb_collection_title_format">TMDB کلیکشن %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">TMDB ہدایت کار %1$s</string>
-    <string name="collections_editor_tmdb_discover_title">TMDB Discover</string>
-    <string name="collections_editor_tmdb_invalid_id_or_url">درست TMDB ID یا URL درج کریں۔</string>
     <string name="collections_editor_tmdb_list_title_format">TMDB فہرست %1$s</string>
     <string name="collections_editor_tmdb_network_title_format">TMDB نیٹ ورک %1$s</string>
     <string name="collections_editor_tmdb_person_title_format">TMDB شخص %1$s</string>
     <string name="collections_editor_tmdb_production_title_format">TMDB پروڈکشن %1$s</string>
-    <string name="collections_editor_tmdb_source_load_failed">TMDB ماخذ لوڈ نہیں ہو سکا</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
     <string name="collections_tmdb_collection_not_found">TMDB کلیکشن نہیں ملا</string>
     <string name="collections_tmdb_company_not_found">TMDB کمپنی نہیں ملی</string>
@@ -2188,19 +2065,13 @@
     <string name="plugins_empty_repos_title">ابھی کوئی Plugin Repository انسٹال نہیں ہے۔</string>
     <string name="plugins_enable_globally_desc">Stream discovery کے دوران Plugin Providers استعمال کریں۔</string>
     <string name="plugins_enable_globally_title">Plugin Providers کو ہر جگہ فعال کریں</string>
-    <string name="plugins_error_already_installed">یہ Plugin Repository پہلے ہی انسٹال ہے۔</string>
     <string name="plugins_error_enter_repo_url">Plugin Repository کا URL درج کریں۔</string>
     <string name="plugins_error_enter_valid_url">درست Plugin URL درج کریں۔</string>
-    <string name="plugins_error_install_failed">Plugin Repository انسٹال نہیں ہو سکی</string>
     <string name="plugins_error_provider_not_found">Provider نہیں ملا</string>
-    <string name="plugins_error_refresh_failed">Repository ریفریش نہیں ہو سکی</string>
     <string name="plugins_error_unavailable_build">اس build میں Plugins دستیاب نہیں ہیں۔</string>
     <string name="plugins_group_by_repo_desc">Streams میں ہر source کے بجائے ہر Repository کے لیے ایک Provider دکھائیں۔</string>
     <string name="plugins_group_by_repo_title">Plugin Providers کو Repository کے لحاظ سے گروپ کریں</string>
     <string name="plugins_input_manifest_placeholder">Plugin Manifest URL</string>
-    <string name="plugins_manifest_error_name_missing">Manifest کا نام موجود نہیں۔</string>
-    <string name="plugins_manifest_error_no_providers">Manifest میں کوئی Provider نہیں ہے۔</string>
-    <string name="plugins_manifest_error_version_missing">Manifest کا ورژن موجود نہیں۔</string>
     <string name="plugins_manifest_name_missing">Manifest کا نام موجود نہیں۔</string>
     <string name="plugins_manifest_no_providers">Manifest میں کوئی Provider نہیں ہے۔</string>
     <string name="plugins_manifest_version_missing">Manifest کا ورژن موجود نہیں۔</string>
@@ -2232,12 +2103,10 @@
     <string name="trakt_connected_status">Trakt سے منسلک ہے</string>
     <string name="trakt_disconnected_status">Trakt سے منقطع ہے</string>
     <string name="unit_bytes_tb">TB</string>
-    <string name="updates_apk_asset_missing">ریلیز میں کوئی APK فائل نہیں ملی</string>
     <string name="updates_download_failed_http">ڈاؤن لوڈ ناکام ہو گیا: HTTP %1$d</string>
     <string name="updates_downloaded_file_missing">ڈاؤن لوڈ کی گئی اپ ڈیٹ فائل موجود نہیں ہے۔</string>
     <string name="updates_empty_download_body">ڈاؤن لوڈ کی Response body خالی ہے</string>
     <string name="updates_github_api_error">GitHub releases API میں خرابی: %1$d</string>
-    <string name="updates_no_channel_release">ابھی تک کوئی اپ ڈیٹ جاری نہیں کی گئی۔</string>
     <string name="updates_channel_title">اپ ڈیٹ چینل</string>
     <string name="updates_channel_description">موصول ہونے والی ایپ اپ ڈیٹس کی قسم منتخب کریں</string>
     <string name="updates_channel_stable">Stable</string>
@@ -2245,7 +2114,6 @@
     <string name="updates_channel_stable_description">روزمرہ استعمال کے لیے۔</string>
     <string name="updates_channel_beta_description">ابتدائی اپ ڈیٹس جن میں خرابیاں ہو سکتی ہیں، فیچرز کام کرنا چھوڑ سکتے ہیں یا ایپ غیر متوقع انداز میں چل سکتی ہے۔</string>
     <string name="updates_waiting_for_stable">اگلی Stable ریلیز دستیاب ہوتے ہی آپ کو مل جائے گی</string>
-    <string name="updates_release_missing_title">ریلیز کا کوئی tag یا نام نہیں ہے</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">%1$s کو نشر ہوگی</string>
     <string name="cw_airs_today">آج نشر ہوگی</string>
@@ -2254,9 +2122,6 @@
         <item quantity="one">Airs in %1$d Day</item>
         <item quantity="other">Airs in %1$d Days</item>
     </plurals>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">آج</string>
-    <string name="cw_airs_tomorrow_short">کل</string>
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">In %1$d day</item>
         <item quantity="other">In %1$d days</item>
@@ -2296,10 +2161,7 @@
     <string name="settings_p2p_clear_cache_done">%1$s غیر فعال Torrent data صاف کر دیا گیا</string>
     <string name="settings_p2p_clear_cache_failed">Torrent cache صاف نہیں ہو سکا</string>
     <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
-    <string name="player_torrent_buffered_status">%1$s buffered · %2$s · %3$s</string>
-    <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
-    <string name="player_torrent_connecting_peers">Peers سے کنکشن ہو رہا ہے…</string>
     <string name="player_torrent_starting_engine">P2P engine شروع کیا جا رہا ہے…</string>
     <string name="player_torrent_fetching_metadata">Torrent metadata حاصل کیا جا رہا ہے…</string>
     <string name="player_torrent_preparing_stream">Torrent stream تیار کی جا رہی ہے…</string>
@@ -2345,7 +2207,6 @@
     <string name="settings_playback_legacy_layout">پرانا Layout</string>
     <string name="settings_playback_legacy_layout_description">اصل Player controls استعمال کریں۔</string>
     <string name="compose_player_via">%1$s کے ذریعے</string>
-    <string name="compose_player_episode_code">S%1$d E%2$d</string>
     <string name="compose_player_more_actions">مزید کنٹرولز</string>
     <string name="compose_player_fewer_actions">کم کنٹرولز</string>
     <string name="compose_player_speed">پلے بیک کی رفتار</string>

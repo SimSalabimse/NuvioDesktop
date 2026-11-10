@@ -51,6 +51,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import com.nuvio.app.core.a11y.WordBoundaryText
 import com.nuvio.app.core.a11y.largeTextLineLimit
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
@@ -328,14 +329,13 @@ fun NuvioPosterCard(
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                Text(
+                WordBoundaryText(
                     text = title,
                     modifier = Modifier.padding(horizontal = NuvioTokens.Space.s14),
                     style = MaterialTheme.typography.titleMedium,
                     color = tokens.colors.textMuted,
                     textAlign = TextAlign.Center,
                     maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
 
@@ -386,20 +386,18 @@ fun NuvioPosterCard(
             NuvioPosterWatchedOverlay(isWatched = isWatched)
         }
         if (shouldShowTitleBelow) {
-            Text(
+            WordBoundaryText(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = tokens.colors.textPrimary,
                 maxLines = largeTextLineLimit(),
-                overflow = TextOverflow.Ellipsis,
             )
             if (!detailLine.isNullOrBlank()) {
-                Text(
+                WordBoundaryText(
                     text = detailLine,
                     style = MaterialTheme.typography.labelSmall,
                     color = tokens.colors.textMuted,
                     maxLines = largeTextLineLimit(),
-                    overflow = TextOverflow.Ellipsis,
                 )
             } else {
                 Box(modifier = Modifier.height(NuvioTokens.Space.none))
