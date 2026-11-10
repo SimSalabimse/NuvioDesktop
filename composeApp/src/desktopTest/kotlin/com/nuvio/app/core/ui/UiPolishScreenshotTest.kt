@@ -38,6 +38,7 @@ import com.nuvio.app.features.downloads.downloadSkipStatusLines
 import com.nuvio.app.features.player.skip.SkipMark
 import java.io.File
 import javax.imageio.ImageIO
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -73,6 +74,16 @@ class UiPolishScreenshotTest {
             val large = png("after", item, "large").readBytes()
             assertFalse(normal.contentEquals(large), "$item large matched normal")
         }
+        listOf("details-rest", "details-scrolled").forEach { item ->
+            listOf("normal", "large").forEach { size ->
+                val step = maxRowStep(png("after", item, size))
+                println("$item-$size max adjacent row step $step")
+                assertTrue(step <= 3, "$item-$size fade has a visible seam, max step $step")
+            }
+        }
+        val contrastStep = maxRowStep(File("build/reports/ui-polish/after/details-rest-contrast.png"))
+        println("details-rest-contrast max adjacent row step $contrastStep")
+        assertTrue(contrastStep > 20, "contrast band should keep a solid edge, max step $contrastStep")
     }
 
     private fun render(shot: WindowShot): Float {
@@ -83,7 +94,7 @@ class UiPolishScreenshotTest {
             density = Density(shot.density),
             useStandardTestDispatcherForComposition = false,
         ).runTest {
-            fun capture(phase: String, item: String, content: @Composable () -> Unit) {
+            fun capture(phase: String, item: String, fileName: String = "$item-${shot.name}.png", content: @Composable () -> Unit) {
                 setContent {
                     NuvioTheme(darkTheme = true, appTheme = AppTheme.WHITE, desktopUiScale = shot.uiScale) {
                         Box(
@@ -101,13 +112,18 @@ class UiPolishScreenshotTest {
                 assertEquals(shot.width, image.width, "$item ${shot.name} width")
                 assertEquals(shot.height, image.height, "$item ${shot.name} height")
                 val directory = File("build/reports/ui-polish/$phase").apply { mkdirs() }
-                ImageIO.write(image, "png", File(directory, "$item-${shot.name}.png"))
+                ImageIO.write(image, "png", File(directory, fileName))
             }
 
             capture("before", "hero-fade") { HeavyTopBand() }
             capture("after", "hero-fade") { QuietTopFade() }
             capture("before", "details-rest") { DetailsArtwork {} }
             capture("after", "details-rest") { DetailsArtwork { RestingHeader() } }
+            if (shot.name == "normal") {
+                capture("after", "details-rest-contrast", fileName = "details-rest-contrast.png") {
+                    DetailsArtwork { ContrastRestingHeader() }
+                }
+            }
             capture("before", "details-scrolled") { DetailsArtwork { SolidScrolledBar() } }
             capture("after", "details-scrolled") { DetailsArtwork { ScrolledHeader() } }
             capture("before", "introdb") { IntroDbBefore() }
@@ -142,6 +158,26 @@ class UiPolishScreenshotTest {
 
     private fun png(phase: String, item: String, size: String): File =
         File("build/reports/ui-polish/$phase/$item-$size.png")
+
+    /** Largest channel change between adjacent rows in the fade, clear of the chrome icons and the title. */
+    private fun maxRowStep(file: File): Int {
+        val image = ImageIO.read(file)
+        val x = (image.width * 0.22f).toInt().coerceIn(0, image.width - 1)
+        val limit = (image.height * 0.32f).toInt().coerceAtMost(image.height - 1)
+        var maxStep = 0
+        var previous = image.getRGB(x, 0)
+        for (y in 1..limit) {
+            val current = image.getRGB(x, y)
+            val step = maxOf(
+                abs(((current shr 16) and 255) - ((previous shr 16) and 255)),
+                abs(((current shr 8) and 255) - ((previous shr 8) and 255)),
+                abs((current and 255) - (previous and 255)),
+            )
+            if (step > maxStep) maxStep = step
+            previous = current
+        }
+        return maxStep
+    }
 
     private fun assertInside(bounds: androidx.compose.ui.geometry.Rect, shot: WindowShot) {
         assertTrue(bounds.left >= -0.5f && bounds.top >= -0.5f, "origin outside $bounds")
@@ -227,6 +263,23 @@ private fun DetailsArtwork(header: @Composable () -> Unit) {
 @Composable
 private fun RestingHeader() {
     CompositionLocalProvider(LocalScrollEdgeInset provides 28.dp) {
+        DetailFloatingHeader(
+            meta = MetaDetails(id = "tt1", type = "movie", name = "Northwater"),
+            isSaved = false,
+            progressProvider = { 0f },
+            interactive = false,
+            onBack = {},
+            onToggleSaved = {},
+        )
+    }
+}
+
+@Composable
+private fun ContrastRestingHeader() {
+    CompositionLocalProvider(
+        LocalScrollEdgeInset provides 28.dp,
+        LocalScrollEdgeFlags provides ScrollEdgeFlags(increaseContrast = true),
+    ) {
         DetailFloatingHeader(
             meta = MetaDetails(id = "tt1", type = "movie", name = "Northwater"),
             isSaved = false,

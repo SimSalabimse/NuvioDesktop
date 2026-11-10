@@ -24,6 +24,22 @@ import kotlin.math.max
 /** How far a quiet fade continues past the protected inset. A solid edge does not use it. */
 internal const val SCROLL_EDGE_TAIL_DP = 28f
 
+/**
+ * How far the details chrome fade continues past the row.
+ * The extra length is what lets the ease reach the art with a flat slope.
+ */
+internal const val DETAIL_SCROLL_EDGE_TAIL_DP = 96f
+
+/**
+ * Soft fade amount at [t] in 0..1. Smoothstep of the remaining distance:
+ * opaque at the top, transparent at the bottom, and the slope is flat at both ends
+ * so the fade does not meet the art on a visible line.
+ */
+internal fun quietFadeAlpha(t: Float): Float {
+    val remaining = (1f - t).coerceIn(0f, 1f)
+    return remaining * remaining * (3f - 2f * remaining)
+}
+
 internal enum class ScrollEdgeKind { None, QuietFade, Solid }
 
 /** One protective edge. A suppressed surface, or a zero inset, draws nothing. Contrast makes it solid. */
@@ -99,8 +115,9 @@ internal fun QuietScrollEdge(
     val solid = kind == ScrollEdgeKind.Solid
     val edgeHeight = scrollEdgeHeightDp(
         safeTopDp = protected.value,
-        contentTopDp = if (detailRow) protected.value + SCROLL_EDGE_TAIL_DP else contentTop.value,
+        contentTopDp = if (detailRow) protected.value + DETAIL_SCROLL_EDGE_TAIL_DP else contentTop.value,
         solid = solid,
+        tailDp = if (detailRow) DETAIL_SCROLL_EDGE_TAIL_DP else SCROLL_EDGE_TAIL_DP,
     ).dp
     if (edgeHeight <= 0.dp) return
     Box(
@@ -125,17 +142,12 @@ internal fun QuietScrollEdge(
                     )
                     return@drawBehind
                 }
-                val heightPx = size.height
-                val insetHold = if (heightPx <= 0f) 0f else (safeTop.toPx() / heightPx).coerceIn(0f, 1f)
-                val rowHold = if (heightPx <= 0f) 1f else (protected.toPx() / heightPx).coerceIn(insetHold, 1f)
                 drawRect(
                     Brush.verticalGradient(
-                        colorStops = arrayOf(
-                            0f to color,
-                            insetHold to color.copy(alpha = 0.94f),
-                            rowHold to color.copy(alpha = 0.45f),
-                            1f to color.copy(alpha = 0f),
-                        ),
+                        colorStops = Array(17) { index ->
+                            val t = index / 16f
+                            t to color.copy(alpha = quietFadeAlpha(t))
+                        },
                     ),
                 )
             },
