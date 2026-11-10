@@ -24,6 +24,7 @@ object DownloadsRepository {
     val hasUnseenCompleted: StateFlow<Boolean> = _hasUnseenCompleted.asStateFlow()
 
     private val activeHandles = mutableMapOf<String, DownloadsTaskHandle>()
+    private val downloadAttempts = DownloadAttemptLedger()
     private var hasLoaded = false
     private var nextDownloadOrdinal = 0L
 
@@ -41,6 +42,7 @@ object DownloadsRepository {
     }
 
     fun clearLocalState() {
+        downloadAttempts.clear()
         activeHandles.values.forEach(DownloadsTaskHandle::cancel)
         activeHandles.clear()
         hasLoaded = false
@@ -149,6 +151,7 @@ object DownloadsRepository {
         val existing = currentItems.firstOrNull { it.logicalContentKey == logicalKey }
         if (existing != null) {
             replacedExisting = true
+            downloadAttempts.end(existing.id)
             activeHandles.remove(existing.id)?.cancel()
             DownloadsPlatformDownloader.removeFile(playableLocalFileUri(existing) ?: existing.localFileUri)
             DownloadsPlatformDownloader.removePartialFile(existing.fileName)
@@ -216,6 +219,7 @@ object DownloadsRepository {
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
         if (item.status != DownloadStatus.Downloading) return
 
+        downloadAttempts.end(downloadId)
         activeHandles.remove(downloadId)?.cancel()
         mutateItem(downloadId) { current ->
             current.copy(
@@ -258,6 +262,7 @@ object DownloadsRepository {
     internal fun reattachBackgroundDownload(downloadId: String) {
         if (!hasLoaded) return
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
+        downloadAttempts.end(downloadId)
         activeHandles.remove(downloadId)?.cancel()
         val restored = DownloadsPlatformDownloader.restoreItem(item)
         replaceItem(restored)
@@ -269,6 +274,7 @@ object DownloadsRepository {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
 
+        downloadAttempts.end(downloadId)
         activeHandles.remove(downloadId)?.cancel()
         DownloadsPlatformDownloader.removeFile(playableLocalFileUri(item) ?: item.localFileUri)
         DownloadsPlatformDownloader.removePartialFile(item.fileName)
@@ -310,65 +316,55 @@ object DownloadsRepository {
 
     private fun startDownload(item: DownloadItem, attempt: Int = 1) {
         val request = DownloadPlatformRequest(item)
+        val attemptId = downloadAttempts.begin(item.id)
 
         val handle = DownloadsPlatformDownloader.start(
             request = request,
             onProgress = { downloadedBytes, totalBytes ->
+                if (!downloadAttempts.isCurrent(item.id, attemptId)) return@start
                 mutateItem(item.id) { current ->
-                    if (current.status != DownloadStatus.Downloading) {
-                        current
-                    } else {
-                        current.copy(
-                            downloadedBytes = downloadedBytes.coerceAtLeast(0L),
-                            totalBytes = totalBytes?.takeIf { it > 0L },
-                            updatedAtEpochMs = DownloadsClock.nowEpochMs(),
-                            errorMessage = null,
-                        )
-                    }
+                    current.withPlatformProgress(
+                        attemptIsCurrent = true,
+                        downloadedBytes = downloadedBytes,
+                        totalBytes = totalBytes,
+                        nowEpochMs = DownloadsClock.nowEpochMs(),
+                    )
                 }
             },
             onSuccess = { localFileUri, totalBytes ->
+                if (!downloadAttempts.isCurrent(item.id, attemptId)) return@start
                 activeHandles.remove(item.id)
                 mutateItem(item.id) { current ->
-                    if (current.status != DownloadStatus.Downloading) return@mutateItem current
-                    current.copy(
-                        status = DownloadStatus.Completed,
+                    current.withPlatformSuccess(
+                        attemptIsCurrent = true,
                         localFileUri = localFileUri,
-                        downloadedBytes = if (totalBytes != null && totalBytes > 0L) {
-                            totalBytes
-                        } else {
-                            current.downloadedBytes
-                        },
-                        totalBytes = totalBytes?.takeIf { it > 0L } ?: current.totalBytes,
-                        errorMessage = null,
-                        updatedAtEpochMs = DownloadsClock.nowEpochMs(),
+                        totalBytes = totalBytes,
+                        nowEpochMs = DownloadsClock.nowEpochMs(),
                     )
                 }
             },
             onFailure = onFailure@ { message ->
+                if (!downloadAttempts.isCurrent(item.id, attemptId)) return@onFailure
                 activeHandles.remove(item.id)
                 val current = _uiState.value.items.firstOrNull { it.id == item.id }
                 if (current?.status == DownloadStatus.Downloading && attempt < MaxDownloadAttempts) {
                     startDownload(current, attempt + 1)
                     return@onFailure
                 }
+                val failure = message.ifBlank { runBlocking { getString(Res.string.download_failed) } }
                 mutateItem(item.id) { current ->
-                    if (current.status != DownloadStatus.Downloading) {
-                        current
-                    } else {
-                        current.copy(
-                            status = DownloadStatus.Failed,
-                            errorMessage = message.ifBlank { runBlocking { getString(Res.string.download_failed) } },
-                            updatedAtEpochMs = DownloadsClock.nowEpochMs(),
-                        )
-                    }
+                    current.withPlatformFailure(
+                        attemptIsCurrent = true,
+                        message = failure,
+                        nowEpochMs = DownloadsClock.nowEpochMs(),
+                    )
                 }
             },
             onPaused = {
+                if (!downloadAttempts.isCurrent(item.id, attemptId)) return@start
                 activeHandles.remove(item.id)
                 mutateItem(item.id) { current ->
-                    if (current.status != DownloadStatus.Downloading) return@mutateItem current
-                    current.copy(status = DownloadStatus.Paused, errorMessage = null)
+                    current.withPlatformPause(attemptIsCurrent = true)
                 }
             },
         )

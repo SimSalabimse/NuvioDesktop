@@ -1,7 +1,6 @@
 package com.nuvio.app.features.autosync
 
 import com.nuvio.app.features.player.SubtitleSyncCue
-import kotlin.math.max
 
 /**
  * AutoSync's subtitle cue parser (SRT, WebVTT, ASS/SSA and TTML), with cooperative cancellation
@@ -317,7 +316,7 @@ internal object AutoSyncSubtitleCueParser {
             "ms" -> 1.0
             else -> return null
         }
-        return max(0L, (value * multiplier).toLong())
+        return finiteMillis(value * multiplier)
     }
 
     private fun parseClockTimeWithFrames(raw: String, frameRate: Double): Long? {
@@ -329,11 +328,10 @@ internal object AutoSyncSubtitleCueParser {
         val minutes = parts[1].toLongOrNull() ?: return null
         val seconds = parts[2].toLongOrNull() ?: return null
         val frames = parts[3].toDoubleOrNull() ?: return null
+        if (!frames.isFinite() || frames < 0.0) return null
         val frameMs = frames * 1_000.0 / frameRate
-        return max(
-            0L,
-            (hours * 3_600_000.0 + minutes * 60_000.0 + seconds * 1_000.0 + frameMs).toLong(),
-        )
+        val base = finiteMillis(hours * 3_600_000.0 + minutes * 60_000.0 + seconds * 1_000.0) ?: return null
+        return finiteMillis(base.toDouble() + frameMs)
     }
 
     private fun isWebVttMetadataBlockHeader(line: String): Boolean {
@@ -362,17 +360,36 @@ internal object AutoSyncSubtitleCueParser {
 
     private fun parseTimestampMs(rawTimestamp: String): Long? {
         val match = timestampRegex.matchEntire(rawTimestamp.trim()) ?: return null
-        val hours = match.groupValues[1].toLongOrNull() ?: 0L
-        val minutes = match.groupValues[2].toLongOrNull() ?: 0L
-        val seconds = match.groupValues[3].toLongOrNull() ?: 0L
+        val hoursRaw = match.groupValues[1]
+        val hours = if (hoursRaw.isEmpty()) 0L else hoursRaw.toLongOrNull() ?: return null
+        val minutes = match.groupValues[2].toLongOrNull() ?: return null
+        val seconds = match.groupValues[3].toLongOrNull() ?: return null
         val millisRaw = match.groupValues[5]
         val millis = when (millisRaw.length) {
             0 -> 0L
             1 -> "${millisRaw}00".toLong()
             2 -> "${millisRaw}0".toLong()
-            else -> millisRaw.take(3).toLongOrNull() ?: 0L
+            else -> millisRaw.take(3).toLongOrNull() ?: return null
         }
-        return ((hours * 3600L) + (minutes * 60L) + seconds) * 1000L + millis
+        return composeTimestampMs(hours, minutes, seconds, millis)
+    }
+
+    /** Milliseconds since the start, or null when the parts do not fit in a signed 64-bit value. */
+    private fun composeTimestampMs(hours: Long, minutes: Long, seconds: Long, millis: Long): Long? {
+        if (hours < 0L || minutes < 0L || seconds < 0L || millis < 0L) return null
+        if (hours > Long.MAX_VALUE / 3_600_000L) return null
+        val fromHours = hours * 3_600_000L
+        if (minutes > (Long.MAX_VALUE - fromHours) / 60_000L) return null
+        val afterMinutes = fromHours + minutes * 60_000L
+        if (seconds > (Long.MAX_VALUE - afterMinutes) / 1_000L) return null
+        val afterSeconds = afterMinutes + seconds * 1_000L
+        if (millis > Long.MAX_VALUE - afterSeconds) return null
+        return afterSeconds + millis
+    }
+
+    private fun finiteMillis(value: Double): Long? {
+        if (!value.isFinite() || value < 0.0 || value > Long.MAX_VALUE.toDouble()) return null
+        return value.toLong()
     }
 
     private fun checkCancellation(
