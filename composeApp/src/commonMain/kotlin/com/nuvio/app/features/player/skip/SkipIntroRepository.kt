@@ -7,6 +7,34 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 
+/** Cache key for one episode. A known file length is part of the key so two cuts do not share a row. */
+internal fun skipLookupCacheKey(base: String, durationMs: Long): String =
+    if (durationMs > 0L) "$base:$durationMs" else base
+
+/**
+ * First list wins each category. Movie credits share the ending slot with other credit types.
+ * A later post-credits scene stays its own slot so the ending does not erase it.
+ */
+internal fun mergeSkipIntervalsByPriority(providerResults: List<List<SkipInterval>>): List<SkipInterval> {
+    val chosen = LinkedHashMap<String, SkipInterval>()
+    for (result in providerResults) {
+        for (interval in result) {
+            val category = segmentCategory(interval.type) ?: continue
+            if (category !in chosen) chosen[category] = interval
+        }
+    }
+    return chosen.values.toList()
+}
+
+internal fun segmentCategory(type: String): String? = when (type.lowercase()) {
+    "intro", "op", "mixed-op" -> "opening"
+    "outro", "ed", "mixed-ed", "credits", "ending", "movie-credits" -> "ending"
+    "post-credits" -> "post-credits"
+    "recap" -> "recap"
+    "preview" -> "preview"
+    else -> null
+}
+
 object SkipIntroRepository {
 
     private val cache = HashMap<String, List<SkipInterval>>()
@@ -199,24 +227,11 @@ object SkipIntroRepository {
         return@coroutineScope mergeByPriority(introDb, animeSkip, aniSkipDeferred.await()).also { cache[cacheKey] = it }
     }
 
-    private fun mergeByPriority(vararg providerResults: List<SkipInterval>): List<SkipInterval> {
-        val chosen = LinkedHashMap<String, SkipInterval>()
-        for (result in providerResults) {
-            for (interval in result) {
-                val category = segmentCategory(interval.type) ?: continue
-                if (category !in chosen) chosen[category] = interval
-            }
-        }
-        return chosen.values.toList()
-    }
+    private fun mergeByPriority(vararg providerResults: List<SkipInterval>): List<SkipInterval> =
+        mergeSkipIntervalsByPriority(providerResults.toList())
 
-    private fun segmentCategory(type: String): String? = when (type.lowercase()) {
-        "intro", "op", "mixed-op" -> "opening"
-        "credits", "outro", "ed", "mixed-ed", "ending" -> "ending"
-        "recap" -> "recap"
-        "preview" -> "preview"
-        else -> null
-    }
+    /** A stored list, including an empty one, is a hit. Null is a miss. */
+    internal fun cachedSkipIntervals(key: String): List<SkipInterval>? = cache[key]
 
     private suspend fun fetchFromTheIntroDb(
         imdbId: String,
