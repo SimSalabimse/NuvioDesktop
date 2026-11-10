@@ -120,14 +120,21 @@ internal class DesktopAppFullscreenController {
      * window has been interacted with. Only acts when [fullscreen] is true;
      * windowed is already the default state for a freshly created window.
      */
-    fun applyRestoredFullscreenState(window: Window, windowState: WindowState, fullscreen: Boolean) {
+    fun applyRestoredFullscreenState(
+        window: Window,
+        windowState: WindowState,
+        fullscreen: Boolean,
+        windowedPlacement: WindowPlacement = WindowPlacement.Floating,
+    ) {
         if (!fullscreen) return
         if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
             SwingUtilities.invokeLater {
                 enterWindowsFullscreen(window, windowState)
             }
         } else {
-            restoreWindowPlacement = windowState.placement
+            // Launch already set placement to Fullscreen, so the current placement
+            // is not the windowed mode to return to.
+            restoreWindowPlacement = windowedPlacement
                 .takeUnless { it == WindowPlacement.Fullscreen }
                 ?: WindowPlacement.Floating
             windowState.placement = WindowPlacement.Fullscreen
@@ -253,6 +260,23 @@ internal class DesktopAppFullscreenController {
  * can alter the frame AppKit is restoring. The Compose fallback is only used if the native macOS
  * request cannot be made.
  */
+/**
+ * The windowed placement to return to after a launch that starts in fullscreen.
+ * Mirrors startup placement with the fullscreen branch removed: a saved
+ * "not maximized" choice stays floating, and hosts that restore maximized
+ * windows go back to maximized. Reading the live placement is wrong here,
+ * because launch has already set it to fullscreen.
+ */
+internal fun windowedPlacementAfterFullscreenRestore(
+    wasMaximized: Boolean?,
+    hasSavedGeometry: Boolean,
+    restoresMaximizedWindowPlacement: Boolean,
+): WindowPlacement = when {
+    wasMaximized == false && hasSavedGeometry -> WindowPlacement.Floating
+    restoresMaximizedWindowPlacement -> WindowPlacement.Maximized
+    else -> WindowPlacement.Floating
+}
+
 internal fun applyMacosComposeFullscreenExit(
     restorePlacement: WindowPlacement,
     requestNativeFullscreenExit: () -> Boolean,

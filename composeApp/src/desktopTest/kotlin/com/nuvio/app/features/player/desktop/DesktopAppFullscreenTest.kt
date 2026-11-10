@@ -61,4 +61,40 @@ class DesktopAppFullscreenTest {
             updates,
         )
     }
+
+    @Test
+    fun `a restored fullscreen session returns to maximized when that was the windowed mode`() {
+        assertEquals(
+            WindowPlacement.Maximized,
+            windowedPlacementAfterFullscreenRestore(
+                wasMaximized = true,
+                hasSavedGeometry = true,
+                restoresMaximizedWindowPlacement = true,
+            ),
+        )
+        assertEquals(
+            WindowPlacement.Floating,
+            windowedPlacementAfterFullscreenRestore(
+                wasMaximized = false,
+                hasSavedGeometry = true,
+                restoresMaximizedWindowPlacement = true,
+            ),
+        )
+        assertEquals(
+            WindowPlacement.Maximized,
+            windowedPlacementAfterFullscreenRestore(
+                wasMaximized = false,
+                hasSavedGeometry = false,
+                restoresMaximizedWindowPlacement = true,
+            ),
+        )
+        assertEquals(
+            WindowPlacement.Floating,
+            windowedPlacementAfterFullscreenRestore(
+                wasMaximized = true,
+                hasSavedGeometry = true,
+                restoresMaximizedWindowPlacement = false,
+            ),
+        )
+    }
 }

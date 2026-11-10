@@ -20,7 +20,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.player.desktop.DesktopHostOs
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,14 +31,16 @@ class DesktopWindowInsetsTest {
 
     @Test
     fun titleBarClearanceSurvivesScalingAndFullscreenWithoutMovingTheBackdropOrResettingContent() {
-        assumeTrue(DesktopHostOs.current == DesktopHostOs.MACOS)
         val fullscreen = mutableStateOf(false)
         val uiScale = mutableFloatStateOf(1f)
         var contentIdentity: Any? = null
 
         compose.setContent {
             CompositionLocalProvider(LocalDensity provides Density(2f)) {
-                ProvideDesktopWindowInsets(isFullscreen = fullscreen.value) {
+                ProvideDesktopWindowInsets(
+                    isFullscreen = fullscreen.value,
+                    hostOs = DesktopHostOs.MACOS,
+                ) {
                     val identity = remember { Any() }
                     SideEffect { contentIdentity = identity }
                     NuvioTheme(desktopUiScale = uiScale.floatValue) {
@@ -77,6 +78,24 @@ class DesktopWindowInsetsTest {
         assertTop("backdrop", 0f)
         assertTop("control", 56f)
         assertSame(initialIdentity, contentIdentity)
+    }
+
+    @Test
+    fun linuxClientAreaDoesNotReserveMacosTitleBarClearance() {
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(2f)) {
+                ProvideDesktopWindowInsets(
+                    isFullscreen = false,
+                    hostOs = DesktopHostOs.LINUX,
+                ) {
+                    Box(Modifier.fillMaxSize().testTag("backdrop")) {
+                        Box(Modifier.statusBarsPadding().testTag("control"))
+                    }
+                }
+            }
+        }
+        assertTop("backdrop", 0f)
+        assertTop("control", 0f)
     }
 
     private fun assertTop(tag: String, expected: Float) {

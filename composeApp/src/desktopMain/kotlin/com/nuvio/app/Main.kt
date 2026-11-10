@@ -33,6 +33,7 @@ import com.nuvio.app.features.player.desktop.DesktopWindowGeometry
 import com.nuvio.app.features.player.desktop.DesktopWindowModeStorage
 import com.nuvio.app.features.player.desktop.NativePlayerBridge
 import com.nuvio.app.features.player.desktop.applyNativeDesktopWindowChrome
+import com.nuvio.app.features.player.desktop.windowedPlacementAfterFullscreenRestore
 import com.nuvio.app.features.player.desktop.configureMacosWindowBeforePeer
 import com.nuvio.app.features.player.desktop.installDesktopAppFullscreenShortcuts
 import com.nuvio.app.features.player.desktop.preloadNativePlayerBridgeAsync
@@ -168,7 +169,16 @@ fun main(args: Array<String>) {
                 installLinuxExtendedMouseButtons()
                 // Windows fullscreen is emulated natively and isn't reflected by
                 // WindowPlacement, so it must be re-applied once the window peer exists.
-                fullscreenController.applyRestoredFullscreenState(window, windowState, wasFullscreenOnLastExit)
+                fullscreenController.applyRestoredFullscreenState(
+                    window = window,
+                    windowState = windowState,
+                    fullscreen = wasFullscreenOnLastExit,
+                    windowedPlacement = windowedPlacementAfterFullscreenRestore(
+                        wasMaximized = wasMaximizedOnLastExit,
+                        hasSavedGeometry = savedGeometry != null,
+                        restoresMaximizedWindowPlacement = restoresMaximizedWindowPlacement,
+                    ),
+                )
             }
             LaunchedEffect(windowState) {
                 // Covers OS-driven placement changes too (e.g. the native macOS

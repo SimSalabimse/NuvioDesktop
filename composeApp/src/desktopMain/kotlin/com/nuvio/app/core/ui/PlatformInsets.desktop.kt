@@ -27,9 +27,10 @@ internal actual fun platformPhysicalTopInset(): Dp = 0.dp
 @Composable
 internal fun ProvideDesktopWindowInsets(
     isFullscreen: Boolean,
+    hostOs: DesktopHostOs = DesktopHostOs.current,
     content: @Composable () -> Unit,
 ) {
-    if (DesktopHostOs.current != DesktopHostOs.MACOS) {
+    if (hostOs != DesktopHostOs.MACOS) {
         content()
         return
     }
