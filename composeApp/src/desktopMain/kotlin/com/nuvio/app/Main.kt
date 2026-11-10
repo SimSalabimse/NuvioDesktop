@@ -21,11 +21,12 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.deeplink.handleAppUrl
 import com.nuvio.app.core.diagnostics.SentryInitializer
+import com.nuvio.app.core.perf.DesktopStartupProbe
 import com.nuvio.app.core.ui.NuvioTheme
 import com.nuvio.app.core.ui.ProvideDesktopWindowInsets
 import com.nuvio.app.features.discordrpc.DiscordPresenceManager
 import com.nuvio.app.features.p2p.P2pStreamingEngine
-import com.nuvio.app.features.plugins.configureDesktopQuickJsLibrary
+import com.nuvio.app.core.tracking.preloadTrackingProvidersAsync
 import com.nuvio.app.features.player.PlatformPlayerSurface
 import com.nuvio.app.features.player.desktop.DesktopAppFullscreenController
 import com.nuvio.app.features.player.desktop.DesktopHostOs
@@ -53,25 +54,31 @@ private const val MacosDarkAquaAppearance = "NSAppearanceNameDarkAqua"
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
+    DesktopStartupProbe.arm()
     // On Linux, initialize GTK BEFORE AWT/Compose/Skia to prevent GdkDisplayManager
     // type registration conflict (Skiko partially loads GDK without full GTK init).
-    if (System.getProperty("os.name", "").lowercase().contains("linux")) {
-        runCatching { NativePlayerBridge.initGtkEarly() }
+    DesktopStartupProbe.phase("gtk") {
+        if (System.getProperty("os.name", "").lowercase().contains("linux")) {
+            runCatching { NativePlayerBridge.initGtkEarly() }
+        }
     }
-    applyDesktopRendererPreference()
-    SentryInitializer.start()
-    configureDesktopQuickJsLibrary()
-    configureDesktopChrome()
-    configureLinuxSwingGlobalsBeforeAwt()
-    installDesktopOpenUriHandler()
-    handleDesktopLaunchArgs(args)
-    preloadNativePlayerBridgeAsync()
+    DesktopStartupProbe.phase("renderer") { applyDesktopRendererPreference() }
+    DesktopStartupProbe.phase("sentry") { SentryInitializer.start() }
+    DesktopStartupProbe.phase("chrome") {
+        configureDesktopChrome()
+        configureLinuxSwingGlobalsBeforeAwt()
+        installDesktopOpenUriHandler()
+        handleDesktopLaunchArgs(args)
+        preloadNativePlayerBridgeAsync()
+    }
     // Load cached profile data synchronously so the profile color is available
     // on the very first Compose frame (matching Android's SharedPreferences behavior).
-    ProfileRepository.loadCachedProfiles()
-    AppIconRepository.ensureLoaded()
-    DiscordPresenceManager.start()
+    DesktopStartupProbe.phase("profiles") { ProfileRepository.loadCachedProfiles() }
+    DesktopStartupProbe.phase("icons") { AppIconRepository.ensureLoaded() }
+    DesktopStartupProbe.phase("discord") { DiscordPresenceManager.start() }
 
+    DesktopStartupProbe.mark("application")
+    preloadTrackingProvidersAsync()
     application {
         val appIconState by AppIconRepository.state.collectAsState()
         val smokePlayerUrl = (
@@ -135,6 +142,7 @@ fun main(args: Array<String>) {
             icon = painterResource(appIconState.selected.transparentPreviewResource),
             init = ::configureMacosWindowBeforePeer,
         ) {
+            DesktopStartupProbe.mark("window_content")
             SideEffect {
                 window.background = NuvioDesktopNativeBackground
                 window.rootPane.background = NuvioDesktopNativeBackground
@@ -239,6 +247,7 @@ fun main(args: Array<String>) {
 
             if (smokePlayerUrl == null) {
                 ProvideDesktopWindowInsets(isFullscreen = windowState.placement == WindowPlacement.Fullscreen) {
+                    DesktopStartupProbe.mark("app")
                     App()
                 }
             } else {

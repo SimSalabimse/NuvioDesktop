@@ -6,8 +6,21 @@ import java.util.Locale
 private const val QuickJsLibraryPathProperty = "com.dokar.quickjs.library.path"
 private const val QuickJsLibraryNameProperty = "com.dokar.quickjs.library.name"
 
+internal fun ensureDesktopQuickJsLibrary() {
+    configureDesktopQuickJsLibrary()
+}
+
+private val quickJsInstallLock = Any()
+
 internal fun configureDesktopQuickJsLibrary() {
     if (!System.getProperty(QuickJsLibraryPathProperty).isNullOrBlank()) return
+    synchronized(quickJsInstallLock) {
+        if (!System.getProperty(QuickJsLibraryPathProperty).isNullOrBlank()) return
+        installDesktopQuickJsLibrary()
+    }
+}
+
+private fun installDesktopQuickJsLibrary() {
     val osName = System.getProperty("os.name").orEmpty().lowercase(Locale.ROOT)
     val osPrefix = when {
         osName.contains("linux") -> "linux"

@@ -7,6 +7,7 @@ import com.nuvio.app.features.catalog.CatalogTarget
 import com.nuvio.app.features.catalog.CatalogPage
 import com.nuvio.app.features.catalog.fetchCatalogPage
 import com.nuvio.app.features.catalog.mergeCatalogItems
+import com.nuvio.app.core.perf.StartupMarkers
 import com.nuvio.app.core.poster.CustomPosterUrlRepository
 import com.nuvio.app.core.poster.reapplyCustomPosterUrls
 import com.nuvio.app.core.poster.withCustomPosterUrls
@@ -232,6 +233,7 @@ object HomeRepository {
             errorMessage = if (sections.isEmpty()) lastErrorMessage else null,
         )
         if (_uiState.value != nextState) _uiState.value = nextState
+        if (!isLoading) StartupMarkers.cataloguesSettled()
     }
 
     private suspend fun HomeCatalogDefinition.toSection(forceRefresh: Boolean): HomeCatalogSection {
