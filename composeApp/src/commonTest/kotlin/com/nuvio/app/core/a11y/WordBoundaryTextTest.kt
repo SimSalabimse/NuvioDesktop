@@ -24,9 +24,9 @@ class WordBoundaryTextTest {
         val layout = layoutPosterTitle(title, maxWidthPx = 8f, maxLines = 3, measure = ::chars)
         assertEquals(PosterTitleSmallerStep, layout.scale)
         assertTrue(layout.wordWiderThanLine)
-        assertEquals("The …", layout.text)
-        assertFalse(layout.text.contains("Extra"))
+        assertTrue(layout.text.endsWith("…"))
         assertFalse(layout.text.contains("Adventures"))
+        assertTrue(layout.text.lines().last().startsWith("Extra"))
     }
 
     @Test
@@ -37,11 +37,20 @@ class WordBoundaryTextTest {
     }
 
     @Test
-    fun lastLineKeepsAWordThatFitsWithoutTheEllipsis() {
+    fun truncationAfterAFullWordShowsTheEllipsis() {
         val layout = layoutPosterTitle(title, maxWidthPx = 14f, maxLines = 2, measure = ::chars)
         assertEquals(1f, layout.scale)
-        assertEquals("The\nExtraordinary", layout.text)
-        assertTokensAreWholeWords(layout.text)
+        assertEquals("The\nExtraordinary…", layout.text)
+        assertTrue(layout.text.lines().last().endsWith("…"))
+    }
+
+    @Test
+    fun wordIsClippedOnlyWhenTheEllipsisDoesNotFitBesideIt() {
+        val layout = layoutPosterTitle(title, maxWidthPx = 13f, maxLines = 2, measure = ::chars)
+        assertEquals(1f, layout.scale)
+        assertEquals("The\nExtraordinar…", layout.text)
+        assertTrue(layout.text.lines().last().endsWith("…"))
+        assertFalse(layout.text.contains("Extraordinary"))
     }
 
     @Test

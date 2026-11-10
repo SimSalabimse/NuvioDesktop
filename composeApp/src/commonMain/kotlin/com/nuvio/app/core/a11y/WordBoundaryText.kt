@@ -19,7 +19,10 @@ import androidx.compose.ui.unit.TextUnitType
  * paragraph layouter in ui-text-desktop 1.12.0 does not read that value (the Skiko `LineBreak`
  * type only has Simple, Heading, Paragraph, and Unspecified), so hyphenation is not available
  * here. A word wider than the line is retried once at [PosterTitleSmallerStep]. If it still
- * does not fit, the word is left out and the line ends with an ellipsis.
+ * does not fit, the line keeps the longest prefix that fits and ends with an ellipsis.
+ * A line that drops later words always ends with an ellipsis, glued to the last word
+ * (`Extraordinary…`) or clipped inside that word (`Extraordin…`) when the ellipsis
+ * does not fit beside it.
  */
 internal const val PosterTitleSmallerStep = 0.85f
 
@@ -61,6 +64,7 @@ private fun layoutAt(
     while (index < words.size && lines.size < maxLines) {
         val lineWords = mutableListOf<String>()
         var endLine = false
+        var wideWord: String? = null
         while (index < words.size && !endLine) {
             val word = words[index]
             val candidate = if (lineWords.isEmpty()) word else lineWords.joinToString(" ") + " " + word
@@ -69,22 +73,19 @@ private fun layoutAt(
                 index += 1
             } else if (lineWords.isEmpty()) {
                 wordWiderThanLine = true
-                if (lines.isEmpty()) {
-                    if (fits(Ellipsis)) lines += Ellipsis
-                } else {
-                    val previous = lines.removeAt(lines.lastIndex)
-                    val withEllipsis = "$previous $Ellipsis"
-                    lines += if (fits(withEllipsis)) withEllipsis else previous
-                }
-                index = words.size
+                wideWord = word
                 endLine = true
             } else {
                 endLine = true
             }
         }
-        if (wordWiderThanLine || lineWords.isEmpty()) break
         val moreRemain = index < words.size
         val lastLine = lines.size + 1 >= maxLines
+        if (wideWord != null) {
+            lines += clipWord(wideWord, ::fits)
+            break
+        }
+        if (lineWords.isEmpty()) break
         lines += if (moreRemain && lastLine) ellipsizeWords(lineWords, ::fits) else lineWords.joinToString(" ")
         if (moreRemain && lastLine) break
     }
@@ -98,13 +99,26 @@ private fun layoutAt(
 private fun ellipsizeWords(words: List<String>, fits: (String) -> Boolean): String {
     var kept = words
     while (kept.isNotEmpty()) {
-        val withEllipsis = kept.joinToString(" ") + " " + Ellipsis
-        if (fits(withEllipsis)) return withEllipsis
-        // A word that fills the last line stays whole. The ellipsis is only added when it fits beside it.
-        if (kept.size == 1 && fits(kept.single())) return kept.single()
+        val withGap = kept.joinToString(" ") + " " + Ellipsis
+        if (fits(withGap)) return withGap
+        val glued = kept.joinToString(" ") + Ellipsis
+        if (fits(glued)) return glued
+        if (kept.size == 1) return clipWord(kept.single(), fits)
         kept = kept.dropLast(1)
     }
-    return if (fits(Ellipsis)) Ellipsis else ""
+    return Ellipsis
+}
+
+/** Longest prefix of [word] that still leaves room for the ellipsis. */
+private fun clipWord(word: String, fits: (String) -> Boolean): String {
+    if (fits(word + Ellipsis)) return word + Ellipsis
+    var length = word.length - 1
+    while (length > 0) {
+        val candidate = word.substring(0, length) + Ellipsis
+        if (fits(candidate)) return candidate
+        length -= 1
+    }
+    return Ellipsis
 }
 
 private fun TextStyle.scaled(scale: Float): TextStyle {

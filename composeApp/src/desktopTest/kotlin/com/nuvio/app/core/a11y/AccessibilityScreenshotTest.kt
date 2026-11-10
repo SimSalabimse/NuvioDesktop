@@ -155,8 +155,17 @@ private fun assertPosterWordsStayWhole(node: SemanticsNode) {
     walk(node)
     assertTrue(texts.isNotEmpty(), "Poster title was not in the semantics tree")
     texts.forEach { block ->
+        val flat = block.replace("\n", " ")
+        if (!flat.contains(LongTitle)) {
+            assertTrue(
+                block.lines().last().trimEnd().endsWith("…"),
+                "Truncated poster title missed the ellipsis: '$block'",
+            )
+        }
         block.split(Regex("\\s+")).filter { it.isNotEmpty() && it != "…" }.forEach { token ->
-            assertTrue(token in PosterWords, "Poster title broke '$token' out of '$block'")
+            val stem = token.removeSuffix("…")
+            val whole = token in PosterWords || (token.endsWith("…") && PosterWords.any { it.startsWith(stem) && stem.isNotEmpty() })
+            assertTrue(whole, "Poster title broke '$token' out of '$block'")
         }
     }
 }
