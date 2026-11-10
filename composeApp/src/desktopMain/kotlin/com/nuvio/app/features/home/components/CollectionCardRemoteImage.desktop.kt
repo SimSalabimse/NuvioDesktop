@@ -71,21 +71,33 @@ private val gifDiskCacheDir: Path by lazy {
     }
 }
 
-private fun gifDiskCacheFile(url: String): Path {
-    val hash = MessageDigest.getInstance("SHA-256")
-        .digest(url.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it) }
-    return gifDiskCacheDir.resolve("$hash.gif")
+private val gifDiskSha256 = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-256") }
+
+private val gifDiskHexDigits = charArrayOf(
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f',
+)
+
+/** Lower-case SHA-256 hex. Same bytes as the previous `%02x` formatting, without a Formatter per byte. */
+private fun gifDiskSha256Hex(url: String): String {
+    val digest = gifDiskSha256.get()
+    digest.reset()
+    val hash = digest.digest(url.toByteArray(Charsets.UTF_8))
+    val chars = CharArray(hash.size * 2)
+    for (index in hash.indices) {
+        val value = hash[index].toInt() and 0xff
+        chars[index * 2] = gifDiskHexDigits[value ushr 4]
+        chars[index * 2 + 1] = gifDiskHexDigits[value and 0x0f]
+    }
+    return String(chars)
 }
 
-private fun readGifDiskCache(url: String): ByteArray? {
-    val file = gifDiskCacheFile(url)
-    return runCatching {
-        if (Files.exists(file)) Files.readAllBytes(file) else null
-    }.getOrNull()
-}
+private fun gifDiskCacheFile(url: String): Path =
+    gifDiskCacheDir.resolve(gifDiskSha256Hex(url) + ".gif")
 
-private fun writeGifDiskCache(url: String, bytes: ByteArray) {
+internal fun readGifDiskCache(url: String): ByteArray? =
+    runCatching { Files.readAllBytes(gifDiskCacheFile(url)) }.getOrNull()
+
+internal fun writeGifDiskCache(url: String, bytes: ByteArray) {
     runCatching {
         val target = gifDiskCacheFile(url)
         Files.createDirectories(target.parent)

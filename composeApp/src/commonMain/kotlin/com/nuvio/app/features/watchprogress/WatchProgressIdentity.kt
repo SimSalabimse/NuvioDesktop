@@ -151,18 +151,22 @@ internal fun reconcileLocalProgressKeysWithSnapshot(
     serverEntries: Collection<ProgressSyncRecord>,
     localEntries: Collection<WatchProgressEntry>,
 ): WatchProgressIdentityReconciliation {
-    val serverKeys = serverEntries.mapTo(mutableSetOf(), ProgressSyncRecord::resolvedProgressKey)
-    val uniqueServerKeyByLogicalIdentity = serverEntries
-        .groupBy { record ->
-            Triple(record.contentId, record.season, record.episode)
+    val serverKeys = HashSet<String>(serverEntries.size)
+    val uniqueServerKeyByLogicalIdentity = HashMap<Triple<String, Int?, Int?>, String>(serverEntries.size)
+    val ambiguousIdentities = HashSet<Triple<String, Int?, Int?>>()
+    for (record in serverEntries) {
+        val key = record.resolvedProgressKey()
+        serverKeys.add(key)
+        val identity = Triple(record.contentId, record.season, record.episode)
+        if (identity in ambiguousIdentities) continue
+        val existing = uniqueServerKeyByLogicalIdentity[identity]
+        if (existing == null) {
+            uniqueServerKeyByLogicalIdentity[identity] = key
+        } else if (existing != key) {
+            uniqueServerKeyByLogicalIdentity.remove(identity)
+            ambiguousIdentities.add(identity)
         }
-        .mapNotNull { (identity, records) ->
-            records.map(ProgressSyncRecord::resolvedProgressKey)
-                .distinct()
-                .singleOrNull()
-                ?.let { key -> identity to key }
-        }
-        .toMap()
+    }
     val migrations = linkedMapOf<String, String>()
     val reconciled = localEntries.map { entry ->
         val localKey = entry.resolvedProgressKey()

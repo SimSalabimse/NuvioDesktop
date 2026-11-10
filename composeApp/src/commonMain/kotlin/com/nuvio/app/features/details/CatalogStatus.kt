@@ -55,7 +55,7 @@ internal fun listedTypeLabels(types: List<String>, labels: CatalogLabels = Catal
             else -> canonical += key
         }
     }
-    val ordered = listOf("intro", "recap", "outro", "preview").filter { it in canonical }
+    val ordered = canonicalLabelOrder.filter { it in canonical }
     return ordered.map { catalogTypeLabel(it, labels) } + extra.toList()
 }
 
@@ -168,21 +168,48 @@ internal fun seasonOverviewRows(
     marksFor: (SeasonEpisodeRef) -> Map<String, SkipMark>,
     publicFor: (SeasonEpisodeRef) -> Pair<CatalogRead, List<String>> = { CatalogRead.NotChecked to emptyList() },
     labels: CatalogLabels = CatalogLabels(),
-): List<SeasonOverviewRow> = episodes.map { episode ->
-    val marks = marksFor(episode)
-    val (publicRead, publicTypes) = publicFor(episode)
-    val canonicalMarks = marks.filterKeys { SkipMarks.canonicalType(it) != null }
-    val ownRead = if (canonicalMarks.isEmpty()) CatalogRead.None else CatalogRead.Listed
-    SeasonOverviewRow(
-        season = episode.season,
-        episode = episode.episode,
-        code = episode.code,
-        title = episode.title,
-        publicLine = publicCatalogLine(publicRead, publicTypes, labels),
-        ownLine = ownCatalogLine(ownRead, hasOwnChips = canonicalMarks.isNotEmpty(), labels)
-            ?: ownMarkLine(canonicalMarks, labels),
-    )
+): List<SeasonOverviewRow> {
+    // Neighbouring episodes usually share the unmarked read. Reuse those two sentences.
+    var cachedMarks: Map<String, SkipMark>? = null
+    var cachedPublicRead: CatalogRead? = null
+    var cachedPublicTypes: List<String>? = null
+    var cachedLines: Pair<String, String?>? = null
+    return episodes.map { episode ->
+        val marks = marksFor(episode)
+        val (publicRead, publicTypes) = publicFor(episode)
+        val lines = if (
+            marks === cachedMarks &&
+            publicRead == cachedPublicRead &&
+            publicTypes === cachedPublicTypes
+        ) {
+            cachedLines!!
+        } else {
+            val canonicalMarks = marks.filterKeys { SkipMarks.canonicalType(it) != null }
+            val ownRead = if (canonicalMarks.isEmpty()) CatalogRead.None else CatalogRead.Listed
+            (
+                publicCatalogLine(publicRead, publicTypes, labels) to (
+                    ownCatalogLine(ownRead, hasOwnChips = canonicalMarks.isNotEmpty(), labels)
+                        ?: ownMarkLine(canonicalMarks, labels)
+                    )
+                ).also { built ->
+                cachedMarks = marks
+                cachedPublicRead = publicRead
+                cachedPublicTypes = publicTypes
+                cachedLines = built
+            }
+        }
+        SeasonOverviewRow(
+            season = episode.season,
+            episode = episode.episode,
+            code = episode.code,
+            title = episode.title,
+            publicLine = lines.first,
+            ownLine = lines.second,
+        )
+    }
 }
+
+private val canonicalLabelOrder = listOf("intro", "recap", "outro", "preview")
 
 internal data class SeasonEpisodeRef(
     val season: Int,
