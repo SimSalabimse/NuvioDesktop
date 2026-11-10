@@ -3,6 +3,8 @@ package com.nuvio.app.features.home.components
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -26,6 +28,7 @@ fun HomeCatalogRowSection(
     onViewAllClick: (() -> Unit)? = null,
     onPosterClick: ((MetaPreview) -> Unit)? = null,
     onPosterLongClick: ((MetaPreview) -> Unit)? = null,
+    rowState: LazyListState = rememberLazyListState(),
 ) {
     if (sectionPadding != null) {
         HomeCatalogRowSectionContent(
@@ -38,6 +41,7 @@ fun HomeCatalogRowSection(
             onViewAllClick = onViewAllClick,
             onPosterClick = onPosterClick,
             onPosterLongClick = onPosterLongClick,
+            rowState = rowState,
         )
     } else {
         BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -51,6 +55,7 @@ fun HomeCatalogRowSection(
                 onViewAllClick = onViewAllClick,
                 onPosterClick = onPosterClick,
                 onPosterLongClick = onPosterLongClick,
+                rowState = rowState,
             )
         }
     }
@@ -67,6 +72,7 @@ private fun HomeCatalogRowSectionContent(
     onViewAllClick: (() -> Unit)?,
     onPosterClick: ((MetaPreview) -> Unit)?,
     onPosterLongClick: ((MetaPreview) -> Unit)?,
+    rowState: LazyListState,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
 
@@ -80,6 +86,7 @@ private fun HomeCatalogRowSectionContent(
         onTitleClick = onViewAllClick?.takeIf { isDesktop },
         viewAllPillSize = NuvioViewAllPillSize.Compact,
         key = { item -> item.stableKey() },
+        state = rowState,
     ) { item ->
         HomePosterCard(
             item = item,

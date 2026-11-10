@@ -1,6 +1,8 @@
 package com.nuvio.app.features.home.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import com.nuvio.app.core.perf.ScrollProbeCounters
 import androidx.compose.ui.Modifier
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioPosterCard
@@ -20,6 +22,9 @@ fun HomePosterCard(
     onLongClick: (() -> Unit)? = null,
     showLandscapeOverlay: Boolean = true,
 ) {
+    if (ScrollProbeCounters.enabled) {
+        SideEffect { ScrollProbeCounters.posterComposed() }
+    }
     val posterCardStyle = rememberPosterCardStyleUiState()
     val isLandscapeMode = useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled
     val effectiveLandscapePoster = if (posterCardStyle.alwaysShowLandscapeClearlogo) null else item.landscapePoster

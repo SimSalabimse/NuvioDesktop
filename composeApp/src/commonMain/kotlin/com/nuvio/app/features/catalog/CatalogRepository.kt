@@ -64,6 +64,18 @@ object CatalogRepository {
         )
     }
 
+    internal fun installProbePage(target: CatalogTarget, items: List<com.nuvio.app.features.home.MetaPreview>) {
+        val request = catalogRequest(target)
+        activeJob?.cancel()
+        activeJob = null
+        activeRequest = request
+        _uiState.value = CatalogUiState(
+            items = items,
+            isLoading = false,
+            nextSkip = null,
+        )
+    }
+
     fun clear() {
         activeJob?.cancel()
         activeRequest = null
