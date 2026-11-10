@@ -3,9 +3,9 @@ package com.nuvio.app.features.home
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 internal object HomeCatalogParser {
     private val json = Json {
@@ -56,7 +56,7 @@ internal object HomeCatalogParser {
                     rawReleaseDate = meta.string("released"),
                     imdbRating = meta.string("imdbRating"),
                     genres = meta.array("genres").mapNotNull { genre ->
-                        genre.jsonPrimitive.contentOrNull?.takeIf { it.isNotBlank() }
+                        (genre as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
                     },
                     landscapePoster = landscapePoster,
                 )
@@ -72,7 +72,7 @@ internal object HomeCatalogParser {
     }
 
     private fun JsonObject.string(name: String): String? =
-        this[name]?.jsonPrimitive?.contentOrNull
+        (this[name] as? JsonPrimitive)?.contentOrNull
 
     private fun JsonObject.array(name: String): JsonArray =
         this[name] as? JsonArray ?: JsonArray(emptyList())

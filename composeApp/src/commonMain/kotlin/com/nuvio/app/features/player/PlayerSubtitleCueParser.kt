@@ -1,7 +1,5 @@
 package com.nuvio.app.features.player
 
-import kotlin.math.max
-
 object PlayerSubtitleCueParser {
     private val timestampRegex = Regex("""(?:(\d+):)?(\d{1,2}):(\d{2})([.,](\d+))?""")
 
@@ -259,7 +257,7 @@ object PlayerSubtitleCueParser {
             "ms" -> 1.0
             else -> return null
         }
-        return max(0L, (value * multiplier).toLong())
+        return finiteMillis(value * multiplier)
     }
 
     private fun parseClockTimeWithFrames(raw: String): Long? {
@@ -270,7 +268,11 @@ object PlayerSubtitleCueParser {
         val minutes = parts[1].toLongOrNull() ?: return null
         val seconds = parts[2].toLongOrNull() ?: return null
         val frames = parts[3].substringBefore('.').toLongOrNull() ?: return null
-        return max(0L, hours * 3_600_000L + minutes * 60_000L + seconds * 1_000L + frames * 1_000L / 30L)
+        if (frames < 0L) return null
+        val frameMillis = frames * 1_000L / 30L
+        return composeTimestampMs(hours, minutes, seconds, 0L)?.let { base ->
+            if (frameMillis > Long.MAX_VALUE - base) null else base + frameMillis
+        }
     }
 
     private fun isWebVttMetadataBlockHeader(line: String): Boolean {
@@ -299,17 +301,36 @@ object PlayerSubtitleCueParser {
 
     private fun parseTimestampMs(rawTimestamp: String): Long? {
         val match = timestampRegex.matchEntire(rawTimestamp.trim()) ?: return null
-        val hours = match.groupValues[1].toLongOrNull() ?: 0L
-        val minutes = match.groupValues[2].toLongOrNull() ?: 0L
-        val seconds = match.groupValues[3].toLongOrNull() ?: 0L
+        val hoursRaw = match.groupValues[1]
+        val hours = if (hoursRaw.isEmpty()) 0L else hoursRaw.toLongOrNull() ?: return null
+        val minutes = match.groupValues[2].toLongOrNull() ?: return null
+        val seconds = match.groupValues[3].toLongOrNull() ?: return null
         val millisRaw = match.groupValues[5]
         val millis = when (millisRaw.length) {
             0 -> 0L
             1 -> "${millisRaw}00".toLong()
             2 -> "${millisRaw}0".toLong()
-            else -> millisRaw.take(3).toLongOrNull() ?: 0L
+            else -> millisRaw.take(3).toLongOrNull() ?: return null
         }
-        return ((hours * 3600L) + (minutes * 60L) + seconds) * 1000L + millis
+        return composeTimestampMs(hours, minutes, seconds, millis)
+    }
+
+    /** Milliseconds since the start, or null when the parts do not fit in a signed 64-bit value. */
+    private fun composeTimestampMs(hours: Long, minutes: Long, seconds: Long, millis: Long): Long? {
+        if (hours < 0L || minutes < 0L || seconds < 0L || millis < 0L) return null
+        if (hours > Long.MAX_VALUE / 3_600_000L) return null
+        val fromHours = hours * 3_600_000L
+        if (minutes > (Long.MAX_VALUE - fromHours) / 60_000L) return null
+        val afterMinutes = fromHours + minutes * 60_000L
+        if (seconds > (Long.MAX_VALUE - afterMinutes) / 1_000L) return null
+        val afterSeconds = afterMinutes + seconds * 1_000L
+        if (millis > Long.MAX_VALUE - afterSeconds) return null
+        return afterSeconds + millis
+    }
+
+    private fun finiteMillis(value: Double): Long? {
+        if (!value.isFinite() || value < 0.0 || value > Long.MAX_VALUE.toDouble()) return null
+        return value.toLong()
     }
 
     private fun List<String>.indexOfField(name: String): Int =

@@ -5,7 +5,6 @@ import com.nuvio.app.features.addons.httpRequestRaw
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -17,8 +16,6 @@ internal object TheIntroDb {
     const val USER_STATS_URL = "$API_BASE/user/stats"
     const val SUBMISSIONS_URL = "$API_BASE/submissions"
     const val PROVIDER = "theintrodb"
-
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     suspend fun fetchTvIntervals(
         imdbId: String? = null,
@@ -34,7 +31,7 @@ internal object TheIntroDb {
             episode = episode,
             durationMs = durationMs,
         ) ?: return emptyList()
-        return data.tvSkipIntervals()
+        return data.tvSkipIntervals(durationMs)
     }
 
     suspend fun fetchMovieIntervals(
@@ -47,7 +44,7 @@ internal object TheIntroDb {
             imdbId = imdbId,
             durationMs = durationMs,
         ) ?: return emptyList()
-        return data.movieSkipIntervals()
+        return data.movieSkipIntervals(durationMs)
     }
 
     suspend fun getMedia(
@@ -80,7 +77,7 @@ internal object TheIntroDb {
                     body = "",
                 ).body
             }
-            json.decodeFromString<TheIntroDbMediaResponse>(text)
+            parseTheIntroDbMedia(text)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -151,13 +148,7 @@ internal object TheIntroDb {
                 return collected
             }
             if (response.body.isBlank()) return collected
-            val page = try {
-                json.decodeFromString<TheIntroDbSubmissionsPage>(response.body)
-            } catch (cancelled: CancellationException) {
-                throw cancelled
-            } catch (_: Exception) {
-                return collected
-            }
+            val page = parseTheIntroDbSubmissions(response.body) ?: return collected
             collected += page.submissions
             val next = offset + page.submissions.size
             if (page.submissions.isEmpty() || page.submissions.size < pageSize || (page.total > 0 && next >= page.total)) {
@@ -243,21 +234,21 @@ data class TheIntroDbSegment(
     @SerialName("submission_count") val submissionCount: Int? = null,
 )
 
-internal fun TheIntroDbMediaResponse.tvSkipIntervals(): List<SkipInterval> = buildList {
-    addAll(intro.toTheIntroDbIntervals("intro"))
-    addAll(recap.toTheIntroDbIntervals("recap"))
-    addAll(credits.toTheIntroDbIntervals("outro"))
-    addAll(preview.toTheIntroDbIntervals("preview"))
+internal fun TheIntroDbMediaResponse.tvSkipIntervals(durationMs: Long? = null): List<SkipInterval> = buildList {
+    addAll(intro.toTheIntroDbIntervals("intro", durationMs))
+    addAll(recap.toTheIntroDbIntervals("recap", durationMs))
+    addAll(credits.toTheIntroDbIntervals("outro", durationMs))
+    addAll(preview.toTheIntroDbIntervals("preview", durationMs))
 }
 
-internal fun TheIntroDbMediaResponse.movieSkipIntervals(): List<SkipInterval> {
-    val creditIntervals = credits.toTheIntroDbIntervals("movie-credits")
+internal fun TheIntroDbMediaResponse.movieSkipIntervals(durationMs: Long? = null): List<SkipInterval> {
+    val creditIntervals = credits.toTheIntroDbIntervals("movie-credits", durationMs)
     val firstCredits = creditIntervals.firstOrNull()
     val laterCredits = creditIntervals.drop(1).map { it.copy(type = "post-credits") }
-    val introIntervals = intro.toTheIntroDbIntervals("intro")
+    val introIntervals = intro.toTheIntroDbIntervals("intro", durationMs)
     // Every segment type TheIntroDB has gets its own Skip button, movies included.
     return listOfNotNull(firstCredits) + laterCredits + introIntervals +
-        recap.toTheIntroDbIntervals("recap") + preview.toTheIntroDbIntervals("preview")
+        recap.toTheIntroDbIntervals("recap", durationMs) + preview.toTheIntroDbIntervals("preview", durationMs)
 }
 
 @Serializable
@@ -283,11 +274,16 @@ internal data class TheIntroDbUserSubmission(
     @kotlinx.serialization.json.JsonNames("video_duration_ms", "videoDurationMs") val videoDurationMs: Long? = null,
 )
 
-private fun List<TheIntroDbSegment>?.toTheIntroDbIntervals(type: String): List<SkipInterval> {
+private fun List<TheIntroDbSegment>?.toTheIntroDbIntervals(
+    type: String,
+    durationMs: Long?,
+): List<SkipInterval> {
     if (this.isNullOrEmpty()) return emptyList()
+    val durationSec = durationMs?.takeIf { it > 0L }?.div(1000.0)
     return mapNotNull { segment ->
         val start = (segment.startMs ?: 0L) / 1000.0
-        val end = segment.endMs?.div(1000.0) ?: return@mapNotNull null
+        // A null end means the segment runs to the end of the known duration.
+        val end = segment.endMs?.div(1000.0) ?: durationSec ?: return@mapNotNull null
         if (!start.isFinite() || !end.isFinite() || start < 0.0 || end <= start) null
         else SkipInterval(start, end, type, TheIntroDb.PROVIDER)
     }
