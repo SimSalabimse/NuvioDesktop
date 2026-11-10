@@ -94,4 +94,43 @@ class CatalogStatusTest {
         assertEquals(listOf(3, 1), sections[0].rows.map { it.episode })
         assertEquals(listOf(1), sections[1].rows.map { it.episode })
     }
+
+    @Test
+    fun catalogueLinesReadAsSentences() {
+        assertEquals(
+            "The public catalogue has not been checked.",
+            catalogStatusSentence("Public · Not checked"),
+        )
+        assertEquals(
+            "The public catalogue lists no skip marks.",
+            catalogStatusSentence("Public · None"),
+        )
+        assertEquals(
+            "The public catalogue is unavailable.",
+            catalogStatusSentence("Public · Unavailable"),
+        )
+        assertEquals(
+            "The public catalogue lists Intro, Credits.",
+            catalogStatusSentence("Public · Intro, Credits"),
+        )
+        assertEquals(
+            "You have not submitted skip marks.",
+            catalogStatusSentence("Yours · Not submitted"),
+        )
+        assertEquals(
+            "Your skip marks have not been checked.",
+            catalogStatusSentence("Yours · Not checked"),
+        )
+        assertEquals(
+            "Your skip marks are unavailable.",
+            catalogStatusSentence("Yours · Unavailable"),
+        )
+        assertEquals("Your skip marks are ready.", catalogStatusSentence("Yours · Ready"))
+        assertEquals("No recap was found.", catalogStatusSentence("Yours · No recap found"))
+        assertEquals(
+            "Your skip marks include Intro.",
+            catalogStatusSentence("Yours · Intro"),
+        )
+        assertEquals("Public · Not checked", publicCatalogLine(CatalogRead.NotChecked, emptyList()))
+    }
 }

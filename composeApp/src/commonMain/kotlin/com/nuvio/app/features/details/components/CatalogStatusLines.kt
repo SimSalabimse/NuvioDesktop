@@ -17,7 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.app.core.a11y.largeTextLineLimit
+import com.nuvio.app.features.details.catalogStatusSentence
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.features.details.CatalogLabels
 import com.nuvio.app.features.details.CatalogRead
@@ -52,14 +57,20 @@ internal fun CatalogStatusLines(
             text = publicLine,
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.testTag(CATALOG_PUBLIC_LINE_TAG),
+            modifier = Modifier.clearAndSetSemantics {
+                set(SemanticsProperties.TestTag, CATALOG_PUBLIC_LINE_TAG)
+                set(SemanticsProperties.Text, listOf(AnnotatedString(catalogStatusSentence(publicLine))))
+            },
         )
         if (ownLine != null) {
             Text(
                 text = ownLine,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(CATALOG_OWN_LINE_TAG),
+                modifier = Modifier.clearAndSetSemantics {
+                    set(SemanticsProperties.TestTag, CATALOG_OWN_LINE_TAG)
+                    set(SemanticsProperties.Text, listOf(AnnotatedString(catalogStatusSentence(ownLine))))
+                },
             )
         }
     }
@@ -92,8 +103,11 @@ internal fun CatalogStatusChip(
                 text = text,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
+                maxLines = largeTextLineLimit(),
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clearAndSetSemantics {
+                    set(SemanticsProperties.Text, listOf(AnnotatedString(catalogStatusSentence(text))))
+                },
             )
         }
     }

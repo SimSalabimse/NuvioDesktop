@@ -2,9 +2,11 @@ package com.nuvio.app.features.player
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -60,8 +62,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import com.nuvio.app.core.a11y.keyboardFocusRing
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -501,6 +505,34 @@ private fun PlayerHeader(
 }
 
 @Composable
+private fun PlayerIconButton(
+    description: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    background: Color = Color.Transparent,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    content: @Composable () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        modifier = modifier
+            .keyboardFocusRing(interaction, CircleShape)
+            .clip(CircleShape)
+            .background(background)
+            .clickable(
+                interactionSource = interaction,
+                indication = LocalIndication.current,
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .semantics { contentDescription = description }
+            .padding(contentPadding),
+        contentAlignment = Alignment.Center,
+        content = { content() },
+    )
+}
+
+@Composable
 internal fun PlayerHeaderIconButton(
     icon: ImageVector,
     contentDescription: String,
@@ -509,17 +541,15 @@ internal fun PlayerHeaderIconButton(
     onClick: () -> Unit,
     tint: Color = Color.White,
 ) {
-    Box(
-        modifier = Modifier
-            .size(buttonSize)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.35f))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+    PlayerIconButton(
+        description = contentDescription,
+        onClick = onClick,
+        modifier = Modifier.size(buttonSize),
+        background = Color.Black.copy(alpha = 0.35f),
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = tint,
             modifier = Modifier.size(iconSize),
         )
@@ -568,16 +598,14 @@ private fun SideControlButton(
     metrics: PlayerLayoutMetrics,
     onClick: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .padding(metrics.sideButtonPadding),
-        contentAlignment = Alignment.Center,
+    PlayerIconButton(
+        description = contentDescription,
+        onClick = onClick,
+        contentPadding = PaddingValues(metrics.sideButtonPadding),
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = contentDescription,
+            contentDescription = null,
             tint = Color.White,
             modifier = Modifier.size(metrics.playIconSize),
         )
@@ -590,17 +618,24 @@ internal fun PlayPauseControlButton(
     isBuffering: Boolean,
     metrics: PlayerLayoutMetrics,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val playPausePainter = appIconPainter(
-        if (isPlaying) AppIconResource.PlayerPause else AppIconResource.PlayerPlay,
-    )
+    val action = if (isPlaying) {
+        stringResource(Res.string.compose_action_pause)
+    } else {
+        stringResource(Res.string.detail_btn_play)
+    }
+    val description = if (isBuffering) {
+        stringResource(Res.string.a11y_buffering_action, action)
+    } else {
+        action
+    }
 
-    Box(
-        modifier = Modifier
-            .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .padding(metrics.playButtonPadding),
-        contentAlignment = Alignment.Center,
+    PlayerIconButton(
+        description = description,
+        onClick = onClick,
+        modifier = modifier,
+        contentPadding = PaddingValues(metrics.playButtonPadding),
     ) {
         if (isBuffering) {
             NuvioLoadingIndicator(
@@ -608,12 +643,10 @@ internal fun PlayPauseControlButton(
             )
         } else {
             Icon(
-                painter = playPausePainter,
-                contentDescription = if (isPlaying) {
-                    stringResource(Res.string.compose_action_pause)
-                } else {
-                    stringResource(Res.string.detail_btn_play)
-                },
+                painter = appIconPainter(
+                    if (isPlaying) AppIconResource.PlayerPause else AppIconResource.PlayerPlay,
+                ),
+                contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(metrics.playIconSize),
             )
@@ -818,18 +851,17 @@ internal fun LockedPlayerOverlay(
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Box(
+            PlayerIconButton(
+                description = stringResource(Res.string.compose_player_unlock_controls),
+                onClick = onUnlock,
                 modifier = Modifier
                     .size(78.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.52f))
-                    .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
-                    .clickable(onClick = onUnlock),
-                contentAlignment = Alignment.Center,
+                    .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape),
+                background = Color.Black.copy(alpha = 0.52f),
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Lock,
-                    contentDescription = stringResource(Res.string.compose_player_unlock_controls),
+                    contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(34.dp),
                 )

@@ -238,7 +238,7 @@ fun NuvioTheme(
         LocalNuvioPlatformDensity provides density,
         LocalDensity provides Density(
             density = density.density * effectiveDesktopUiScale,
-            fontScale = if (isDesktop) NuvioDesktopFontScale else 1f,
+            fontScale = if (isDesktop) density.fontScale * NuvioDesktopFontScale else 1f,
         ),
         LocalNuvioThemeTokens provides tokens,
         LocalNuvioTypeScale provides NuvioTypeTokens,

@@ -295,7 +295,7 @@ private fun LazyListScope.downloadsRootContent(
                             text = item.title,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
+                            maxLines = com.nuvio.app.core.a11y.largeTextLineLimit(),
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
@@ -475,7 +475,7 @@ private fun DownloadRow(
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface,
                             fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
+                            maxLines = com.nuvio.app.core.a11y.largeTextLineLimit(),
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -483,7 +483,7 @@ private fun DownloadRow(
                         text = displaySubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
+                        maxLines = com.nuvio.app.core.a11y.largeTextLineLimit(),
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(

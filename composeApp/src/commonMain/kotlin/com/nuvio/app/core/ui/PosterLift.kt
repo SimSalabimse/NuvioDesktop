@@ -3,6 +3,9 @@ package com.nuvio.app.core.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.Role
+import com.nuvio.app.core.a11y.keyboardFocusRing
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.RememberObserver
@@ -108,6 +111,7 @@ internal fun Modifier.posterCardClickable(
         }
     }
     return Modifier
+        .keyboardFocusRing(interactionSource, RoundedCornerShape(zoomCornerRadius))
         .desktopPosterHoverScale(
             enabled = hoverScaleEnabled,
             interactionSource = interactionSource,
@@ -116,6 +120,7 @@ internal fun Modifier.posterCardClickable(
         .combinedClickable(
             interactionSource = interactionSource,
             indication = if (!isDesktop && onPosterClickAnchor == null) LocalIndication.current else null,
+            role = Role.Button,
             onClick = {
                 if (onClick != null) {
                     source.bounds?.let { bounds ->
