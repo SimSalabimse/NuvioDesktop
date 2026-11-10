@@ -26,7 +26,7 @@ import com.nuvio.app.core.ui.NuvioTheme
 import com.nuvio.app.core.ui.ProvideDesktopWindowInsets
 import com.nuvio.app.features.discordrpc.DiscordPresenceManager
 import com.nuvio.app.features.p2p.P2pStreamingEngine
-import com.nuvio.app.features.plugins.configureDesktopQuickJsLibrary
+import com.nuvio.app.core.tracking.preloadTrackingProvidersAsync
 import com.nuvio.app.features.player.PlatformPlayerSurface
 import com.nuvio.app.features.player.desktop.DesktopAppFullscreenController
 import com.nuvio.app.features.player.desktop.DesktopHostOs
@@ -64,7 +64,6 @@ fun main(args: Array<String>) {
     }
     DesktopStartupProbe.phase("renderer") { applyDesktopRendererPreference() }
     DesktopStartupProbe.phase("sentry") { SentryInitializer.start() }
-    DesktopStartupProbe.phase("quickjs") { configureDesktopQuickJsLibrary() }
     DesktopStartupProbe.phase("chrome") {
         configureDesktopChrome()
         configureLinuxSwingGlobalsBeforeAwt()
@@ -79,6 +78,7 @@ fun main(args: Array<String>) {
     DesktopStartupProbe.phase("discord") { DiscordPresenceManager.start() }
 
     DesktopStartupProbe.mark("application")
+    preloadTrackingProvidersAsync()
     application {
         val appIconState by AppIconRepository.state.collectAsState()
         val smokePlayerUrl = (
