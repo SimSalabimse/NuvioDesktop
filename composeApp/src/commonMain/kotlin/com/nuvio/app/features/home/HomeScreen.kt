@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.AppScreenTab
+import com.nuvio.app.core.perf.StartupMarkers
 import com.nuvio.app.isDesktop
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
@@ -131,6 +133,7 @@ fun HomeScreen(
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     onFirstCatalogRendered: (() -> Unit)? = null,
 ) {
+    StartupMarkers.mark("home_composed")
     LaunchedEffect(Unit) {
         withContext(Dispatchers.Default) {
             AddonRepository.initialize()
@@ -143,6 +146,12 @@ fun HomeScreen(
         val authState = AuthRepository.state.value
         if (authState !is AuthState.Authenticated || authState.isAnonymous) {
             WatchProgressSourceCoordinator.ensureStarted()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        withFrameNanos {
+            StartupMarkers.homeFramePresented()
         }
     }
 

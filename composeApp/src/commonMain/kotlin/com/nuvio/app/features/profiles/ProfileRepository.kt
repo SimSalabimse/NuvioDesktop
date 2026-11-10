@@ -2,6 +2,7 @@ package com.nuvio.app.features.profiles
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
+import com.nuvio.app.core.perf.StartupMarkers
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.auth.isAnonymous
 import com.nuvio.app.core.network.SupabaseProvider
@@ -163,18 +164,27 @@ object ProfileRepository {
     }
 
     private fun selectProfile(profileIndex: Int) {
+        StartupMarkers.mark("profile_select_start")
         activeProfileIndex = profileIndex
+        StartupMarkers.mark("profile_index_set")
         CustomPosterUrlRepository.onProfileChanged()
+        StartupMarkers.mark("custom_poster")
         val selectedProfile = _state.value.profiles.find { it.profileIndex == profileIndex }
         _state.value = _state.value.copy(
             activeProfile = selectedProfile,
             hasEverSelectedProfile = selectedProfile != null || _state.value.hasEverSelectedProfile,
         )
+        StartupMarkers.mark("profile_state_copied")
         persist()
+        StartupMarkers.mark("profile_persisted")
         WatchedRepository.onProfileChanged(profileIndex)
+        StartupMarkers.mark("after_watched")
         TrackingSettingsRepository.onProfileChanged()
+        StartupMarkers.mark("after_tracking_settings")
         ensureTrackingProvidersRegistered()
+        StartupMarkers.mark("after_tracking_register")
         TrackingProviderRegistry.onProfileChanged()
+        StartupMarkers.mark("after_tracking")
         LibraryRepository.onProfileChanged(profileIndex)
         LibraryDisplaySettingsRepository.onProfileChanged()
         WatchProgressRepository.onProfileChanged(profileIndex)
@@ -182,6 +192,7 @@ object ProfileRepository {
         if (com.nuvio.app.core.build.AppFeaturePolicy.pluginsEnabled) {
             PluginRepository.onProfileChanged(profileIndex)
         }
+        StartupMarkers.mark("after_library")
         ThemeSettingsRepository.onProfileChanged()
         PosterCardStyleRepository.onProfileChanged()
         CardDepthStyleRepository.onProfileChanged()
@@ -190,10 +201,12 @@ object ProfileRepository {
         P2pSettingsRepository.onProfileChanged()
         HomeCatalogSettingsRepository.onProfileChanged()
         HomeRepository.clear()
+        StartupMarkers.mark("after_theme")
         MetaScreenSettingsRepository.onProfileChanged()
         com.nuvio.app.features.shuffle.EpisodeShuffleRepository.onProfileChanged()
         ContinueWatchingPreferencesRepository.onProfileChanged()
         com.nuvio.app.features.watchprogress.ContinueWatchingEnrichmentCache.onProfileChanged()
+        StartupMarkers.mark("after_continue")
         EpisodeReleaseNotificationsRepository.onProfileChanged()
         TmdbSettingsRepository.onProfileChanged()
         MdbListSettingsRepository.onProfileChanged()
@@ -204,6 +217,8 @@ object ProfileRepository {
         DownloadsRepository.onProfileChanged()
         ServerRepository.onProfileChanged()
         ProfileSettingsSync.onProfileChanged()
+        StartupMarkers.mark("after_rest")
+        StartupMarkers.mark("profile_select_end")
     }
 
     suspend fun pushProfiles(profiles: List<ProfilePushPayload>) {
