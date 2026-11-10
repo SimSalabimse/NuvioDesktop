@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import com.nuvio.app.core.ui.scrollEdgeInset
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
@@ -308,6 +308,15 @@ fun DesktopDetailHero(
                     color = colorScheme.onSurface,
                 )
             }
+            if (meta.type != "series") {
+                Spacer(modifier = Modifier.height(space.s12))
+                IntroDbStatusBlock(
+                    parentMetaId = meta.id,
+                    season = null,
+                    episode = null,
+                    modifier = Modifier.widthIn(max = 520.dp),
+                )
+            }
             Spacer(modifier = Modifier.height(space.s28))
             val shuffleAction = onShuffleClick?.let { onClick ->
                 DetailSecondaryAction(
@@ -366,9 +375,8 @@ fun DesktopDetailHero(
                 enabled = heroTrailerReady,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .statusBarsPadding()
                     .padding(
-                        top = space.s32,
+                        top = scrollEdgeInset(),
                         end = actionHorizontalInset + if (isFullscreenActionSupported) 60.dp else 0.dp,
                     )
                     .size(48.dp)
@@ -398,8 +406,7 @@ fun DesktopDetailHero(
             FullscreenActionButton(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = space.s32, end = actionHorizontalInset),
+                    .padding(top = scrollEdgeInset(), end = actionHorizontalInset),
                 buttonSize = 48.dp,
                 iconSize = 24.dp,
                 containerColor = colorScheme.surfaceVariant.copy(alpha = 0.82f),
