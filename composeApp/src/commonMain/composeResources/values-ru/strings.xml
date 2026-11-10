@@ -31,8 +31,6 @@
     <string name="action_retry">Повторить попытку</string>
     <string name="action_save">Сохранить</string>
     <string name="action_saving">Сохранение…</string>
-    <string name="action_switch">Переключить</string>
-    <string name="action_validate">Подтвердить</string>
     <string name="addon_installing">Установка</string>
     <string name="addon_title">Аддоны</string>
     <string name="addons_badge_active">Активный</string>
@@ -50,8 +48,6 @@
     <string name="addons_appstore_empty_title">Сделайте Nuvio своим.</string>
     <string name="addons_appstore_input_placeholder">Аддон URL</string>
     <string name="addons_appstore_install_button">Добавить аддон</string>
-    <string name="store_empty_unavailable_title">Здесь пока ничего</string>
-    <string name="store_empty_unavailable_message">Вашим текущим аддонам здесь нечего показывать.</string>
     <string name="addons_empty_subtitle">Добавьте манифест URL, чтобы начать загрузку каталогов, метаданных, потоков или субтитров в Nuvio.</string>
     <string name="addons_empty_title">Аддоны пока не установлены.</string>
     <string name="addons_error_enter_url">Введите аддон URL.</string>
@@ -91,7 +87,6 @@
     <string name="collections_editor_cover_none">Нет</string>
     <string name="collections_editor_cover">Обложка</string>
     <string name="collections_editor_create_collection">Создать коллекцию</string>
-    <string name="collections_editor_done">Готово</string>
     <string name="collections_editor_edit_collection">Редактировать коллекцию</string>
     <string name="collections_editor_edit_folder">Редактировать папку</string>
     <string name="collections_editor_folder_editor_help">Установите идентификатор папки, представление и источники каталога с той же структурой, что и в главном редакторе коллекций.</string>
@@ -254,11 +249,8 @@
     <string name="collections_editor_trakt_sort_popular">Популярный</string>
     <string name="collections_editor_trakt_sort_percentage">Процент</string>
     <string name="collections_editor_trakt_sort_votes">Голоса</string>
-    <string name="collections_editor_trakt_enter_name_url_or_id">Введите имя списка Trakt, URL или идентификатор.</string>
-    <string name="collections_editor_trakt_enter_id_or_url">Введите идентификатор списка Trakt или URL.</string>
     <string name="collections_editor_trakt_load_failed">Не удалось загрузить список Trakt.</string>
     <string name="collections_editor_trakt_no_lists_found">Списков Trakt не найдено</string>
-    <string name="collections_editor_trakt_resolved_subtitle">Разрешенный список Trakt</string>
     <string name="collections_editor_trakt_fallback_title">Trakt Список %1$d</string>
     <string name="collections_editor_tmdb_genre_action">Действие</string>
     <string name="collections_editor_tmdb_genre_adventure">Приключение</string>
@@ -423,7 +415,6 @@
     <string name="compose_player_capture_line">Захват</string>
     <string name="compose_player_close">Закрыть проигрыватель</string>
     <string name="compose_player_color">Цвет</string>
-    <string name="compose_player_currently_playing">Сейчас воспроизводится</string>
     <string name="compose_player_episode_code_episode_only">E%1$d</string>
     <string name="compose_player_episode_code_full">S%1$d E%2$d</string>
     <string name="compose_player_episode_title_format">S%1$d E%2$d • %3$s</string>
@@ -482,8 +473,6 @@
     <string name="compose_search_discover_title">Подборки</string>
     <string name="compose_search_empty_failed_message">Установленные дополнения не смогли вернуть действительные результаты поиска.</string>
     <string name="compose_search_empty_failed_title">Поиск не удался</string>
-    <string name="compose_search_empty_no_active_addons_message">Включите или добавьте дополнение перед поиском.</string>
-    <string name="compose_search_empty_no_active_addons_title">Нет активных дополнений</string>
     <string name="compose_search_empty_no_results_message">Установленные каталоги с возможностью поиска не дали ни одного совпадения по этому запросу.</string>
     <string name="compose_search_empty_no_results_title">Результаты не найдены</string>
     <string name="compose_search_empty_no_search_catalogs_message">Ваши включенные дополнения не поддерживают поиск по каталогу.</string>
@@ -527,9 +516,6 @@
     <string name="compose_settings_root_check_updates_description">Скачать последнюю версию</string>
     <string name="compose_settings_root_check_updates_title">Проверьте наличие обновлений</string>
     <string name="compose_settings_root_content_discovery_description">Управляйте надстройками и источниками обнаружения.</string>
-    <string name="compose_settings_root_content_discovery_description_appstore">Управляйте аддонами и выбирайте, что появится в Nuvio.</string>
-    <string name="compose_settings_root_downloads_description">Управляйте загруженными фильмами и эпизодами.</string>
-    <string name="compose_settings_root_downloads_description_appstore">Управляйте тем, что вы сохранили на этом устройстве.</string>
     <string name="compose_settings_root_downloads_title">Загрузки</string>
     <string name="compose_settings_root_general_section">ОБЩИЕ</string>
     <string name="compose_settings_root_integrations_description">Управление доступными интеграциями</string>
@@ -538,7 +524,6 @@
     <string name="compose_settings_root_streams_description">Отображение потоков и правила URL значков.</string>
     <string name="compose_settings_root_switch_profile_description">Перейдите на другой профиль.</string>
     <string name="compose_settings_root_switch_profile_title">Переключить профиль</string>
-    <string name="compose_settings_root_trakt_description">Откройте экран подключения Trakt.</string>
     <string name="compose_settings_root_tracking_description">Подключите поставщиков отслеживания и выберите, какой из них будет поддерживать вашу библиотеку, и продолжайте просмотр.</string>
     <string name="settings_search_empty">Настройки не найдены.</string>
     <string name="settings_search_placeholder">Настройки поиска...</string>
@@ -594,19 +579,15 @@
     <string name="settings_licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="settings_licenses_attributions_exoplayer_body">Используется для воспроизведения на сборках Android.</string>
     <string name="settings_licenses_attributions_exoplayer_license">Лицензия Apache, версия 2.0.</string>
-    <string name="compose_trakt_list_picker_loading">Загрузка списков Trakt…</string>
-    <string name="compose_trakt_list_picker_subtitle">Выберите, где сохранить этот фильм или сериал в Trakt.</string>
     <string name="compose_tracking_list_picker_loading">Загрузка списков…</string>
     <string name="compose_tracking_list_picker_subtitle">Выберите, где сохранить этот фильм или сериал</string>
     <string name="action_donate">Пожертвовать</string>
-    <string name="action_support_nuvio">Поддержка Nuvio</string>
     <string name="cw_action_go_to_details">Перейти к деталям</string>
     <string name="cw_action_remove">Удалить</string>
     <string name="cw_action_start_from_beginning">Начать с начала</string>
     <string name="detail_btn_play">Воспроизвести</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
     <string name="detail_comments_badge_review">Обзор</string>
-    <string name="detail_comments_badge_spoiler">Спойлер</string>
     <string name="detail_comments_empty">Обзоров Trakt пока нет.</string>
     <string name="detail_comments_likes">%1$d нравится</string>
     <string name="detail_comments_spoiler_card">Этот комментарий содержит спойлеры.</string>
@@ -799,7 +780,6 @@
     <string name="settings_continue_watching_up_next_title">Следующий из самого дальнего эпизода</string>
     <string name="settings_continue_watching_use_episode_thumbnails_description">Предпочитайте миниатюры эпизодов, если они доступны.</string>
     <string name="settings_continue_watching_use_episode_thumbnails_title">Предпочитайте миниатюры эпизодов при продолжении просмотра</string>
-    <string name="settings_content_discovery_section_home">ГЛАВНАЯ</string>
     <string name="settings_content_discovery_section_sources">ИСТОЧНИКИ</string>
     <string name="settings_content_discovery_addons_description">Устанавливайте, удаляйте, обновляйте и сортируйте источники контента.</string>
     <string name="settings_content_discovery_addons_description_appstore">Добавляйте и управляйте надстройками, которые вы используете с Nuvio.</string>
@@ -886,9 +866,7 @@
     <string name="settings_fusion_badge_preview_empty">В этом URL нет изображений значков в стиле Fusion.</string>
     <string name="settings_fusion_badge_group_title">Группа %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Другие значки Fusion</string>
-    <string name="settings_debrid_key_valid">Ключ API подтвержден.</string>
     <string name="settings_debrid_key_invalid">Не удалось проверить этот ключ API.</string>
-    <string name="settings_mdb_add_api_key_first">Прежде чем включать рейтинги, добавьте ниже ключ MDBList API.</string>
     <string name="settings_mdb_api_key_description">Требуется для получения рейтингов из MDBList.</string>
     <string name="settings_mdb_api_key_label">API Ключ</string>
     <string name="settings_mdb_api_key_title">API Ключ</string>
@@ -901,8 +879,6 @@
     <string name="settings_meta_actions_description">Кнопки воспроизведения и сохранения.</string>
     <string name="settings_meta_cast">В ролях</string>
     <string name="settings_meta_cast_description">Основной актерский состав.</string>
-    <string name="settings_meta_cinematic_background">Кинематографический фон</string>
-    <string name="settings_meta_cinematic_background_description">Размытый фон позади контента, похожий на экран потоков.</string>
     <string name="settings_meta_background_mode">Фоновый режим</string>
     <string name="settings_meta_background_mode_description">Выберите, как иллюстрации будут отображаться за страницами метаданных.</string>
     <string name="settings_meta_background_mode_normal">Нормальный</string>
@@ -956,8 +932,6 @@
     <string name="settings_notifications_test_for_title">Отправьте локальное уведомление о тестировании для %1$s.</string>
     <string name="settings_notifications_test_requires_saved_show">Сначала сохраните шоу в своей библиотеке, чтобы проверить уведомления.</string>
     <string name="settings_notifications_test_title">Уведомление о тестировании</string>
-    <string name="community_section_title">Сообщество</string>
-    <string name="community_section_description">Посмотрите, как люди создают и поддерживают Nuvio на мобильных устройствах, телевидении и в Интернете.</string>
     <string name="community_membership_title">Членство сторонника Nuvio</string>
     <string name="community_membership_description">Поддержка Nuvio помогает охватить инфраструктуру и постоянное развитие, сохраняя при этом основной опыт бесплатным для всех.</string>
     <string name="community_view_supporter_membership">Просмотр членства сторонников</string>
@@ -981,7 +955,6 @@
     <string name="community_tab_supporters">Сторонники</string>
     <string name="community_open_github">Открыть GitHub</string>
     <string name="community_github_profile_unavailable">Профиль GitHub недоступен.</string>
-    <string name="community_no_message_attached">Сообщение не прикреплено.</string>
     <string name="community_loading_contributors">Загрузка участников...</string>
     <string name="community_loading_supporters">Загрузка сторонников...</string>
     <string name="community_load_contributors_failed">Не удалось загрузить участников</string>
@@ -992,7 +965,6 @@
     <string name="community_error_unable_load_supporters">Не удалось загрузить сторонников.</string>
     <string name="community_error_contributors_request_failed">Не удалось загрузить участников прямо сейчас.</string>
     <string name="community_error_supporters_request_failed">Не удалось загрузить сторонников.</string>
-    <string name="community_total_commits">Общее количество коммитов %1$d</string>
     <string name="community_month_jan">Ян</string>
     <string name="community_month_feb">февраль</string>
     <string name="community_month_mar">Мар</string>
@@ -1026,7 +998,6 @@
     <string name="settings_playback_decoder_prefer_app">Предпочитаю декодеры приложений (FFmpeg)</string>
     <string name="settings_playback_decoder_prefer_device">Предпочитаю декодеры устройств</string>
     <string name="settings_playback_decoder_priority">Приоритет декодера</string>
-    <string name="settings_playback_dialog_close">Нажмите снаружи, чтобы закрыть</string>
     <string name="settings_playback_dialog_save_close">Нажмите снаружи, чтобы сохранить и закрыть</string>
     <string name="settings_playback_duration_day_one">%1$d день</string>
     <string name="settings_playback_duration_days">%1$d дней</string>
@@ -1037,7 +1008,6 @@
     <string name="settings_playback_external_player">Внешний проигрыватель</string>
     <string name="settings_playback_external_player_app">Приложение внешнего проигрывателя</string>
     <string name="settings_playback_external_player_description_android">Откройте новое воспроизведение с помощью видеоприложения Android по умолчанию или средства выбора системы.</string>
-    <string name="settings_playback_external_player_description_ios">Откройте новое воспроизведение с выбранным установленным плеером.</string>
     <string name="settings_playback_external_player_forward_subtitles">Переслать субтитры на внешний проигрыватель</string>
     <string name="settings_playback_external_player_forward_subtitles_description">Получите субтитры дополнения на предпочитаемом вами языке и передайте их внешнему проигрывателю.</string>
     <string name="settings_playback_external_player_send_skip_segments">Отправка временных меток вступления и завершения</string>
@@ -1067,13 +1037,6 @@
     <string name="settings_playback_option_original_hint">Требуется, чтобы обогащение TMDB было включено.</string>
     <string name="settings_playback_option_forced">Принудительный</string>
     <string name="settings_playback_option_none">Нет</string>
-    <string name="settings_playback_addon_subtitle_startup_all">Все субтитры аддона</string>
-    <string name="settings_playback_addon_subtitle_startup_all_description">Предварительная загрузка и прикрепление всех дополнительных субтитров перед воспроизведением. Самый медленный запуск.</string>
-    <string name="settings_playback_addon_subtitle_startup_fast">Быстрый запуск</string>
-    <string name="settings_playback_addon_subtitle_startup_fast_description">Немедленно начните воспроизведение. Выбор субтитров аддона может привести к однократной перезагрузке плеера.</string>
-    <string name="settings_playback_addon_subtitle_startup_mode">Загрузка субтитров аддона</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred">Предпочитаемые языки</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred_description">Предварительно загрузите дополнительные субтитры перед воспроизведением и прикрепите треки на предпочитаемом/дополнительном языке.</string>
     <string name="settings_playback_prefer_binge_group">Предпочитать binge-группу (следующий эпизод)</string>
     <string name="settings_playback_prefer_binge_group_description">Сначала попробуйте тот же исходный профиль (то же дополнение/группу качества) перед обычными правилами автоматического воспроизведения.</string>
     <string name="settings_playback_reuse_binge_group">Повторное использование группы Binge</string>
@@ -1166,7 +1129,6 @@
     <string name="settings_playback_stream_selection_mode_regex_description">Воспроизведите первый источник, текст которого соответствует вашему шаблону регулярного выражения.</string>
     <string name="settings_playback_stream_timeout">Тайм-аут выбора потока</string>
     <string name="settings_playback_stream_timeout_description">Прежде чем выбирать, подождите, пока появятся дополнения.</string>
-    <string name="settings_playback_threshold_minutes">Пороговые минуты</string>
     <string name="settings_playback_threshold_mode">Пороговый режим следующего эпизода</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">Минуты до конца</string>
     <string name="settings_playback_threshold_mode_percentage">Процент</string>
@@ -1209,7 +1171,6 @@
     <string name="settings_tmdb_section_modules">МОДУЛИ</string>
     <string name="settings_tmdb_section_title">TMDB ОБОГАЩЕНИЕ</string>
     <string name="settings_trakt_approval_redirect">После одобрения вы будете автоматически перенаправлены обратно.</string>
-    <string name="settings_trakt_authentication">АУТЕНТИФИКАЦИЯ</string>
     <string name="settings_trakt_comments">Комментарии</string>
     <string name="settings_trakt_comments_description">Показывать обзоры Trakt на страницах метаданных</string>
     <string name="settings_trakt_connect">Подключить Trakt</string>
@@ -1217,7 +1178,6 @@
     <string name="settings_trakt_default_user">Пользователь Trakt</string>
     <string name="settings_trakt_disconnect">Отключить</string>
     <string name="settings_trakt_failed_open_browser">Не удалось открыть браузер</string>
-    <string name="settings_trakt_features">ФУНКЦИИ</string>
     <string name="settings_trakt_finish_sign_in">Завершить согласование подключения</string>
     <string name="settings_trakt_intro_description">Синхронизируйте свой список просмотра, следите за прогрессом, продолжайте просмотр, просматривайте и личные списки с помощью Trakt.</string>
     <string name="settings_trakt_missing_credentials">В local.properties отсутствует TRAKT_CLIENT_ID/TRAKT_CLIENT_SECRET.</string>
@@ -1278,8 +1238,6 @@
     <string name="settings_simkl_sync_info_docs">Прочтите руководство по синхронизации Simkl.</string>
     <string name="settings_simkl_authorization_revoked">Авторизация Simkl была отозвана. Подключитесь снова.</string>
     <string name="tracking_source_simkl">Simkl</string>
-    <string name="tracking_library_source_simkl_selected">Simkl выбран список наблюдения</string>
-    <string name="tracking_watch_progress_simkl_selected">Источник прогресса просмотра установлен на Simkl.</string>
     <string name="tracking_watch_progress_dialog_subtitle">Выберите сервис, из которого Nuvio будет брать прогресс для продолжения просмотра. Скробблинг остается активным для каждого подключенного сервиса.</string>
     <string name="trakt_library_source_title">Источник библиотеки</string>
     <string name="trakt_library_source_subtitle">Выберите, какой источник Nuvio читает для вашей библиотеки.</string>
@@ -1287,16 +1245,11 @@
     <string name="trakt_library_source_dialog_subtitle">Выберите сервис, который читает Nuvio для вашей библиотеки. Воспроизведение скроблируется для каждой подключенной службы.</string>
     <string name="trakt_library_source_trakt">Trakt</string>
     <string name="trakt_library_source_nuvio">Библиотека Nuvio</string>
-    <string name="trakt_library_source_trakt_selected">Выбрана библиотека Trakt.</string>
-    <string name="trakt_library_source_nuvio_selected">Выбрана библиотека Nuvio.</string>
     <string name="trakt_watch_progress_title">Смотреть прогресс</string>
     <string name="trakt_watch_progress_subtitle">Выберите, какие источники прогресса возобновят, и продолжайте просмотр.</string>
     <string name="trakt_watch_progress_dialog_title">Смотреть прогресс</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Выберите, следует ли для возобновления и продолжения просмотра использовать синхронизацию Trakt или Nuvio, пока скробблинг Trakt остается активным.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Синхронизация</string>
-    <string name="trakt_watch_progress_trakt_selected">Источник прогресса просмотра установлен на Trakt.</string>
-    <string name="trakt_watch_progress_nuvio_selected">В качестве источника прогресса просмотра установлено значение Nuvio Sync.</string>
     <string name="trakt_more_like_this_source_title">Больше похоже на этот источник</string>
     <string name="trakt_more_like_this_source_subtitle">Выберите, откуда берутся рекомендации на страницах с подробными сведениями.</string>
     <string name="trakt_more_like_this_source_dialog_title">Больше похоже на этот источник</string>
@@ -1415,7 +1368,6 @@
     <string name="lang_zulu">Зулу</string>
     <string name="action_clear">Очистить</string>
     <string name="action_continue">Продолжить</string>
-    <string name="action_ignore">игнорировать</string>
     <string name="action_install">Установить</string>
     <string name="action_later">Позже</string>
     <string name="action_no">Нет</string>
@@ -1450,7 +1402,6 @@
     <string name="discover_empty_no_catalogs_title">Нет каталогов поиска</string>
     <string name="discover_empty_no_results_message">Выбранный каталог и фильтры не вернули результатов.</string>
     <string name="discover_empty_no_results_title">Названия не найдены</string>
-    <string name="discover_empty_no_active_addons_message">Включите или добавьте дополнение перед просмотром Discover.</string>
     <string name="discover_select_catalog">Выберите каталог</string>
     <string name="discover_select_genre">Выберите жанр</string>
     <string name="discover_select_type">Выберите тип</string>
@@ -1466,7 +1417,6 @@
     <string name="home_continue_watching_watched">%1$s смотрел</string>
     <string name="home_continue_watching_hours_minutes_left">%1$dh %2$dm осталось</string>
     <string name="home_continue_watching_minutes_left">%1$dm осталось</string>
-    <string name="home_empty_no_active_addons_message">Включите или добавьте дополнение, чтобы просматривать каталоги на главной странице.</string>
     <string name="home_empty_no_rows_message">Включенные вами дополнения не предоставляют каталоги, которые можно было бы отобразить на главной странице.</string>
     <string name="home_empty_no_rows_title">Нет доступного домашнего контента</string>
     <string name="home_load_failed_title">Не удалось загрузить главную страницу</string>
@@ -1489,8 +1439,6 @@
     <string name="meta_section_trailers_description">Полка трейлеров и быстрый запуск воспроизведения.</string>
     <string name="network_back_online">Вернуться в онлайн</string>
     <string name="network_cannot_reach_servers">Не могу связаться с серверами</string>
-    <string name="network_error_empty_response_body">Пустое тело ответа</string>
-    <string name="network_error_request_failed_http">Не удалось выполнить запрос с HTTP %1$d.</string>
     <string name="network_no_internet_connection">Нет подключения к Интернету</string>
     <string name="person_age">(возраст %1$d)</string>
     <string name="person_born">Родился %1$s%2$s</string>
@@ -1553,9 +1501,6 @@
     <string name="streams_open_internal_player">Открыть во встроенном проигрывателе</string>
     <string name="streams_empty_load_failed_message">Установленные дополнения потока не смогли вернуть действительный ответ потока.</string>
     <string name="streams_empty_load_failed_title">Не удалось загрузить потоки</string>
-    <string name="streams_empty_no_addons_message">Сначала установите аддон, чтобы загрузить потоки для этого фильма или сериала.</string>
-    <string name="streams_empty_no_stream_addon_message">Установленные аддоны не предоставляют потоки для этого типа контента.</string>
-    <string name="streams_empty_no_stream_addon_title">Нет доступного дополнения к потоку</string>
     <string name="streams_empty_no_streams_message">Ни один из установленных аддонов не вернул потоки для этого фильма или сериала.</string>
     <string name="streams_episode_badge">S%1$d E%2$d</string>
     <string name="streams_episode_fallback_title">Эпизод</string>
@@ -1583,7 +1528,6 @@
     <string name="trailer_close">Закрыть трейлер</string>
     <string name="trailer_unable_to_play">Не могу воспроизвести трейлер</string>
     <string name="trakt_lists_load_failed">Не удалось загрузить списки Trakt.</string>
-    <string name="trakt_lists_update_failed">Не удалось обновить списки Trakt.</string>
     <string name="tracking_lists_update_failed">Не удалось обновить списки отслеживания.</string>
     <string name="tracking_list_status_rewritten">%1$s поместил этот фильм или сериал в %2$s вместо %3$s.</string>
     <string name="tracking_remove_confirmation_title">Удалить из %1$s?</string>
@@ -1591,11 +1535,8 @@
     <string name="tracking_removal_impact_history">смотрел историю</string>
     <string name="tracking_removal_impact_rating">рейтинг</string>
     <string name="tracking_removal_impact_history_and_rating">смотрел историю и рейтинг</string>
-    <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">Проверка обновлений не удалась</string>
     <string name="updates_download_failed">Загрузка не удалась</string>
-    <string name="updates_download_empty_body">Пустое тело загрузки</string>
-    <string name="updates_download_file_missing">Загруженный файл обновления отсутствует.</string>
     <string name="updates_downloading_progress">Загрузка %1$d%</string>
     <string name="updates_debug_test_complete">Тестирование баннера завершено</string>
     <string name="updates_debug_test_description">Предварительный просмотр баннера и имитация процесса загрузки.</string>
@@ -1603,8 +1544,6 @@
     <string name="updates_install_failed">Невозможно начать установку</string>
     <string name="updates_latest_version">Вы используете последнюю версию.</string>
     <string name="updates_message_allow_installs">Включите установку приложений для Nuvio, затем вернитесь и продолжите.</string>
-    <string name="updates_message_downloading">Загрузка обновления...</string>
-    <string name="updates_message_no_updates">Обновлений не найдено.</string>
     <string name="updates_message_ready">Новая версия готова к установке.</string>
     <string name="updates_not_available">В этой сборке обновления внутри приложения недоступны.</string>
     <string name="updates_no_release_notes">Никаких примечаний к выпуску предоставлено не было.</string>
@@ -1612,7 +1551,6 @@
     <string name="updates_release_notes">Примечания к выпуску</string>
     <string name="updates_title_allow_installs">Разрешить установку продолжить</string>
     <string name="updates_title_available">Доступно обновление</string>
-    <string name="updates_title_status">Обновить статус</string>
     <string name="addon_already_installed">Этот аддон уже установлен.</string>
     <string name="addon_invalid_url">Введите действительный аддон URL.</string>
     <string name="addon_load_manifest_failed">Не удалось загрузить манифест</string>
@@ -1637,17 +1575,12 @@
     <string name="downloads_live_downloading_with_total">Загрузка %1$s • %2$s / %3$s</string>
     <string name="downloads_live_failed">Загрузка не удалась</string>
     <string name="downloads_live_paused">Приостановлено %1$s</string>
-    <string name="library_remove_confirm">Удалить</string>
-    <string name="library_remove_from_list_message">Удалить %1$s из %2$s?</string>
-    <string name="library_remove_message">Удалить %1$s из своей библиотеки?</string>
-    <string name="library_remove_title">Удалить из библиотеки?</string>
     <string name="media_movie">Фильм</string>
     <string name="notifications_channel_episode_releases_description">Оповещения о выходе нового эпизода сохраненного шоу.</string>
     <string name="notifications_test_preview_body">Оповещение о выпуске предварительного просмотра эпизода.</string>
     <string name="notifications_test_send_failed">Не удалось отправить тестовое уведомление.</string>
     <string name="notifications_test_sent_for">Уведомление о тестировании отправлено для %1$s.</string>
     <string name="player_unable_to_play_stream">Невозможно воспроизвести этот поток.</string>
-    <string name="player_engine_unavailable_rebuild">Движок проигрывателя MPV недоступен. Пожалуйста, пересоберите приложение.</string>
     <string name="profile_pin_changed_requires_refresh">Этот профиль PIN изменился. Подключитесь один раз, чтобы обновить блокировку на этом устройстве.</string>
     <string name="profile_pin_clear_failed">Не удалось снять блокировку PIN. Попробуйте еще раз.</string>
     <string name="profile_pin_clear_requires_internet">Подключитесь к Интернету, чтобы снять блокировку PIN.</string>
@@ -1656,13 +1589,10 @@
     <string name="profile_pin_set_requires_internet">Подключитесь к Интернету, чтобы установить PIN.</string>
     <string name="profile_primary_addons_required">В этом профиле используются основные дополнения.</string>
     <string name="streams_failed_to_load_scraper">Не удалось загрузить %1$s.</string>
-    <string name="stream_default_name">поток</string>
     <string name="source_embedded">Встроенный</string>
     <string name="trakt_authorization_denied">Авторизация отклонена</string>
     <string name="trakt_authorization_expired_reconnect">Ваша авторизация Trakt больше не действительна. Повторно подключите свою учетную запись Trakt.</string>
     <string name="trakt_complete_sign_in_browser">Завершите вход Trakt в браузере.</string>
-    <string name="trakt_connected">Подключен к Trakt.</string>
-    <string name="trakt_disconnected">Отключено от Trakt</string>
     <string name="trakt_invalid_callback">Неверный обратный вызов Trakt</string>
     <string name="trakt_invalid_callback_state">Недопустимое состояние обратного вызова Trakt</string>
     <string name="trakt_invalid_token_response">Неверный ответ токена Trakt</string>
@@ -1671,16 +1601,6 @@
     <string name="trakt_missing_auth_code">Trakt не вернул код авторизации</string>
     <string name="trakt_missing_credentials">Отсутствуют учетные данные Trakt.</string>
     <string name="trakt_progress_load_failed">Не удалось загрузить прогресс Trakt.</string>
-    <string name="trakt_public_list">Публичный список Trakt</string>
-    <string name="trakt_public_list_enter_valid_id_or_url">Введите действительный идентификатор списка Trakt или URL.</string>
-    <string name="trakt_public_list_items_count">%1$d элементы</string>
-    <string name="trakt_public_list_likes_count">%1$d нравится</string>
-    <string name="trakt_public_list_missing_credentials">Отсутствуют учетные данные Trakt в local.properties (TRAKT_CLIENT_ID).</string>
-    <string name="trakt_public_list_missing_id">Отсутствует идентификатор списка Trakt.</string>
-    <string name="trakt_public_list_missing_numeric_id">В списке Trakt не указан числовой идентификатор.</string>
-    <string name="trakt_public_list_not_found_or_not_public">Список Trakt не найден или не является общедоступным</string>
-    <string name="trakt_public_list_rate_limit_reached">Достигнут предел скорости Trakt</string>
-    <string name="trakt_public_list_request_failed">Запрос Trakt не выполнен.</string>
     <string name="trakt_sign_in_complete_failed">Не удалось завершить вход в систему Trakt.</string>
     <string name="trakt_user_fallback">Пользователь Trakt</string>
     <string name="trakt_watchlist">Список наблюдения</string>
@@ -1694,29 +1614,9 @@
     <string name="trakt_error_add_list_failed">Не удалось добавить в список Trakt.</string>
     <string name="trakt_error_missing_ids">Отсутствуют совместимые идентификаторы Trakt.</string>
     <string name="trakt_error_empty_response">Пустое тело ответа</string>
-    <string name="tmdb_sources_collection_fallback_title">Коллекция TMDB %1$d</string>
-    <string name="tmdb_sources_collection_not_found">Коллекция TMDB не найдена</string>
-    <string name="tmdb_sources_company_fallback_title">TMDB Производство %1$d</string>
-    <string name="tmdb_sources_company_not_found">Компания TMDB не найдена</string>
-    <string name="tmdb_sources_director_fallback_title">Режиссер TMDB %1$d</string>
-    <string name="tmdb_sources_discover_no_data">TMDB обнаружение не вернуло данных</string>
-    <string name="tmdb_sources_discover_title">TMDB Discover</string>
-    <string name="tmdb_sources_invalid_id_or_url">Введите действительный идентификатор TMDB или URL.</string>
-    <string name="tmdb_sources_list_fallback_title">TMDB Список %1$d</string>
-    <string name="tmdb_sources_list_not_found">Список TMDB не найден</string>
-    <string name="tmdb_sources_load_failed">Не удалось загрузить источник TMDB.</string>
-    <string name="tmdb_sources_missing_collection_id">Отсутствует идентификатор коллекции TMDB.</string>
-    <string name="tmdb_sources_missing_list_id">Отсутствует идентификатор списка TMDB.</string>
-    <string name="tmdb_sources_missing_person_id">Отсутствует идентификатор человека TMDB.</string>
-    <string name="tmdb_sources_network_fallback_title">TMDB Сеть %1$d</string>
-    <string name="tmdb_sources_network_not_found">Сеть TMDB не найдена</string>
-    <string name="tmdb_sources_person_credits_not_found">Фильмография персоны TMDB не найдена</string>
-    <string name="tmdb_sources_person_fallback_title">TMDB Человек %1$d</string>
-    <string name="tmdb_sources_person_not_found">TMDB человек не найден</string>
     <string name="generic_trailer">Трейлер</string>
     <string name="generic_unknown">Неизвестно</string>
     <string name="generic_addon">Аддон</string>
-    <string name="action_saved">Сохранено</string>
     <string name="action_play_episode">Воспроизвести %1$s</string>
     <string name="action_resume_episode">Продолжить %1$s</string>
     <string name="collections_import_error_empty_json">JSON пуст.</string>
@@ -1779,14 +1679,6 @@
     <string name="downloads_enqueue_replaced">Заменено предыдущее скачивание</string>
     <string name="downloads_enqueue_started">Загрузка началась</string>
     <string name="downloads_enqueue_unsupported_format">Неподдерживаемый формат потока для загрузки</string>
-    <string name="downloads_error_empty_body">Пустое тело ответа</string>
-    <string name="downloads_error_finalize_failed">Не удалось завершить загрузку файла.</string>
-    <string name="downloads_error_http_failed">Не удалось выполнить запрос с HTTP %1$d.</string>
-    <string name="downloads_error_not_initialized">Система загрузки не инициализирована</string>
-    <string name="downloads_error_open_partial_failed">Не удалось открыть файл частичной загрузки.</string>
-    <string name="downloads_error_partial_not_open">Файл частичной загрузки не открыт</string>
-    <string name="downloads_error_request_failed">Запрос на загрузку не выполнен</string>
-    <string name="downloads_error_write_partial_failed">Не удалось записать файл частичной загрузки.</string>
     <string name="home_catalog_default_title">%1$s - %2$s</string>
     <string name="library_empty_message">Сохраненные заголовки появятся здесь после того, как вы нажмете «Сохранить» на экране сведений.</string>
     <string name="library_empty_title">Ваша библиотека пуста</string>
@@ -1875,7 +1767,6 @@
     <string name="unit_bytes_mb">МБ</string>
     <string name="unit_bytes_gb">ГБ</string>
     <!-- PlayerControls a11y -->
-    <string name="player_action_submit_intro">Отправить заставку</string>
     <string name="player_action_video_settings">Настройки видео</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">Облачная библиотека недоступна для %1$s.</string>
@@ -2009,15 +1900,10 @@
     <string name="settings_debrid_rule_excluded_release_groups_desc">Скрыть выбранные группы релизов.</string>
     <!-- Submit intro/recap/outro dialog -->
     <string name="submit_intro_title">Отправить временные метки</string>
-    <string name="submit_intro_segment_type">ТИП СЕГМЕНТА</string>
     <string name="submit_intro_segment_intro">Введение</string>
     <string name="submit_intro_segment_recap">Краткий пересказ</string>
     <string name="submit_intro_segment_outro">Аутро</string>
     <string name="submit_intro_segment_preview">Предпросмотр</string>
-    <string name="submit_intro_start_time">ВРЕМЯ НАЧАЛА (ММ:СС)</string>
-    <string name="submit_intro_end_time">ВРЕМЯ КОНЦА (ММ:СС)</string>
-    <string name="submit_intro_submit">Отправить</string>
-    <string name="submit_intro_capture">Захват</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">Аппаратный декодер</string>
     <string name="settings_playback_ios_audio_output_dialog">Аудиовыход</string>
@@ -2026,7 +1912,6 @@
     <!-- Collection editor -->
     <string name="collections_editor_resolved_trakt_list">Разрешенный список Trakt</string>
     <string name="collections_editor_tmdb_discover">TMDB Discover</string>
-    <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>
     <!-- Collection editor error messages -->
     <string name="collections_editor_trakt_input_required">Введите имя списка Trakt, URL или идентификатор.</string>
     <string name="collections_editor_tmdb_invalid_id_error">Введите действительный идентификатор TMDB или URL.</string>
@@ -2043,17 +1928,13 @@
     <!-- Cloud library -->
     <string name="cloud_library_playback_disabled">Облачная библиотека отключена.</string>
     <!-- IntroDB settings -->
-    <string name="settings_playback_introdb_invalid_api_key">Неверный ключ API или соединение не установлено.</string>
     <string name="addons_manifest_missing_field">Манифест отсутствует \"%1$s\"</string>
     <string name="collections_editor_tmdb_collection_title_format">Коллекция TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Режиссер TMDB %1$s</string>
-    <string name="collections_editor_tmdb_discover_title">TMDB Discover</string>
-    <string name="collections_editor_tmdb_invalid_id_or_url">Введите действительный идентификатор TMDB или URL.</string>
     <string name="collections_editor_tmdb_list_title_format">TMDB Список %1$s</string>
     <string name="collections_editor_tmdb_network_title_format">TMDB Сеть %1$s</string>
     <string name="collections_editor_tmdb_person_title_format">TMDB Человек %1$s</string>
     <string name="collections_editor_tmdb_production_title_format">TMDB Производство %1$s</string>
-    <string name="collections_editor_tmdb_source_load_failed">Не удалось загрузить источник TMDB.</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
     <string name="collections_tmdb_collection_not_found">Коллекция TMDB не найдена</string>
     <string name="collections_tmdb_company_not_found">Компания TMDB не найдена</string>
@@ -2108,19 +1989,13 @@
     <string name="plugins_empty_repos_title">Репозитории плагинов пока не установлены.</string>
     <string name="plugins_enable_globally_desc">Используйте поставщиков плагинов во время обнаружения потока.</string>
     <string name="plugins_enable_globally_title">Включить поставщиков плагинов по всему миру</string>
-    <string name="plugins_error_already_installed">Этот репозиторий плагинов уже установлен.</string>
     <string name="plugins_error_enter_repo_url">Введите репозиторий плагинов URL.</string>
     <string name="plugins_error_enter_valid_url">Введите действительный плагин URL.</string>
-    <string name="plugins_error_install_failed">Невозможно установить репозиторий плагинов</string>
     <string name="plugins_error_provider_not_found">Провайдер не найден</string>
-    <string name="plugins_error_refresh_failed">Невозможно обновить репозиторий</string>
     <string name="plugins_error_unavailable_build">Плагины в этой сборке недоступны.</string>
     <string name="plugins_group_by_repo_desc">В потоках показывайте по одному поставщику для каждого репозитория вместо одного для каждого источника.</string>
     <string name="plugins_group_by_repo_title">Группировать поставщиков плагинов по репозиторию</string>
     <string name="plugins_input_manifest_placeholder">Манифест плагина URL</string>
-    <string name="plugins_manifest_error_name_missing">Имя манифеста отсутствует.</string>
-    <string name="plugins_manifest_error_no_providers">У Manifest нет поставщиков.</string>
-    <string name="plugins_manifest_error_version_missing">Версия манифеста отсутствует.</string>
     <string name="plugins_manifest_name_missing">Имя манифеста отсутствует.</string>
     <string name="plugins_manifest_no_providers">У Manifest нет поставщиков.</string>
     <string name="plugins_manifest_version_missing">Версия манифеста отсутствует.</string>
@@ -2152,13 +2027,10 @@
     <string name="trakt_connected_status">Подключен к Trakt.</string>
     <string name="trakt_disconnected_status">Отключено от Trakt</string>
     <string name="unit_bytes_tb">ТБ</string>
-    <string name="updates_apk_asset_missing">В выпуске не найден ресурс APK</string>
     <string name="updates_download_failed_http">Не удалось загрузить HTTP %1$d.</string>
     <string name="updates_downloaded_file_missing">Загруженный файл обновления отсутствует.</string>
     <string name="updates_empty_download_body">Пустое тело загрузки</string>
     <string name="updates_github_api_error">GitHub выпускает ошибку API: %1$d</string>
-    <string name="updates_no_channel_release">Обновление еще не опубликовано.</string>
-    <string name="updates_release_missing_title">У релиза нет тега или названия</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Выходит %1$s</string>
     <string name="cw_airs_today">В эфире сегодня</string>
@@ -2169,9 +2041,6 @@
         <item quantity="many">Выйдет через %1$d дней</item>
         <item quantity="other">Выйдет через %1$d дня</item>
     </plurals>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Сегодня</string>
-    <string name="cw_airs_tomorrow_short">Завтра</string>
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">Через %1$d день</item>
         <item quantity="few">Через %1$d дня</item>
@@ -2213,10 +2082,7 @@
     <string name="settings_p2p_clear_cache_done">Очищен %1$s от неактивных данных торрента.</string>
     <string name="settings_p2p_clear_cache_failed">Не удалось очистить торрент-кэш</string>
     <string name="player_torrent_peer_info">%1$d сидов · %2$d пиров</string>
-    <string name="player_torrent_buffered_status">%1$s буферизовано · %2$s · %3$s</string>
-    <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d пиров · %2$d сидов · %3$d%%</string>
-    <string name="player_torrent_connecting_peers">Подключение к пирам…</string>
     <string name="player_torrent_starting_engine">Запуск P2P-движка…</string>
     <string name="player_torrent_fetching_metadata">Получение метаданных торрента…</string>
     <string name="player_torrent_preparing_stream">Подготовка торрент-стрима…</string>

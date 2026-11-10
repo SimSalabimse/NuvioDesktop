@@ -19,8 +19,6 @@
     <string name="action_retry">Zkusit znovu</string>
     <string name="action_save">Uložit</string>
     <string name="action_saving">Ukládání…</string>
-    <string name="action_switch">Přepnout</string>
-    <string name="action_validate">Ověřit</string>
     <string name="addon_installing">Instalace</string>
     <string name="addon_title">Doplňky</string>
     <string name="addons_badge_active">Aktivní</string>
@@ -37,8 +35,6 @@
     <string name="addons_appstore_empty_title">Přizpůsobte si Nuvio.</string>
     <string name="addons_appstore_input_placeholder">URL doplňku</string>
     <string name="addons_appstore_install_button">Přidat doplněk</string>
-    <string name="store_empty_unavailable_title">Zatím tu nic není</string>
-    <string name="store_empty_unavailable_message">Vaše současné doplňky tu zatím nemají co zobrazit.</string>
     <string name="addons_empty_subtitle">Přidejte URL manifestu, abyste mohli do Nuvio začít načítat katalogy, metadata, streamy nebo titulky.</string>
     <string name="addons_empty_title">Zatím nejsou nainstalovány žádné doplňky.</string>
     <string name="addons_error_enter_url">Zadejte URL doplňku.</string>
@@ -77,7 +73,6 @@
     <string name="collections_editor_cover_none">Žádný</string>
     <string name="collections_editor_cover">Obal</string>
     <string name="collections_editor_create_collection">Vytvořit sbírku</string>
-    <string name="collections_editor_done">Hotovo</string>
     <string name="collections_editor_edit_collection">Upravit sbírku</string>
     <string name="collections_editor_edit_folder">Upravit složku</string>
     <string name="collections_editor_folder_editor_help">Nastavte identitu složky, prezentaci a zdroje katalogu se stejnou strukturou jako v hlavním editoru sbírek.</string>
@@ -231,11 +226,8 @@
     <string name="collections_editor_trakt_sort_popular">Populární</string>
     <string name="collections_editor_trakt_sort_percentage">Procento</string>
     <string name="collections_editor_trakt_sort_votes">Hlasy</string>
-    <string name="collections_editor_trakt_enter_name_url_or_id">Zadejte název, URL nebo ID seznamu Trakt</string>
-    <string name="collections_editor_trakt_enter_id_or_url">Zadejte ID nebo URL seznamu Trakt</string>
     <string name="collections_editor_trakt_load_failed">Seznam Trakt se nepodařilo načíst</string>
     <string name="collections_editor_trakt_no_lists_found">Nebyly nalezeny žádné seznamy Trakt</string>
-    <string name="collections_editor_trakt_resolved_subtitle">Rozpoznaný seznam Trakt</string>
     <string name="collections_editor_trakt_fallback_title">Trakt seznam %1$d</string>
     <string name="collections_editor_tmdb_genre_action">Akční</string>
     <string name="collections_editor_tmdb_genre_adventure">Dobrodružný</string>
@@ -346,7 +338,6 @@
     <string name="compose_player_capture_line">Zachytit</string>
     <string name="compose_player_close">Zavřít přehrávač</string>
     <string name="compose_player_color">Barva</string>
-    <string name="compose_player_currently_playing">Nyní se přehrává</string>
     <string name="compose_player_episode_code_episode_only">E%1$d</string>
     <string name="compose_player_episode_code_full">S%1$d E%2$d</string>
     <string name="compose_player_episode_title_format">S%1$d E%2$d • %3$s</string>
@@ -404,8 +395,6 @@
     <string name="compose_search_discover_title">Objevovat</string>
     <string name="compose_search_empty_failed_message">Nainstalované doplňky nevrátily platné výsledky vyhledávání.</string>
     <string name="compose_search_empty_failed_title">Vyhledávání selhalo</string>
-    <string name="compose_search_empty_no_active_addons_message">Před vyhledáváním nainstalujte a ověřte alespoň jeden doplněk.</string>
-    <string name="compose_search_empty_no_active_addons_title">Žádné aktivní doplňky</string>
     <string name="compose_search_empty_no_results_message">Pro tento dotaz nevrátily nainstalované prohledávatelné katalogy žádnou shodu.</string>
     <string name="compose_search_empty_no_results_title">Nebyly nalezeny žádné výsledky</string>
     <string name="compose_search_empty_no_search_catalogs_message">Vaše nainstalované doplňky neumožňují vyhledávání v katalogu.</string>
@@ -447,9 +436,6 @@
     <string name="compose_settings_root_check_updates_description">Stáhnout nejnovější verzi</string>
     <string name="compose_settings_root_check_updates_title">Zkontrolovat aktualizace</string>
     <string name="compose_settings_root_content_discovery_description">Správa doplňků a zdrojů objevování.</string>
-    <string name="compose_settings_root_content_discovery_description_appstore">Spravujte doplňky a vyberte, co se má v Nuviu zobrazovat.</string>
-    <string name="compose_settings_root_downloads_description">Spravujte své stažené filmy a epizody.</string>
-    <string name="compose_settings_root_downloads_description_appstore">Spravujte obsah uložený v tomto zařízení.</string>
     <string name="compose_settings_root_downloads_title">Stažené položky</string>
     <string name="compose_settings_root_general_section">OBECNÉ</string>
     <string name="compose_settings_root_integrations_description">Spravovat dostupné integrace</string>
@@ -457,7 +443,6 @@
     <string name="compose_settings_root_streams_description">Zobrazení výsledků streamů a pravidla pro URL odznaků.</string>
     <string name="compose_settings_root_switch_profile_description">Změnit na jiný profil.</string>
     <string name="compose_settings_root_switch_profile_title">Přepnout profil</string>
-    <string name="compose_settings_root_trakt_description">Otevřít obrazovku připojení Trakt</string>
     <string name="settings_search_empty">Nebylo nalezeno žádné nastavení.</string>
     <string name="settings_search_placeholder">Hledat v nastavení...</string>
     <string name="settings_search_results_section">VÝSLEDKY</string>
@@ -494,8 +479,6 @@
     <string name="settings_licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="settings_licenses_attributions_exoplayer_body">Používá se pro přehrávání na Android buildech.</string>
     <string name="settings_licenses_attributions_exoplayer_license">Licencováno pod Apache License, verze 2.0.</string>
-    <string name="compose_trakt_list_picker_loading">Načítání vašich seznamů Trakt…</string>
-    <string name="compose_trakt_list_picker_subtitle">Vyberte, kam se má tento titul uložit na Trakt</string>
     <string name="action_donate">Přispět</string>
     <string name="cw_action_go_to_details">Přejít na podrobnosti</string>
     <string name="cw_action_remove">Odstranit</string>
@@ -503,7 +486,6 @@
     <string name="detail_btn_play">Přehrát</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
     <string name="detail_comments_badge_review">Recenze</string>
-    <string name="detail_comments_badge_spoiler">Spoiler</string>
     <string name="detail_comments_empty">Zatím nejsou k dispozici žádné recenze z Trakt.</string>
     <string name="detail_comments_likes">%1$d to se mi líbí</string>
     <string name="detail_comments_spoiler_card">Tento komentář obsahuje spoilery.</string>
@@ -640,7 +622,6 @@
     <string name="settings_continue_watching_up_next_title">Další na řadě podle nejdále zhlédnuté epizody</string>
     <string name="settings_continue_watching_use_episode_thumbnails_description">Upřednostňovat miniatury epizod, jsou-li k dispozici.</string>
     <string name="settings_continue_watching_use_episode_thumbnails_title">Upřednostňovat miniatury epizod</string>
-    <string name="settings_content_discovery_section_home">DOMŮ</string>
     <string name="settings_content_discovery_section_sources">ZDROJE</string>
     <string name="settings_content_discovery_addons_description">Instalovat, odstraňovat, obnovovat a třídit vaše zdroje obsahu.</string>
     <string name="settings_content_discovery_addons_description_appstore">Přidávejte a spravujte doplňky, které používáte s Nuviem.</string>
@@ -727,9 +708,7 @@
     <string name="settings_fusion_badge_preview_empty">V tomto URL nejsou žádné obrázky odznaků ve stylu Fusion.</string>
     <string name="settings_fusion_badge_group_title">Skupina %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Ostatní odznaky Fusion</string>
-    <string name="settings_debrid_key_valid">API klíč byl ověřen.</string>
     <string name="settings_debrid_key_invalid">Tento API klíč se nepodařilo ověřit.</string>
-    <string name="settings_mdb_add_api_key_first">Před zapnutím hodnocení přidejte níže svůj API klíč MDBList.</string>
     <string name="settings_mdb_api_key_description">Vyžadováno k získání hodnocení z MDBList</string>
     <string name="settings_mdb_api_key_label">API klíč</string>
     <string name="settings_mdb_api_key_title">API klíč</string>
@@ -742,8 +721,6 @@
     <string name="settings_meta_actions_description">Ovládání přehrávání a ukládání.</string>
     <string name="settings_meta_cast">Obsazení</string>
     <string name="settings_meta_cast_description">Hlavní herecké obsazení.</string>
-    <string name="settings_meta_cinematic_background">Filmové pozadí</string>
-    <string name="settings_meta_cinematic_background_description">Rozmazané pozadí za obsahem, podobné jako na obrazovce streamů.</string>
     <string name="settings_meta_collection">Sbírka</string>
     <string name="settings_meta_collection_description">Související sbírka nebo franšízový pruh.</string>
     <string name="settings_meta_comments">Komentáře</string>
@@ -789,8 +766,6 @@
     <string name="settings_notifications_test_for_title">Odeslat lokální zkušební oznámení pro %1$s.</string>
     <string name="settings_notifications_test_requires_saved_show">Abyste mohli otestovat oznámení, uložte si nejprve nějaký pořad do knihovny.</string>
     <string name="settings_notifications_test_title">Zkušební oznámení</string>
-    <string name="community_section_title">Komunita</string>
-    <string name="community_section_description">Podívejte se na lidi, kteří tvoří a podporují Nuvio na Mobilech, TV a Webu.</string>
     <string name="community_donation_progress_title">Tento měsíc za servery a údržbu</string>
     <string name="community_donation_progress_complete">Pokryto. Dodatečná podpora nyní půjde na vývoj.</string>
     <string name="community_donation_progress_remaining">Po dosažení 100% půjde další podpora na vývoj.</string>
@@ -800,7 +775,6 @@
     <string name="community_tab_supporters">Podporovatelé</string>
     <string name="community_open_github">Otevřít GitHub</string>
     <string name="community_github_profile_unavailable">Profil na GitHubu je nedostupný</string>
-    <string name="community_no_message_attached">Žádná připojená zpráva.</string>
     <string name="community_loading_contributors">Načítání přispěvatelů...</string>
     <string name="community_loading_supporters">Načítání podporovatelů...</string>
     <string name="community_load_contributors_failed">Přispěvatele se nepodařilo načíst</string>
@@ -811,7 +785,6 @@
     <string name="community_error_unable_load_supporters">Nelze načíst podporovatele.</string>
     <string name="community_error_contributors_request_failed">Přispěvatele právě teď nelze načíst.</string>
     <string name="community_error_supporters_request_failed">Podporovatele právě teď nelze načíst.</string>
-    <string name="community_total_commits">%1$d commitů celkem</string>
     <string name="community_month_jan">Led</string>
     <string name="community_month_feb">Úno</string>
     <string name="community_month_mar">Bře</string>
@@ -843,7 +816,6 @@
     <string name="settings_playback_decoder_prefer_app">Upřednostnit dekodéry aplikace (FFmpeg)</string>
     <string name="settings_playback_decoder_prefer_device">Upřednostnit dekodéry zařízení</string>
     <string name="settings_playback_decoder_priority">Priorita dekodéru</string>
-    <string name="settings_playback_dialog_close">Klepnutím mimo oblast zavřete</string>
     <string name="settings_playback_dialog_save_close">Klepnutím mimo oblast uložíte a zavřete</string>
     <string name="settings_playback_duration_day_one">%1$d den</string>
     <string name="settings_playback_duration_days">%1$d dní</string>
@@ -854,7 +826,6 @@
     <string name="settings_playback_external_player">Externí přehrávač</string>
     <string name="settings_playback_external_player_app">Aplikace externího přehrávače</string>
     <string name="settings_playback_external_player_description_android">Otevřít nové přehrávání pomocí výchozí video aplikace na Androidu nebo systémového výběru.</string>
-    <string name="settings_playback_external_player_description_ios">Otevřít nové přehrávání pomocí vybraného nainstalovaného přehrávače.</string>
     <string name="settings_playback_external_player_forward_subtitles">Přeposlat titulky do externího přehrávače</string>
     <string name="settings_playback_external_player_forward_subtitles_description">Stáhnout titulky z doplňků ve vašem preferovaném jazyce a předat je externímu přehrávači.</string>
     <string name="settings_playback_external_player_send_skip_segments">Odeslat časové značky pro intro a outro</string>
@@ -884,13 +855,6 @@
     <string name="settings_playback_option_original_hint">Vyžaduje povolení obohacování z TMDB</string>
     <string name="settings_playback_option_forced">Vynucené (Forced)</string>
     <string name="settings_playback_option_none">Žádné</string>
-    <string name="settings_playback_addon_subtitle_startup_all">Všechny titulky z doplňků</string>
-    <string name="settings_playback_addon_subtitle_startup_all_description">Předem načíst a připojit všechny titulky z doplňků před přehráváním. Nejpomalejší spuštění.</string>
-    <string name="settings_playback_addon_subtitle_startup_fast">Rychlé spuštění</string>
-    <string name="settings_playback_addon_subtitle_startup_fast_description">Spustit přehrávání okamžitě. Výběr titulků z doplňků může vyžadovat jednorázové znovunačtení přehrávače.</string>
-    <string name="settings_playback_addon_subtitle_startup_mode">Načítání titulků z doplňků</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred">Preferované jazyky</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred_description">Předem načíst titulky z doplňků před přehráváním a připojit stopy preferovaného/sekundárního jazyka.</string>
     <string name="settings_playback_prefer_binge_group">Upřednostnit skupinu (Další epizoda)</string>
     <string name="settings_playback_prefer_binge_group_description">Před uplatněním normálních pravidel automatického přehrávání zkusit nejdříve stejný profil zdroje (stejný doplněk/skupinu kvality).</string>
     <string name="settings_playback_reuse_binge_group">Znovu použít skupinu pro další sledování (Binge Group)</string>
@@ -979,7 +943,6 @@
     <string name="settings_playback_stream_selection_mode_regex_description">Přehrát první zdroj, jehož text odpovídá vašemu regulárnímu výrazu.</string>
     <string name="settings_playback_stream_timeout">Časový limit pro výběr streamu</string>
     <string name="settings_playback_stream_timeout_description">Doba čekání na doplňky před výběrem.</string>
-    <string name="settings_playback_threshold_minutes">Prahové minuty</string>
     <string name="settings_playback_threshold_mode">Režim pro prahovou hodnotu další epizody</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">Minut do konce</string>
     <string name="settings_playback_threshold_mode_percentage">Procento</string>
@@ -1022,7 +985,6 @@
     <string name="settings_tmdb_section_modules">MODULY</string>
     <string name="settings_tmdb_section_title">OBOHACENÍ TMDB</string>
     <string name="settings_trakt_approval_redirect">Po schválení budete automaticky přesměrováni zpět.</string>
-    <string name="settings_trakt_authentication">OVĚŘENÍ (AUTHENTICATION)</string>
     <string name="settings_trakt_comments">Komentáře</string>
     <string name="settings_trakt_comments_description">Zobrazovat recenze z Trakt na stránkách s metadaty.</string>
     <string name="settings_trakt_connect">Připojit Trakt</string>
@@ -1030,7 +992,6 @@
     <string name="settings_trakt_default_user">Uživatel Trakt</string>
     <string name="settings_trakt_disconnect">Odpojit</string>
     <string name="settings_trakt_failed_open_browser">Nepodařilo se otevřít prohlížeč.</string>
-    <string name="settings_trakt_features">FUNKCE</string>
     <string name="settings_trakt_finish_sign_in">Dokončete přihlášení do Trakt ve svém prohlížeči.</string>
     <string name="settings_trakt_intro_description">Synchronizujte svůj seznam sledovaných (watchlist), postup sledování, scrobblování, pokračování ve sledování a osobní seznamy s Trakt.</string>
     <string name="settings_trakt_missing_credentials">Chybí pověření pro Trakt v local.properties (TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET).</string>
@@ -1043,16 +1004,11 @@
     <string name="trakt_library_source_dialog_subtitle">Vyberte, kam se mají ukládat a spravovat položky vaší knihovny.</string>
     <string name="trakt_library_source_trakt">Trakt</string>
     <string name="trakt_library_source_nuvio">Knihovna Nuvio</string>
-    <string name="trakt_library_source_trakt_selected">Byla vybrána knihovna Trakt</string>
-    <string name="trakt_library_source_nuvio_selected">Byla vybrána knihovna Nuvio</string>
     <string name="trakt_watch_progress_title">Postup sledování</string>
     <string name="trakt_watch_progress_subtitle">Vyberte, který zdroj postupu bude ovládat funkce Pokračovat ve sledování (resume a next up).</string>
     <string name="trakt_watch_progress_dialog_title">Postup sledování</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Vyberte, zda by panel Pokračovat ve sledování (resume a next up) měl používat Trakt nebo Synchronizaci Nuvio, zatímco Trakt scrobbling zůstane aktivní.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Synchronizace Nuvio</string>
-    <string name="trakt_watch_progress_trakt_selected">Zdroj postupu sledování byl nastaven na Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Zdroj postupu sledování byl nastaven na Synchronizaci Nuvio</string>
     <string name="trakt_more_like_this_source_title">Zdroj Podobných titulů (More Like This)</string>
     <string name="trakt_more_like_this_source_subtitle">Vyberte, odkud budou pocházet doporučení na stránkách s podrobnostmi.</string>
     <string name="trakt_more_like_this_source_dialog_title">Zdroj Podobných titulů</string>
@@ -1170,7 +1126,6 @@
     <string name="lang_zulu">Zuluština</string>
     <string name="action_clear">Vymazat</string>
     <string name="action_continue">Pokračovat</string>
-    <string name="action_ignore">Ignorovat</string>
     <string name="action_install">Instalovat</string>
     <string name="action_later">Později</string>
     <string name="action_no">Ne</string>
@@ -1204,7 +1159,6 @@
     <string name="discover_empty_no_catalogs_title">Žádné katalogy pro objevování</string>
     <string name="discover_empty_no_results_message">Vybraný katalog a filtry nevrátily žádné položky.</string>
     <string name="discover_empty_no_results_title">Nebyly nalezeny žádné tituly</string>
-    <string name="discover_empty_no_active_addons_message">Nainstalujte a ověřte alespoň jeden doplněk před procházením objevovacích katalogů.</string>
     <string name="discover_select_catalog">Vybrat katalog</string>
     <string name="discover_select_genre">Vybrat žánr</string>
     <string name="discover_select_type">Vybrat typ</string>
@@ -1220,7 +1174,6 @@
     <string name="home_continue_watching_watched">%1$s zhlédnuto</string>
     <string name="home_continue_watching_hours_minutes_left">Zbývá %1$dh %2$dm</string>
     <string name="home_continue_watching_minutes_left">Zbývá %1$dm</string>
-    <string name="home_empty_no_active_addons_message">Nainstalujte a ověřte alespoň jeden doplněk před načtením řádků katalogu na Domovské obrazovce.</string>
     <string name="home_empty_no_rows_message">Nainstalované doplňky v současné době nezpřístupňují kompatibilní katalogy bez požadovaných doplňků.</string>
     <string name="home_empty_no_rows_title">Nejsou k dispozici žádné domovské řádky</string>
     <string name="home_view_details">Zobrazit podrobnosti</string>
@@ -1242,8 +1195,6 @@
     <string name="meta_section_trailers_description">Pruh s trailery a zástupci pro přehrávání.</string>
     <string name="network_back_online">Zpět online</string>
     <string name="network_cannot_reach_servers">Nelze se připojit k serverům</string>
-    <string name="network_error_empty_response_body">Prázdné tělo odpovědi</string>
-    <string name="network_error_request_failed_http">Požadavek selhal s chybou HTTP %1$d</string>
     <string name="network_no_internet_connection">Žádné připojení k internetu</string>
     <string name="person_age">(věk %1$d)</string>
     <string name="person_born">Narozen/a %1$s%2$s</string>
@@ -1306,9 +1257,6 @@
     <string name="streams_open_internal_player">Otevřít v interním přehrávači</string>
     <string name="streams_empty_load_failed_message">Nainstalované streamovací doplňky nevrátily platnou odpověď streamu.</string>
     <string name="streams_empty_load_failed_title">Nelze načíst streamy</string>
-    <string name="streams_empty_no_addons_message">Nainstalujte si nejprve doplněk pro načtení streamů pro tento titul.</string>
-    <string name="streams_empty_no_stream_addon_message">Vaše nainstalované doplňky neposkytují streamy pro tento typ titulu.</string>
-    <string name="streams_empty_no_stream_addon_title">Není k dispozici žádný streamovací doplněk</string>
     <string name="streams_empty_no_streams_message">Žádný z vašich nainstalovaných doplňků nevrátil streamy pro tento titul.</string>
     <string name="streams_episode_badge">S%1$d E%2$d</string>
     <string name="streams_episode_fallback_title">Epizoda</string>
@@ -1336,25 +1284,18 @@
     <string name="trailer_close">Zavřít trailer</string>
     <string name="trailer_unable_to_play">Nelze přehrát trailer</string>
     <string name="trakt_lists_load_failed">Nepodařilo se načíst seznamy Trakt</string>
-    <string name="trakt_lists_update_failed">Nepodařilo se aktualizovat seznamy Trakt</string>
-    <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">Kontrola aktualizací selhala</string>
     <string name="updates_download_failed">Stahování selhalo</string>
-    <string name="updates_download_empty_body">Prázdné tělo stahování</string>
-    <string name="updates_download_file_missing">Stažený soubor aktualizace chybí.</string>
     <string name="updates_downloading_progress">Stahování %1$d%%</string>
     <string name="updates_install_failed">Nelze spustit instalaci</string>
     <string name="updates_latest_version">Používáte nejnovější verzi.</string>
     <string name="updates_message_allow_installs">Povolte instalace aplikací pro Nuvio, pak se vraťte a pokračujte.</string>
-    <string name="updates_message_downloading">Stahování aktualizace...</string>
-    <string name="updates_message_no_updates">Nebyly nalezeny žádné aktualizace.</string>
     <string name="updates_message_ready">Nová verze je připravena k instalaci.</string>
     <string name="updates_not_available">Aktualizace v aplikaci nejsou v tomto buildu dostupné.</string>
     <string name="updates_preparing_download">Příprava stahování</string>
     <string name="updates_release_notes">Poznámky k vydání</string>
     <string name="updates_title_allow_installs">Povolit instalace pro pokračování</string>
     <string name="updates_title_available">Aktualizace je k dispozici</string>
-    <string name="updates_title_status">Stav aktualizace</string>
     <string name="addon_already_installed">Tento doplněk je již nainstalován.</string>
     <string name="addon_invalid_url">Zadejte platnou URL doplňku</string>
     <string name="addon_load_manifest_failed">Nepodařilo se načíst manifest</string>
@@ -1379,17 +1320,12 @@
     <string name="downloads_live_downloading_with_total">Stahování %1$s • %2$s / %3$s</string>
     <string name="downloads_live_failed">Stahování selhalo</string>
     <string name="downloads_live_paused">Pozastaveno %1$s</string>
-    <string name="library_remove_confirm">Odstranit</string>
-    <string name="library_remove_from_list_message">Odstranit %1$s ze seznamu %2$s?</string>
-    <string name="library_remove_message">Odstranit %1$s z vaší knihovny?</string>
-    <string name="library_remove_title">Odstranit z knihovny?</string>
     <string name="media_movie">Film</string>
     <string name="notifications_channel_episode_releases_description">Upozorňuje na vydání nové epizody uloženého pořadu.</string>
     <string name="notifications_test_preview_body">Náhled upozornění na vydání epizody.</string>
     <string name="notifications_test_send_failed">Odeslání zkušebního oznámení selhalo.</string>
     <string name="notifications_test_sent_for">Zkušební oznámení odesláno pro %1$s.</string>
     <string name="player_unable_to_play_stream">Tento stream se nepodařilo přehrát.</string>
-    <string name="player_engine_unavailable_rebuild">Modul přehrávače MPV není k dispozici. Prosím sestavte aplikaci znovu.</string>
     <string name="profile_pin_changed_requires_refresh">PIN k tomuto profilu se změnil. Pro aktualizaci zámku na tomto zařízení se jednou připojte.</string>
     <string name="profile_pin_clear_failed">PIN zámek se nepodařilo odstranit. Zkuste to znovu.</string>
     <string name="profile_pin_clear_requires_internet">Pro odstranění PIN zámku se připojte k internetu.</string>
@@ -1398,12 +1334,9 @@
     <string name="profile_pin_set_requires_internet">Pro nastavení PINu se připojte k internetu.</string>
     <string name="profile_primary_addons_required">Tento profil používá primární doplňky.</string>
     <string name="streams_failed_to_load_scraper">Nepodařilo se načíst scraper %1$s</string>
-    <string name="stream_default_name">Stream</string>
     <string name="source_embedded">Vestavěné</string>
     <string name="trakt_authorization_denied">Oprávnění odepřeno</string>
     <string name="trakt_complete_sign_in_browser">Dokončete přihlášení do Trakt ve svém prohlížeči</string>
-    <string name="trakt_connected">Připojeno k Trakt</string>
-    <string name="trakt_disconnected">Odpojeno od Trakt</string>
     <string name="trakt_invalid_callback">Neplatný callback Trakt</string>
     <string name="trakt_invalid_callback_state">Neplatný stav callbacku Trakt</string>
     <string name="trakt_invalid_token_response">Neplatná odpověď s tokenem od Trakt</string>
@@ -1412,16 +1345,6 @@
     <string name="trakt_missing_auth_code">Trakt nevrátil autorizační kód</string>
     <string name="trakt_missing_credentials">Chybí pověření pro Trakt</string>
     <string name="trakt_progress_load_failed">Nepodařilo se načíst postup Trakt</string>
-    <string name="trakt_public_list">Veřejný seznam Trakt</string>
-    <string name="trakt_public_list_enter_valid_id_or_url">Zadejte platné ID nebo URL seznamu Trakt</string>
-    <string name="trakt_public_list_items_count">%1$d položek</string>
-    <string name="trakt_public_list_likes_count">%1$d to se mi líbí</string>
-    <string name="trakt_public_list_missing_credentials">Chybí pověření pro Trakt v local.properties (TRAKT_CLIENT_ID).</string>
-    <string name="trakt_public_list_missing_id">Chybí ID seznamu Trakt</string>
-    <string name="trakt_public_list_missing_numeric_id">Seznam Trakt neobsahoval číselné ID</string>
-    <string name="trakt_public_list_not_found_or_not_public">Seznam Trakt nenalezen nebo není veřejný</string>
-    <string name="trakt_public_list_rate_limit_reached">Dosažen limit počtu požadavků na Trakt</string>
-    <string name="trakt_public_list_request_failed">Požadavek na Trakt selhal</string>
     <string name="trakt_sign_in_complete_failed">Nepodařilo se dokončit přihlášení do Trakt</string>
     <string name="trakt_user_fallback">Uživatel Trakt</string>
     <string name="trakt_watchlist">Seznam sledovaných (Watchlist)</string>
@@ -1435,29 +1358,9 @@
     <string name="trakt_error_add_list_failed">Přidání do seznamu Trakt selhalo</string>
     <string name="trakt_error_missing_ids">Chybí kompatibilní Trakt ID</string>
     <string name="trakt_error_empty_response">Prázdné tělo odpovědi</string>
-    <string name="tmdb_sources_collection_fallback_title">Sbírka TMDB %1$d</string>
-    <string name="tmdb_sources_collection_not_found">Sbírka TMDB nenalezena</string>
-    <string name="tmdb_sources_company_fallback_title">Produkce TMDB %1$d</string>
-    <string name="tmdb_sources_company_not_found">Společnost TMDB nenalezena</string>
-    <string name="tmdb_sources_director_fallback_title">Režisér TMDB %1$d</string>
-    <string name="tmdb_sources_discover_no_data">Objevování (Discover) na TMDB nevrátilo žádná data</string>
-    <string name="tmdb_sources_discover_title">Objevovat na TMDB (Discover)</string>
-    <string name="tmdb_sources_invalid_id_or_url">Zadejte platné ID nebo URL z TMDB.</string>
-    <string name="tmdb_sources_list_fallback_title">Seznam TMDB %1$d</string>
-    <string name="tmdb_sources_list_not_found">Seznam TMDB nenalezen</string>
-    <string name="tmdb_sources_load_failed">Zdroj TMDB se nepodařilo načíst</string>
-    <string name="tmdb_sources_missing_collection_id">Chybí ID sbírky TMDB</string>
-    <string name="tmdb_sources_missing_list_id">Chybí ID seznamu TMDB</string>
-    <string name="tmdb_sources_missing_person_id">Chybí ID osoby TMDB</string>
-    <string name="tmdb_sources_network_fallback_title">Síť TMDB %1$d</string>
-    <string name="tmdb_sources_network_not_found">Síť TMDB nenalezena</string>
-    <string name="tmdb_sources_person_credits_not_found">Kredity osoby TMDB nenalezeny</string>
-    <string name="tmdb_sources_person_fallback_title">Osoba TMDB %1$d</string>
-    <string name="tmdb_sources_person_not_found">Osoba TMDB nenalezena</string>
     <string name="generic_trailer">Trailer</string>
     <string name="generic_unknown">Neznámý</string>
     <string name="generic_addon">Doplněk</string>
-    <string name="action_saved">Uloženo</string>
     <string name="action_play_episode">Přehrát %1$s</string>
     <string name="action_resume_episode">Pokračovat v %1$s</string>
     <string name="collections_import_error_empty_json">JSON je prázdný.</string>
@@ -1520,14 +1423,6 @@
     <string name="downloads_enqueue_replaced">Nahrazeno předchozí stahování</string>
     <string name="downloads_enqueue_started">Stahování zahájeno</string>
     <string name="downloads_enqueue_unsupported_format">Nepodporovaný formát streamu pro stahování</string>
-    <string name="downloads_error_empty_body">Prázdné tělo odpovědi</string>
-    <string name="downloads_error_finalize_failed">Stahovaný soubor se nepodařilo dokončit</string>
-    <string name="downloads_error_http_failed">Požadavek selhal s chybou HTTP %1$d</string>
-    <string name="downloads_error_not_initialized">Systém stahování není inicializován</string>
-    <string name="downloads_error_open_partial_failed">Nepodařilo se otevřít částečný soubor stahování</string>
-    <string name="downloads_error_partial_not_open">Částečný soubor stahování není otevřený</string>
-    <string name="downloads_error_request_failed">Požadavek na stažení selhal</string>
-    <string name="downloads_error_write_partial_failed">Nepodařilo se zapsat do částečného souboru stahování</string>
     <string name="home_catalog_default_title">%1$s - %2$s</string>
     <string name="library_empty_message">Uložené tituly se zde objeví poté, co na obrazovce podrobností klepnete na Uložit.</string>
     <string name="library_empty_title">Vaše knihovna je prázdná</string>
@@ -1598,7 +1493,6 @@
     <string name="unit_bytes_mb">MB</string>
     <string name="unit_bytes_gb">GB</string>
     <!-- PlayerControls a11y -->
-    <string name="player_action_submit_intro">Odeslat intro</string>
     <string name="player_action_video_settings">Nastavení videa</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">Cloudová knihovna není pro %1$s k dispozici.</string>
@@ -1732,15 +1626,10 @@
     <string name="settings_debrid_rule_excluded_release_groups_desc">Skrýt vybrané skupiny (release groups).</string>
     <!-- Submit intro/recap/outro dialog -->
     <string name="submit_intro_title">Odeslat časové značky</string>
-    <string name="submit_intro_segment_type">TYP ÚSEKU</string>
     <string name="submit_intro_segment_intro">Intro</string>
     <string name="submit_intro_segment_recap">Rekapitulace</string>
     <string name="submit_intro_segment_outro">Outro</string>
     <string name="submit_intro_segment_preview">Náhled</string>
-    <string name="submit_intro_start_time">ČAS ZAČÁTKU (MM:SS)</string>
-    <string name="submit_intro_end_time">ČAS KONCE (MM:SS)</string>
-    <string name="submit_intro_submit">Odeslat</string>
-    <string name="submit_intro_capture">Zachytit</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">Hardwarový dekodér</string>
     <string name="settings_playback_ios_audio_output_dialog">Výstup zvuku</string>
@@ -1749,7 +1638,6 @@
     <!-- Collection editor -->
     <string name="collections_editor_resolved_trakt_list">Rozpoznaný seznam Trakt</string>
     <string name="collections_editor_tmdb_discover">Objevovat na TMDB (Discover)</string>
-    <string name="collections_editor_watch_region_placeholder">CZ, US, KR, JP, IN</string>
     <!-- Collection editor error messages -->
     <string name="collections_editor_trakt_input_required">Zadejte název, URL nebo ID seznamu Trakt</string>
     <string name="collections_editor_tmdb_invalid_id_error">Zadejte platné ID nebo URL z TMDB.</string>
@@ -1766,17 +1654,13 @@
     <!-- Cloud library -->
     <string name="cloud_library_playback_disabled">Cloudová knihovna je vypnutá.</string>
     <!-- IntroDB settings -->
-    <string name="settings_playback_introdb_invalid_api_key">Neplatný API klíč nebo selhalo připojení</string>
     <string name="addons_manifest_missing_field">V manifestu chybí \"%1$s\"</string>
     <string name="collections_editor_tmdb_collection_title_format">Sbírka TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Režisér TMDB %1$s</string>
-    <string name="collections_editor_tmdb_discover_title">Objevovat na TMDB (Discover)</string>
-    <string name="collections_editor_tmdb_invalid_id_or_url">Zadejte platné ID nebo URL z TMDB.</string>
     <string name="collections_editor_tmdb_list_title_format">Seznam TMDB %1$s</string>
     <string name="collections_editor_tmdb_network_title_format">Síť TMDB %1$s</string>
     <string name="collections_editor_tmdb_person_title_format">Osoba TMDB %1$s</string>
     <string name="collections_editor_tmdb_production_title_format">Produkce TMDB %1$s</string>
-    <string name="collections_editor_tmdb_source_load_failed">Zdroj TMDB se nepodařilo načíst</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
     <string name="collections_tmdb_collection_not_found">Sbírka TMDB nenalezena</string>
     <string name="collections_tmdb_company_not_found">Společnost TMDB nenalezena</string>
@@ -1831,19 +1715,13 @@
     <string name="plugins_empty_repos_title">Zatím nejsou nainstalovány žádné repozitáře pluginů.</string>
     <string name="plugins_enable_globally_desc">Použít pluginy poskytovatelů během objevování streamů.</string>
     <string name="plugins_enable_globally_title">Povolit pluginy poskytovatelů globálně</string>
-    <string name="plugins_error_already_installed">Tento repozitář pluginů je již nainstalován.</string>
     <string name="plugins_error_enter_repo_url">Zadejte URL repozitáře pluginů.</string>
     <string name="plugins_error_enter_valid_url">Zadejte platnou URL pluginu.</string>
-    <string name="plugins_error_install_failed">Nepodařilo se nainstalovat repozitář pluginů</string>
     <string name="plugins_error_provider_not_found">Poskytovatel nebyl nalezen</string>
-    <string name="plugins_error_refresh_failed">Nepodařilo se obnovit repozitář</string>
     <string name="plugins_error_unavailable_build">Pluginy nejsou v tomto buildu dostupné.</string>
     <string name="plugins_group_by_repo_desc">Ve streamech zobrazovat jednoho poskytovatele na repozitář, namísto jednoho na zdroj.</string>
     <string name="plugins_group_by_repo_title">Seskupovat pluginy poskytovatelů podle repozitáře</string>
     <string name="plugins_input_manifest_placeholder">URL manifestu pluginu</string>
-    <string name="plugins_manifest_error_name_missing">V manifestu chybí název.</string>
-    <string name="plugins_manifest_error_no_providers">Manifest neobsahuje žádné poskytovatele.</string>
-    <string name="plugins_manifest_error_version_missing">V manifestu chybí verze.</string>
     <string name="plugins_manifest_name_missing">V manifestu chybí název.</string>
     <string name="plugins_manifest_no_providers">Manifest neobsahuje žádné poskytovatele.</string>
     <string name="plugins_manifest_version_missing">V manifestu chybí verze.</string>
@@ -1875,13 +1753,10 @@
     <string name="trakt_connected_status">Připojeno k Trakt</string>
     <string name="trakt_disconnected_status">Odpojeno od Trakt</string>
     <string name="unit_bytes_tb">TB</string>
-    <string name="updates_apk_asset_missing">Ve vydání nebyl nalezen žádný soubor APK</string>
     <string name="updates_download_failed_http">Stahování selhalo s chybou HTTP %1$d</string>
     <string name="updates_downloaded_file_missing">Stažený soubor aktualizace chybí.</string>
     <string name="updates_empty_download_body">Prázdné tělo stahování</string>
     <string name="updates_github_api_error">Chyba API GitHub vydání: %1$d</string>
-    <string name="updates_no_channel_release">Zatím nebyla vydána žádná aktualizace.</string>
-    <string name="updates_release_missing_title">Vydání nemá štítek ani název</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Vysílá se %1$s</string>
     <string name="cw_airs_today">Vysílá se dnes</string>
@@ -1890,9 +1765,6 @@
         <item quantity="one">Vysílá se za %1$d den</item>
         <item quantity="other">Vysílá se za %1$d dní</item>
     </plurals>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Dnes</string>
-    <string name="cw_airs_tomorrow_short">Zítra</string>
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">Za %1$d den</item>
         <item quantity="other">Za %1$d dní</item>
@@ -1913,10 +1785,7 @@
     <string name="settings_p2p_hide_stats_title">Skrýt statistiky torrentu</string>
     <string name="settings_p2p_hide_stats_subtitle">Skrýt načítání (buffer), seedery, peery a rychlost stahování během načítání a přehrávání</string>
     <string name="player_torrent_peer_info">%1$d seederů · %2$d peerů</string>
-    <string name="player_torrent_buffered_status">%1$s uloženo do paměti (buffer) · %2$s · %3$s</string>
-    <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peerů · %2$d seederů · %3$d%%</string>
-    <string name="player_torrent_connecting_peers">Připojování k peerům…</string>
     <string name="player_torrent_starting_engine">Spouštění enginu P2P…</string>
     <string name="player_error_failed_start_torrent">Nepodařilo se spustit torrent: %1$s</string>
     <string name="player_error_torrent">Chyba torrentu: %1$s</string>
@@ -2022,7 +1891,6 @@
     <string name="settings_licenses_attributions_simkl_body">Nuvio se připojuje k Simkl kvůli ověření účtu, seznamům ke zhlédnutí, historii sledování, průběhu přehrávání a scrobblingu. Data o sledování filmů, seriálů a anime poskytuje Simkl. Nuvio není se Simkl spojeno ani jím podporováno.</string>
     <string name="compose_tracking_list_picker_loading">Načítání seznamů…</string>
     <string name="compose_tracking_list_picker_subtitle">Vyberte, kam tento titul uložit</string>
-    <string name="action_support_nuvio">Podpořit Nuvio</string>
     <string name="downloads_open_directory">Otevřít složku se staženými soubory</string>
     <string name="downloads_open_directory_failed">Složku se staženými soubory se nepodařilo otevřít</string>
     <string name="settings_appearance_app_icon">Ikona aplikace</string>
@@ -2164,8 +2032,6 @@
     <string name="settings_simkl_sync_info_docs">Přečíst průvodce synchronizací Simkl</string>
     <string name="settings_simkl_authorization_revoked">Autorizace Simkl byla zrušena. Připojte účet znovu.</string>
     <string name="tracking_source_simkl">Simkl</string>
-    <string name="tracking_library_source_simkl_selected">Vybrán seznam ke zhlédnutí Simkl</string>
-    <string name="tracking_watch_progress_simkl_selected">Zdroj průběhu sledování nastaven na Simkl</string>
     <string name="tracking_watch_progress_dialog_subtitle">Vyberte službu, ze které Nuvio načítá průběh pro obnovení přehrávání a sekci Pokračovat ve sledování. Scrobbling zůstane aktivní pro všechny připojené služby.</string>
     <string name="source_mal">MyAnimeList</string>
     <string name="theme_custom">Vlastní</string>

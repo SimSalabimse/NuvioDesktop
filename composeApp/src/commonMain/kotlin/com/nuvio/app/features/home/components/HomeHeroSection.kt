@@ -51,7 +51,6 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -80,7 +79,6 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 private const val HERO_BACKGROUND_PARALLAX = 0.055f
 private const val HERO_BACKGROUND_SCALE = 1.14f
@@ -730,48 +728,6 @@ private fun currentHeroItem(
         heroPageVisibility(pagerState, page)
     }
     return items[selectedPage % items.size]
-}
-
-@Composable
-private fun HeroPageIndicatorDot(
-    pagerState: PagerState,
-    page: Int,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .clickable(onClick = onClick)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.onBackground)
-            .graphicsLayer {
-                val activeFraction = heroPageVisibility(pagerState, page)
-                alpha = 0.35f + (0.57f * activeFraction)
-            }
-            .heroPageIndicatorSize(pagerState = pagerState, page = page),
-    )
-}
-
-private fun Modifier.heroPageIndicatorSize(
-    pagerState: PagerState,
-    page: Int,
-): Modifier = layout { measurable, constraints ->
-    val activeFraction = heroPageVisibility(pagerState, page)
-    val widthPx = (8.dp.toPx() + (24.dp.toPx() * activeFraction)).roundToInt()
-    val heightPx = 8.dp.roundToPx()
-    val constrainedWidth = widthPx.coerceIn(constraints.minWidth, constraints.maxWidth)
-    val constrainedHeight = heightPx.coerceIn(constraints.minHeight, constraints.maxHeight)
-    val placeable = measurable.measure(
-        constraints.copy(
-            minWidth = constrainedWidth,
-            maxWidth = constrainedWidth,
-            minHeight = constrainedHeight,
-            maxHeight = constrainedHeight,
-        ),
-    )
-
-    layout(constrainedWidth, constrainedHeight) {
-        placeable.place(0, 0)
-    }
 }
 
 @Composable

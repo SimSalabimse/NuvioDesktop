@@ -19,7 +19,6 @@
     <string name="action_retry">Skúsiť znova</string>
     <string name="action_save">Uložiť</string>
     <string name="action_saving">Ukladanie…</string>
-    <string name="action_validate">Overiť</string>
     <string name="addon_installing">Inštalácia</string>
     <string name="addon_title">Doplnky</string>
     <string name="addons_badge_active">Aktívny</string>
@@ -69,7 +68,6 @@
     <string name="collections_editor_cover_none">Žiadne</string>
     <string name="collections_editor_cover">Obal</string>
     <string name="collections_editor_create_collection">Vytvoriť kolekciu</string>
-    <string name="collections_editor_done">Hotovo</string>
     <string name="collections_editor_edit_collection">Upraviť kolekciu</string>
     <string name="collections_editor_edit_folder">Upraviť priečinok</string>
     <string name="collections_editor_folder_editor_help">Nastavte identitu priečinka, prezentáciu a zdroje katalógov s rovnakou štruktúrou ako hlavný editor kolekcií.</string>
@@ -223,11 +221,8 @@
     <string name="collections_editor_trakt_sort_popular">Populárne</string>
     <string name="collections_editor_trakt_sort_percentage">Percentuálne</string>
     <string name="collections_editor_trakt_sort_votes">Hlasy</string>
-    <string name="collections_editor_trakt_enter_name_url_or_id">Zadajte názov, URL alebo ID zoznamu Trakt</string>
-    <string name="collections_editor_trakt_enter_id_or_url">Zadajte ID alebo URL zoznamu Trakt</string>
     <string name="collections_editor_trakt_load_failed">Nepodarilo sa načítať zoznam Trakt</string>
     <string name="collections_editor_trakt_no_lists_found">Nenašli sa žiadne zoznamy Trakt</string>
-    <string name="collections_editor_trakt_resolved_subtitle">Vyriešený zoznam Trakt</string>
     <string name="collections_editor_trakt_fallback_title">Zoznam Trakt %1$d</string>
     <string name="collections_editor_tmdb_genre_action">Akčný</string>
     <string name="collections_editor_tmdb_genre_adventure">Dobrodružný</string>
@@ -336,7 +331,6 @@
     <string name="compose_player_capture_line">Zachytiť</string>
     <string name="compose_player_close">Zavrieť prehrávač</string>
     <string name="compose_player_color">Farba</string>
-    <string name="compose_player_currently_playing">Práve sa prehráva</string>
     <string name="compose_player_episode_code_episode_only">E%1$d</string>
     <string name="compose_player_episode_code_full">S%1$d E%2$d</string>
     <string name="compose_player_episode_title_format">S%1$d E%2$d • %3$s</string>
@@ -394,8 +388,6 @@
     <string name="compose_search_discover_title">Objavovať</string>
     <string name="compose_search_empty_failed_message">Nainštalované doplnky nevrátili platné výsledky vyhľadávania.</string>
     <string name="compose_search_empty_failed_title">Vyhľadávanie zlyhalo</string>
-    <string name="compose_search_empty_no_active_addons_message">Pred vyhľadávaním nainštalujte a overte aspoň jeden doplnok.</string>
-    <string name="compose_search_empty_no_active_addons_title">Žiadne aktívne doplnky</string>
     <string name="compose_search_empty_no_results_message">Nainštalované prehľadávateľné katalógy nevrátili žiadne zhody pre tento dotaz.</string>
     <string name="compose_search_empty_no_results_title">Nenašli sa žiadne výsledky</string>
     <string name="compose_search_empty_no_search_catalogs_message">Vaše nainštalované doplnky neposkytujú vyhľadávanie v katalógu.</string>
@@ -437,9 +429,6 @@
     <string name="compose_settings_root_check_updates_description">Stiahnuť najnovšie vydanie</string>
     <string name="compose_settings_root_check_updates_title">Skontrolovať aktualizácie</string>
     <string name="compose_settings_root_content_discovery_description">Spravovať doplnky a zdroje objavovania.</string>
-    <string name="compose_settings_root_content_discovery_description_appstore">Spravujte doplnky a vyberte, čo sa má zobrazovať v Nuviu.</string>
-    <string name="compose_settings_root_downloads_description">Spravovať stiahnuté filmy a epizódy.</string>
-    <string name="compose_settings_root_downloads_description_appstore">Spravujte obsah uložený v tomto zariadení.</string>
     <string name="compose_settings_root_downloads_title">Stiahnuté</string>
     <string name="compose_settings_root_general_section">VŠEOBECNÉ</string>
     <string name="compose_settings_root_integrations_description">Spravovať dostupné integrácie</string>
@@ -447,7 +436,6 @@
     <string name="compose_settings_root_streams_description">Zobrazenie výsledkov streamov a pravidlá URL odznakov.</string>
     <string name="compose_settings_root_switch_profile_description">Prepnúť na iný profil.</string>
     <string name="compose_settings_root_switch_profile_title">Prepnúť profil</string>
-    <string name="compose_settings_root_trakt_description">Otvoriť obrazovku pripojenia Trakt</string>
     <string name="settings_search_empty">Nenašli sa žiadne nastavenia.</string>
     <string name="settings_search_placeholder">Hľadať nastavenia...</string>
     <string name="settings_search_results_section">VÝSLEDKY</string>
@@ -484,8 +472,6 @@
     <string name="settings_licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="settings_licenses_attributions_exoplayer_body">Používa sa na prehrávanie v zostavách Android.</string>
     <string name="settings_licenses_attributions_exoplayer_license">Licencované pod Apache License, Version 2.0.</string>
-    <string name="compose_trakt_list_picker_loading">Načítavanie vašich zoznamov Trakt…</string>
-    <string name="compose_trakt_list_picker_subtitle">Vyberte, kam uložiť tento titul na Trakt</string>
     <string name="action_donate">Darovať</string>
     <string name="cw_action_go_to_details">Prejsť na podrobnosti</string>
     <string name="cw_action_remove">Odstrániť</string>
@@ -493,7 +479,6 @@
     <string name="detail_btn_play">Prehrať</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
     <string name="detail_comments_badge_review">Recenzia</string>
-    <string name="detail_comments_badge_spoiler">Spoiler</string>
     <string name="detail_comments_empty">Zatiaľ nie sú dostupné žiadne recenzie Trakt.</string>
     <string name="detail_comments_likes">%1$d páči sa</string>
     <string name="detail_comments_spoiler_card">Tento komentár obsahuje spoilery.</string>
@@ -629,7 +614,6 @@
     <string name="settings_continue_watching_up_next_title">Ďalšia epizóda od najďalej pozretej</string>
     <string name="settings_continue_watching_use_episode_thumbnails_description">Uprednostniť miniatúry epizód, ak sú dostupné.</string>
     <string name="settings_continue_watching_use_episode_thumbnails_title">Uprednostniť miniatúry epizód v Pokračovať v sledovaní</string>
-    <string name="settings_content_discovery_section_home">DOMOV</string>
     <string name="settings_content_discovery_section_sources">ZDROJE</string>
     <string name="settings_content_discovery_addons_description">Inštalovať, odstrániť, obnoviť a zoradiť zdroje obsahu.</string>
     <string name="settings_content_discovery_plugins_description">Inštalovať repozitáre JavaScript scrapers a testovať poskytovateľov interne.</string>
@@ -715,9 +699,7 @@
     <string name="settings_fusion_badge_preview_empty">Žiadne obrázky odznakov v štýle Fusion na tejto URL.</string>
     <string name="settings_fusion_badge_group_title">Skupina %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Ostatné odznaky Fusion</string>
-    <string name="settings_debrid_key_valid">API kľúč overený.</string>
     <string name="settings_debrid_key_invalid">Nepodarilo sa overiť tento API kľúč.</string>
-    <string name="settings_mdb_add_api_key_first">Pred zapnutím hodnotení pridajte nižšie váš API kľúč MDBList.</string>
     <string name="settings_mdb_api_key_description">Vyžaduje sa na načítanie hodnotení z MDBList</string>
     <string name="settings_mdb_api_key_label">API kľúč</string>
     <string name="settings_mdb_api_key_title">API kľúč</string>
@@ -730,8 +712,6 @@
     <string name="settings_meta_actions_description">Ovládacie prvky prehrávania a ukladania.</string>
     <string name="settings_meta_cast">Obsadenie</string>
     <string name="settings_meta_cast_description">Zoznam hlavného obsadenia.</string>
-    <string name="settings_meta_cinematic_background">Kinematografické pozadie</string>
-    <string name="settings_meta_cinematic_background_description">Rozmazané pozadie za obsahom, podobne ako na obrazovke streamov.</string>
     <string name="settings_meta_collection">Kolekcia</string>
     <string name="settings_meta_collection_description">Súvisiaca kolekcia alebo franšíza.</string>
     <string name="settings_meta_comments">Komentáre</string>
@@ -777,8 +757,6 @@
     <string name="settings_notifications_test_for_title">Odoslať lokálne testovacie oznámenie pre %1$s.</string>
     <string name="settings_notifications_test_requires_saved_show">Najprv uložte seriál do knižnice, aby ste mohli testovať oznámenia.</string>
     <string name="settings_notifications_test_title">Testovacie oznámenie</string>
-    <string name="community_section_title">Komunita</string>
-    <string name="community_section_description">Pozrite sa na ľudí, ktorí budujú a podporujú Nuvio na Mobile, TV a Webe.</string>
     <string name="community_donation_progress_title">Server a údržba tohto mesiaca</string>
     <string name="community_donation_progress_complete">Pokryté. Ďalšia podpora ide na vývoj.</string>
     <string name="community_donation_progress_remaining">Po 100 % ide ďalšia podpora na vývoj.</string>
@@ -788,7 +766,6 @@
     <string name="community_tab_supporters">Podporovatelia</string>
     <string name="community_open_github">Otvoriť GitHub</string>
     <string name="community_github_profile_unavailable">Profil GitHub nie je dostupný</string>
-    <string name="community_no_message_attached">Žiadna správa nie je priložená.</string>
     <string name="community_loading_contributors">Načítavanie prispievateľov...</string>
     <string name="community_loading_supporters">Načítavanie podporovateľov...</string>
     <string name="community_load_contributors_failed">Nepodarilo sa načítať prispievateľov</string>
@@ -799,7 +776,6 @@
     <string name="community_error_unable_load_supporters">Nepodarilo sa načítať podporovateľov.</string>
     <string name="community_error_contributors_request_failed">Momentálne sa nepodarilo načítať prispievateľov.</string>
     <string name="community_error_supporters_request_failed">Momentálne sa nepodarilo načítať podporovateľov.</string>
-    <string name="community_total_commits">%1$d celkových commitov</string>
     <string name="community_month_jan">Jan</string>
     <string name="community_month_feb">Feb</string>
     <string name="community_month_mar">Mar</string>
@@ -831,7 +807,6 @@
     <string name="settings_playback_decoder_prefer_app">Uprednostniť dekodéry aplikácie (FFmpeg)</string>
     <string name="settings_playback_decoder_prefer_device">Uprednostniť dekodéry zariadenia</string>
     <string name="settings_playback_decoder_priority">Priorita dekodéra</string>
-    <string name="settings_playback_dialog_close">Klepnutím mimo zatvoríte</string>
     <string name="settings_playback_dialog_save_close">Klepnutím mimo uložíte a zatvoríte</string>
     <string name="settings_playback_duration_day_one">%1$d deň</string>
     <string name="settings_playback_duration_days">%1$d dní</string>
@@ -842,7 +817,6 @@
     <string name="settings_playback_external_player">Externý prehrávač</string>
     <string name="settings_playback_external_player_app">Aplikácia externého prehrávača</string>
     <string name="settings_playback_external_player_description_android">Otvoriť nové prehrávanie s predvolenou video aplikáciou Androidu alebo systémovým výberom.</string>
-    <string name="settings_playback_external_player_description_ios">Otvoriť nové prehrávanie s vybraným nainštalovaným prehrávačom.</string>
     <string name="settings_playback_external_player_forward_subtitles">Preposlať titulky do externého prehrávača</string>
     <string name="settings_playback_external_player_forward_subtitles_description">Načítať titulky doplnku vo vašom preferovanom jazyku a odovzdať ich externému prehrávači.</string>
     <string name="settings_playback_external_player_none_available">Nie sú nainštalované žiadne podporované externé prehrávače</string>
@@ -868,13 +842,6 @@
     <string name="settings_playback_option_device_language">Jazyk zariadenia</string>
     <string name="settings_playback_option_forced">Vynútené</string>
     <string name="settings_playback_option_none">Žiadne</string>
-    <string name="settings_playback_addon_subtitle_startup_all">Všetky titulky z doplnkov</string>
-    <string name="settings_playback_addon_subtitle_startup_all_description">Pred prehrávaním prednačítať a pripojiť všetky titulky z doplnkov. Najpomalšie spustenie.</string>
-    <string name="settings_playback_addon_subtitle_startup_fast">Rýchle spustenie</string>
-    <string name="settings_playback_addon_subtitle_startup_fast_description">Spustiť prehrávanie okamžite. Výber titulkov z doplnkov môže raz znovu načítať prehrávač.</string>
-    <string name="settings_playback_addon_subtitle_startup_mode">Načítavanie titulkov z doplnkov</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred">Preferované jazyky</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred_description">Pred prehrávaním prednačítať titulky z doplnkov a pripojiť preferované/sekundárne jazykové stopy.</string>
     <string name="settings_playback_prefer_binge_group">Uprednostniť skupinu binge (ďalšia epizóda)</string>
     <string name="settings_playback_prefer_binge_group_description">Najprv vyskúšať rovnaký profil zdroja (rovnaká skupina doplnku/kvality) pred bežnými pravidlami automatického prehrávania.</string>
     <string name="settings_playback_reuse_binge_group">Znovu použiť skupinu binge</string>
@@ -953,7 +920,6 @@
     <string name="settings_playback_stream_selection_mode_regex_description">Prehrať prvý zdroj, ktorého text zodpovedá vášmu vzoru regex.</string>
     <string name="settings_playback_stream_timeout">Časový limit výberu streamu</string>
     <string name="settings_playback_stream_timeout_description">Čas čakania na doplnky pred výberom.</string>
-    <string name="settings_playback_threshold_minutes">Prahové minúty</string>
     <string name="settings_playback_threshold_mode">Režim prahu ďalšej epizódy</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">Minúty pred koncom</string>
     <string name="settings_playback_threshold_mode_percentage">Percentuálne</string>
@@ -996,7 +962,6 @@
     <string name="settings_tmdb_section_modules">MODULY</string>
     <string name="settings_tmdb_section_title">OBOHATENIE TMDB</string>
     <string name="settings_trakt_approval_redirect">Po schválení budete automaticky presmerovaný späť.</string>
-    <string name="settings_trakt_authentication">AUTENTIFIKÁCIA</string>
     <string name="settings_trakt_comments">Komentáre</string>
     <string name="settings_trakt_comments_description">Zobraziť recenzie Trakt na stránkach metadát</string>
     <string name="settings_trakt_connect">Pripojiť Trakt</string>
@@ -1004,7 +969,6 @@
     <string name="settings_trakt_default_user">Používateľ Trakt</string>
     <string name="settings_trakt_disconnect">Odpojiť</string>
     <string name="settings_trakt_failed_open_browser">Nepodarilo sa otvoriť prehliadač</string>
-    <string name="settings_trakt_features">FUNKCIE</string>
     <string name="settings_trakt_finish_sign_in">Dokončite prihlásenie do Trakt vo vašom prehliadači</string>
     <string name="settings_trakt_intro_description">Synchronizujte váš zoznam sledovania, postup sledovania, pokračovanie v sledovaní, scrobbles a osobné zoznamy s Trakt.</string>
     <string name="settings_trakt_missing_credentials">Chýbajúce prihlasovacie údaje Trakt v local.properties (TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET).</string>
@@ -1017,16 +981,11 @@
     <string name="trakt_library_source_dialog_subtitle">Vyberte, kde ukladať a spravovať položky knižnice</string>
     <string name="trakt_library_source_trakt">Trakt</string>
     <string name="trakt_library_source_nuvio">Knižnica Nuvio</string>
-    <string name="trakt_library_source_trakt_selected">Vybraná knižnica Trakt</string>
-    <string name="trakt_library_source_nuvio_selected">Vybraná knižnica Nuvio</string>
     <string name="trakt_watch_progress_title">Postup sledovania</string>
     <string name="trakt_watch_progress_subtitle">Vyberte, ktorý zdroj postupu poháňa pokračovanie a sledovanie</string>
     <string name="trakt_watch_progress_dialog_title">Postup sledovania</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Vyberte, či má pokračovanie a sledovanie používať Trakt alebo Nuvio Sync, kým zostáva aktívne scrobbling Trakt.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Nuvio Sync</string>
-    <string name="trakt_watch_progress_trakt_selected">Zdroj postupu sledovania nastavený na Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Zdroj postupu sledovania nastavený na Nuvio Sync</string>
     <string name="trakt_more_like_this_source_title">Zdroj podobných titulov</string>
     <string name="trakt_more_like_this_source_subtitle">Vyberte, odkiaľ pochádzajú odporúčania na stránkach s podrobnosťami</string>
     <string name="trakt_more_like_this_source_dialog_title">Zdroj podobných titulov</string>
@@ -1144,7 +1103,6 @@
     <string name="lang_zulu">Zuluština</string>
     <string name="action_clear">Vymazať</string>
     <string name="action_continue">Pokračovať</string>
-    <string name="action_ignore">Ignorovať</string>
     <string name="action_install">Inštalovať</string>
     <string name="action_later">Neskôr</string>
     <string name="action_no">Nie</string>
@@ -1178,7 +1136,6 @@
     <string name="discover_empty_no_catalogs_title">Žiadne katalógy objavovania</string>
     <string name="discover_empty_no_results_message">Vybraný katalóg a filtre nevrátili žiadne položky.</string>
     <string name="discover_empty_no_results_title">Nenašli sa žiadne tituly</string>
-    <string name="discover_empty_no_active_addons_message">Pred prehliadaním katalógov objavovania nainštalujte a overte aspoň jeden doplnok.</string>
     <string name="discover_select_catalog">Vybrať katalóg</string>
     <string name="discover_select_genre">Vybrať žáner</string>
     <string name="discover_select_type">Vybrať typ</string>
@@ -1194,7 +1151,6 @@
     <string name="home_continue_watching_watched">%1$s pozreté</string>
     <string name="home_continue_watching_hours_minutes_left">Zostáva %1$dh %2$dm</string>
     <string name="home_continue_watching_minutes_left">Zostáva %1$dm</string>
-    <string name="home_empty_no_active_addons_message">Pred načítaním riadkov katalógu na domovskej obrazovke nainštalujte a overte aspoň jeden doplnok.</string>
     <string name="home_empty_no_rows_message">Nainštalované doplnky momentálne nezverejňujú katalógy kompatibilné s tabuľou bez požadovaných doplnkov.</string>
     <string name="home_empty_no_rows_title">Žiadne riadky domovskej obrazovky</string>
     <string name="home_view_details">Zobraziť podrobnosti</string>
@@ -1216,8 +1172,6 @@
     <string name="meta_section_trailers_description">Rad trailerov a skratky prehrávania.</string>
     <string name="network_back_online">Späť online</string>
     <string name="network_cannot_reach_servers">Nie je možné dosiahnuť servery</string>
-    <string name="network_error_empty_response_body">Prázdne telo odpovede</string>
-    <string name="network_error_request_failed_http">Požiadavka zlyhala s HTTP %1$d</string>
     <string name="network_no_internet_connection">Žiadne internetové pripojenie</string>
     <string name="person_age">(vek %1$d)</string>
     <string name="person_born">Narodený %1$s%2$s</string>
@@ -1280,9 +1234,6 @@
     <string name="streams_open_internal_player">Otvoriť vo vstavanom prehrávači</string>
     <string name="streams_empty_load_failed_message">Nainštalované doplnky streamov nevrátili platnú odpoveď streamu.</string>
     <string name="streams_empty_load_failed_title">Nepodarilo sa načítať streamy</string>
-    <string name="streams_empty_no_addons_message">Najprv nainštalujte doplnok na načítanie streamov pre tento titul.</string>
-    <string name="streams_empty_no_stream_addon_message">Vaše nainštalované doplnky neposkytujú streamy pre tento typ titulu.</string>
-    <string name="streams_empty_no_stream_addon_title">Žiadny doplnok streamov nie je dostupný</string>
     <string name="streams_empty_no_streams_message">Žiadny z vašich nainštalovaných doplnkov nevrátil streamy pre tento titul.</string>
     <string name="streams_episode_badge">S%1$d E%2$d</string>
     <string name="streams_episode_fallback_title">Epizóda</string>
@@ -1309,25 +1260,18 @@
     <string name="trailer_close">Zavrieť trailer</string>
     <string name="trailer_unable_to_play">Nepodarilo sa prehrať trailer</string>
     <string name="trakt_lists_load_failed">Nepodarilo sa načítať zoznamy Trakt</string>
-    <string name="trakt_lists_update_failed">Nepodarilo sa aktualizovať zoznamy Trakt</string>
-    <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">Kontrola aktualizácií zlyhala</string>
     <string name="updates_download_failed">Sťahovanie zlyhalo</string>
-    <string name="updates_download_empty_body">Prázdne telo sťahovania</string>
-    <string name="updates_download_file_missing">Stiahnutý súbor aktualizácie chýba.</string>
     <string name="updates_downloading_progress">Sťahovanie %1$d%%</string>
     <string name="updates_install_failed">Nepodarilo sa spustiť inštaláciu</string>
     <string name="updates_latest_version">Používate najnovšiu verziu.</string>
     <string name="updates_message_allow_installs">Povoľte inštalácie aplikácií pre Nuvio a potom sa vráťte a pokračujte.</string>
-    <string name="updates_message_downloading">Sťahovanie aktualizácie...</string>
-    <string name="updates_message_no_updates">Nenašli sa žiadne aktualizácie.</string>
     <string name="updates_message_ready">Nová verzia je pripravená na inštaláciu.</string>
     <string name="updates_not_available">Aktualizácie v aplikácii nie sú dostupné v tejto zostave.</string>
     <string name="updates_preparing_download">Príprava sťahovania</string>
     <string name="updates_release_notes">Poznámky k vydaniu</string>
     <string name="updates_title_allow_installs">Povoliť inštalácie na pokračovanie</string>
     <string name="updates_title_available">Aktualizácia dostupná</string>
-    <string name="updates_title_status">Stav aktualizácie</string>
     <string name="addon_already_installed">Tento doplnok je už nainštalovaný.</string>
     <string name="addon_invalid_url">Zadajte platnú URL doplnku</string>
     <string name="addon_load_manifest_failed">Nepodarilo sa načítať manifest</string>
@@ -1352,17 +1296,12 @@
     <string name="downloads_live_downloading_with_total">Sťahovanie %1$s • %2$s / %3$s</string>
     <string name="downloads_live_failed">Sťahovanie zlyhalo</string>
     <string name="downloads_live_paused">Pozastavené %1$s</string>
-    <string name="library_remove_confirm">Odstrániť</string>
-    <string name="library_remove_from_list_message">Odstrániť %1$s zo %2$s?</string>
-    <string name="library_remove_message">Odstrániť %1$s z vašej knižnice?</string>
-    <string name="library_remove_title">Odstrániť z knižnice?</string>
     <string name="media_movie">Film</string>
     <string name="notifications_channel_episode_releases_description">Upozornenia, keď je vydaná nová epizóda uloženého seriálu.</string>
     <string name="notifications_test_preview_body">Náhľad upozornenia na vydanie epizódy.</string>
     <string name="notifications_test_send_failed">Nepodarilo sa odoslať testovacie oznámenie.</string>
     <string name="notifications_test_sent_for">Testovacie oznámenie odoslané pre %1$s.</string>
     <string name="player_unable_to_play_stream">Nepodarilo sa prehrať tento stream.</string>
-    <string name="player_engine_unavailable_rebuild">Engine prehrávača MPV nie je dostupný. Prosím, znovu zostavte aplikáciu.</string>
     <string name="profile_pin_changed_requires_refresh">PIN tohto profilu sa zmenil. Pripojte sa raz, aby ste obnovili zámok na tomto zariadení.</string>
     <string name="profile_pin_clear_failed">Nepodarilo sa odstrániť zámok PIN. Skúste znova.</string>
     <string name="profile_pin_clear_requires_internet">Pripojte sa na internet, aby ste odstránili zámok PIN.</string>
@@ -1371,12 +1310,9 @@
     <string name="profile_pin_set_requires_internet">Pripojte sa na internet, aby ste nastavili PIN.</string>
     <string name="profile_primary_addons_required">Tento profil používa primárne doplnky.</string>
     <string name="streams_failed_to_load_scraper">Nepodarilo sa načítať %1$s</string>
-    <string name="stream_default_name">Stream</string>
     <string name="source_embedded">Vložené</string>
     <string name="trakt_authorization_denied">Autorizácia zamietnutá</string>
     <string name="trakt_complete_sign_in_browser">Dokončite prihlásenie do Trakt vo vašom prehliadači</string>
-    <string name="trakt_connected">Pripojený k Trakt</string>
-    <string name="trakt_disconnected">Odpojený od Trakt</string>
     <string name="trakt_invalid_callback">Neplatný callback Trakt</string>
     <string name="trakt_invalid_callback_state">Neplatný stav callbacku Trakt</string>
     <string name="trakt_invalid_token_response">Neplatná odpoveď tokenu Trakt</string>
@@ -1385,16 +1321,6 @@
     <string name="trakt_missing_auth_code">Trakt nevrátil autorizačný kód</string>
     <string name="trakt_missing_credentials">Chýbajúce prihlasovacie údaje Trakt</string>
     <string name="trakt_progress_load_failed">Nepodarilo sa načítať postup Trakt</string>
-    <string name="trakt_public_list">Verejný zoznam Trakt</string>
-    <string name="trakt_public_list_enter_valid_id_or_url">Zadajte platné ID alebo URL zoznamu Trakt</string>
-    <string name="trakt_public_list_items_count">%1$d položiek</string>
-    <string name="trakt_public_list_likes_count">%1$d páči sa</string>
-    <string name="trakt_public_list_missing_credentials">Chýbajúce prihlasovacie údaje Trakt v local.properties (TRAKT_CLIENT_ID).</string>
-    <string name="trakt_public_list_missing_id">Chýbajúce ID zoznamu Trakt</string>
-    <string name="trakt_public_list_missing_numeric_id">Zoznam Trakt neobsahoval číselné ID</string>
-    <string name="trakt_public_list_not_found_or_not_public">Zoznam Trakt sa nenašiel alebo nie je verejný</string>
-    <string name="trakt_public_list_rate_limit_reached">Dosiahnutý limit rýchlosti Trakt</string>
-    <string name="trakt_public_list_request_failed">Požiadavka Trakt zlyhala</string>
     <string name="trakt_sign_in_complete_failed">Nepodarilo sa dokončiť prihlásenie do Trakt</string>
     <string name="trakt_user_fallback">Používateľ Trakt</string>
     <string name="trakt_watchlist">Zoznam sledovania</string>
@@ -1408,29 +1334,9 @@
     <string name="trakt_error_add_list_failed">Nepodarilo sa pridať do zoznamu Trakt</string>
     <string name="trakt_error_missing_ids">Chýbajúce kompatibilné ID Trakt</string>
     <string name="trakt_error_empty_response">Prázdne telo odpovede</string>
-    <string name="tmdb_sources_collection_fallback_title">Kolekcia TMDB %1$d</string>
-    <string name="tmdb_sources_collection_not_found">Kolekcia TMDB sa nenašla</string>
-    <string name="tmdb_sources_company_fallback_title">Produkcia TMDB %1$d</string>
-    <string name="tmdb_sources_company_not_found">Spoločnosť TMDB sa nenašla</string>
-    <string name="tmdb_sources_director_fallback_title">Režisér TMDB %1$d</string>
-    <string name="tmdb_sources_discover_no_data">Objavovanie TMDB nevrátilo žiadne dáta</string>
-    <string name="tmdb_sources_discover_title">Objavovanie TMDB</string>
-    <string name="tmdb_sources_invalid_id_or_url">Zadajte platné ID alebo URL TMDB.</string>
-    <string name="tmdb_sources_list_fallback_title">Zoznam TMDB %1$d</string>
-    <string name="tmdb_sources_list_not_found">Zoznam TMDB sa nenašiel</string>
-    <string name="tmdb_sources_load_failed">Nepodarilo sa načítať zdroj TMDB</string>
-    <string name="tmdb_sources_missing_collection_id">Chýbajúce ID kolekcie TMDB</string>
-    <string name="tmdb_sources_missing_list_id">Chýbajúce ID zoznamu TMDB</string>
-    <string name="tmdb_sources_missing_person_id">Chýbajúce ID osoby TMDB</string>
-    <string name="tmdb_sources_network_fallback_title">Sieť TMDB %1$d</string>
-    <string name="tmdb_sources_network_not_found">Sieť TMDB sa nenašla</string>
-    <string name="tmdb_sources_person_credits_not_found">Kredity osoby TMDB sa nenašli</string>
-    <string name="tmdb_sources_person_fallback_title">Osoba TMDB %1$d</string>
-    <string name="tmdb_sources_person_not_found">Osoba TMDB sa nenašla</string>
     <string name="generic_trailer">Trailer</string>
     <string name="generic_unknown">Neznáme</string>
     <string name="generic_addon">Doplnok</string>
-    <string name="action_saved">Uložené</string>
     <string name="action_play_episode">Prehrať %1$s</string>
     <string name="action_resume_episode">Pokračovať v %1$s</string>
     <string name="collections_import_error_empty_json">JSON je prázdny.</string>
@@ -1491,14 +1397,6 @@
     <string name="downloads_enqueue_replaced">Predchádzajúce sťahovanie nahradené</string>
     <string name="downloads_enqueue_started">Sťahovanie spustené</string>
     <string name="downloads_enqueue_unsupported_format">Nepodporovaný formát streamu pre sťahovanie</string>
-    <string name="downloads_error_empty_body">Prázdne telo odpovede</string>
-    <string name="downloads_error_finalize_failed">Nepodarilo sa dokončiť súbor sťahovania</string>
-    <string name="downloads_error_http_failed">Požiadavka zlyhala s HTTP %1$d</string>
-    <string name="downloads_error_not_initialized">Systém sťahovania nie je inicializovaný</string>
-    <string name="downloads_error_open_partial_failed">Nepodarilo sa otvoriť čiastočný súbor sťahovania</string>
-    <string name="downloads_error_partial_not_open">Čiastočný súbor sťahovania nie je otvorený</string>
-    <string name="downloads_error_request_failed">Požiadavka sťahovania zlyhala</string>
-    <string name="downloads_error_write_partial_failed">Nepodarilo sa zapísať čiastočný súbor sťahovania</string>
     <string name="home_catalog_default_title">%1$s - %2$s</string>
     <string name="library_empty_message">Uložené tituly sa zobrazia tu po klepnutí na Uložiť na obrazovke s podrobnosťami.</string>
     <string name="library_empty_title">Vaša knižnica je prázdna</string>
@@ -1569,7 +1467,6 @@
     <string name="unit_bytes_mb">MB</string>
     <string name="unit_bytes_gb">GB</string>
     <!-- PlayerControls a11y -->
-    <string name="player_action_submit_intro">Odoslať intro</string>
     <string name="player_action_video_settings">Nastavenia videa</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">Cloudová knižnica nie je dostupná pre %1$s.</string>
@@ -1703,15 +1600,10 @@
     <string name="settings_debrid_rule_excluded_release_groups_desc">Skryť vybrané release skupiny.</string>
     <!-- Submit intro/recap/outro dialog -->
     <string name="submit_intro_title">Odoslať časové značky</string>
-    <string name="submit_intro_segment_type">TYP SEGMENTU</string>
     <string name="submit_intro_segment_intro">Intro</string>
     <string name="submit_intro_segment_recap">Rekapitulácia</string>
     <string name="submit_intro_segment_outro">Outro</string>
     <string name="submit_intro_segment_preview">Náhľad</string>
-    <string name="submit_intro_start_time">ZAČIATOČNÝ ČAS (MM:SS)</string>
-    <string name="submit_intro_end_time">KONCOVÝ ČAS (MM:SS)</string>
-    <string name="submit_intro_submit">Odoslať</string>
-    <string name="submit_intro_capture">Zachytiť</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">Hardvérový dekodér</string>
     <string name="settings_playback_ios_audio_output_dialog">Zvukový výstup</string>
@@ -1720,7 +1612,6 @@
     <!-- Collection editor -->
     <string name="collections_editor_resolved_trakt_list">Vyriešený Trakt zoznam</string>
     <string name="collections_editor_tmdb_discover">TMDB Objavovanie</string>
-    <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>
     <!-- Collection editor error messages -->
     <string name="collections_editor_trakt_input_required">Zadajte názov, URL alebo ID Trakt zoznamu</string>
     <string name="collections_editor_tmdb_invalid_id_error">Zadajte platné TMDB ID alebo URL.</string>
@@ -1737,17 +1628,13 @@
     <!-- Cloud library -->
     <string name="cloud_library_playback_disabled">Cloudová knižnica je vypnutá.</string>
     <!-- IntroDB settings -->
-    <string name="settings_playback_introdb_invalid_api_key">Neplatný API kľúč alebo zlyhalo pripojenie</string>
     <string name="addons_manifest_missing_field">V manifeste chýba \"%1$s\"</string>
     <string name="collections_editor_tmdb_collection_title_format">TMDB Kolekcia %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">TMDB Režisér %1$s</string>
-    <string name="collections_editor_tmdb_discover_title">TMDB Objavovanie</string>
-    <string name="collections_editor_tmdb_invalid_id_or_url">Zadajte platné TMDB ID alebo URL.</string>
     <string name="collections_editor_tmdb_list_title_format">TMDB Zoznam %1$s</string>
     <string name="collections_editor_tmdb_network_title_format">TMDB Sieť %1$s</string>
     <string name="collections_editor_tmdb_person_title_format">TMDB Osoba %1$s</string>
     <string name="collections_editor_tmdb_production_title_format">TMDB Produkcia %1$s</string>
-    <string name="collections_editor_tmdb_source_load_failed">Nepodarilo sa načítať TMDB zdroj</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
     <string name="collections_tmdb_collection_not_found">TMDB kolekcia nebola nájdená</string>
     <string name="collections_tmdb_company_not_found">TMDB spoločnosť nebola nájdená</string>
@@ -1802,19 +1689,13 @@
     <string name="plugins_empty_repos_title">Zatiaľ nie sú nainštalované žiadne repozitáre pluginov.</string>
     <string name="plugins_enable_globally_desc">Použiť pluginy poskytovateľov počas vyhľadávania streamov.</string>
     <string name="plugins_enable_globally_title">Povoliť pluginy poskytovateľov globálne</string>
-    <string name="plugins_error_already_installed">Tento repozitár pluginov je už nainštalovaný.</string>
     <string name="plugins_error_enter_repo_url">Zadajte URL repozitára pluginov.</string>
     <string name="plugins_error_enter_valid_url">Zadajte platnú URL pluginu.</string>
-    <string name="plugins_error_install_failed">Nepodarilo sa nainštalovať repozitár pluginov</string>
     <string name="plugins_error_provider_not_found">Poskytovateľ nebol nájdený</string>
-    <string name="plugins_error_refresh_failed">Nepodarilo sa obnoviť repozitár</string>
     <string name="plugins_error_unavailable_build">Pluginy nie sú v tomto zostavení k dispozícii.</string>
     <string name="plugins_group_by_repo_desc">V Streamoch zobraziť jedného poskytovateľa na repozitár namiesto jedného na zdroj.</string>
     <string name="plugins_group_by_repo_title">Zoskupiť pluginy poskytovateľov podľa repozitára</string>
     <string name="plugins_input_manifest_placeholder">URL manifestu pluginu</string>
-    <string name="plugins_manifest_error_name_missing">Chýba názov manifestu.</string>
-    <string name="plugins_manifest_error_no_providers">Manifest nemá poskytovateľov.</string>
-    <string name="plugins_manifest_error_version_missing">Chýba verzia manifestu.</string>
     <string name="plugins_manifest_name_missing">Chýba názov manifestu.</string>
     <string name="plugins_manifest_no_providers">Manifest nemá poskytovateľov.</string>
     <string name="plugins_manifest_version_missing">Chýba verzia manifestu.</string>
@@ -1846,13 +1727,10 @@
     <string name="trakt_connected_status">Pripojené k Trakt</string>
     <string name="trakt_disconnected_status">Odpojené od Trakt</string>
     <string name="unit_bytes_tb">TB</string>
-    <string name="updates_apk_asset_missing">V vydaní nebol nájdený žiadny APK súbor</string>
     <string name="updates_download_failed_http">Stiahnutie zlyhalo s HTTP %1$d</string>
     <string name="updates_downloaded_file_missing">Stiahnutý aktualizačný súbor chýba.</string>
     <string name="updates_empty_download_body">Prázdne telo stiahnutia</string>
     <string name="updates_github_api_error">Chyba GitHub releases API: %1$d</string>
-    <string name="updates_no_channel_release">Zatiaľ nebola zverejnená žiadna aktualizácia.</string>
-    <string name="updates_release_missing_title">Vydanie nemá tag ani názov</string>
     <!--  Watching air date display -->
     <string name="cw_airs_date">Vysielanie %1$s</string>
     <string name="cw_airs_today">Vysielanie dnes</string>
@@ -1861,9 +1739,6 @@
         <item quantity="one">Vysielanie o %1$d deň</item>
         <item quantity="other">Vysielanie o %1$d dní</item>
     </plurals>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Dnes</string>
-    <string name="cw_airs_tomorrow_short">Zajtra</string>
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">O %1$d deň</item>
         <item quantity="other">O %1$d dní</item>
@@ -1884,22 +1759,16 @@
     <string name="settings_p2p_hide_stats_title">Skryť štatistiky torrentu</string>
     <string name="settings_p2p_hide_stats_subtitle">Skryť buffer, seedy, peery a rýchlosť sťahovania počas načítavania a prehrávania</string>
     <string name="player_torrent_peer_info">%1$d seedov · %2$d peerov</string>
-    <string name="player_torrent_buffered_status">%1$s bufferované · %2$s · %3$s</string>
-    <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peerov · %2$d seedov · %3$d%%</string>
-    <string name="player_torrent_connecting_peers">Pripájanie k peerom…</string>
     <string name="player_torrent_starting_engine">Spúšťa sa P2P engine…</string>
     <string name="player_error_failed_start_torrent">Nepodarilo sa spustiť torrent: %1$s</string>
     <string name="player_error_torrent">Chyba torrentu: %1$s</string>
     <!-- Current cmp-rewrite string additions -->
-    <string name="action_switch">Prepnúť</string>
     <string name="addons_appstore_add_description">Preneste svoju knižnicu do Nuvia pomocou doplnkov, ktoré používate.</string>
     <string name="addons_appstore_empty_subtitle">Pridajte doplnok a začnite si vytvárať knižnicu.</string>
     <string name="addons_appstore_empty_title">Prispôsobte si Nuvio.</string>
     <string name="addons_appstore_input_placeholder">URL doplnku</string>
     <string name="addons_appstore_install_button">Pridať doplnok</string>
-    <string name="store_empty_unavailable_title">Zatiaľ tu nič nie je</string>
-    <string name="store_empty_unavailable_message">Doplnky, ktoré používate, tu zatiaľ nemajú čo zobraziť.</string>
     <string name="compose_auth_terms_prefix">Registráciou súhlasím s</string>
     <string name="compose_auth_terms_link">Podmienkami</string>
     <string name="settings_appearance_app_language_device">Jazyk zariadenia</string>
@@ -2108,8 +1977,6 @@
     <string name="settings_simkl_sync_info_docs">Prečítať si sprievodcu synchronizáciou Simkl</string>
     <string name="settings_simkl_authorization_revoked">Autorizácia Simkl bola zrušená. Pripojte sa znova.</string>
     <string name="tracking_source_simkl">Simkl</string>
-    <string name="tracking_library_source_simkl_selected">Vybraný zoznam sledovania Simkl</string>
-    <string name="tracking_watch_progress_simkl_selected">Zdroj priebehu sledovania bol nastavený na Simkl</string>
     <string name="tracking_watch_progress_dialog_subtitle">Vyberte službu, z ktorej má Nuvio načítavať pozíciu prehrávania a zoznam Pokračovať v sledovaní. Scrobblovanie zostáva aktívne pre všetky pripojené služby.</string>
     <string name="tracking_lists_update_failed">Nepodarilo sa aktualizovať zoznamy sledovania</string>
     <string name="tracking_list_status_rewritten">Služba %1$s zaradila tento titul do %2$s namiesto %3$s</string>
@@ -2159,8 +2026,6 @@
     <string name="profile_background_member_note">Vlastné URL adresy pozadia je možné nastaviť vo webovom paneli Nuvio.</string>
     <string name="profile_background_normal">Normálne</string>
     <string name="profile_background_custom">Vlastné</string>
-    <string name="action_collapse">Zbaliť</string>
-    <string name="action_expand">Rozbaliť</string>
     <string name="action_delete_confirm_message">Naozaj to chcete odstrániť?</string>
     <string name="action_delete_confirm_title">Odstrániť?</string>
     <string name="addons_delete_confirm_title">Odstrániť doplnok?</string>
@@ -2234,7 +2099,6 @@
     <string name="settings_licenses_attributions_haze_title">Haze 1.7.2</string>
     <string name="settings_licenses_attributions_haze_body">Používa sa na efekty rozostrenia pozadia. Vytvoril Chris Banes.</string>
     <string name="settings_licenses_attributions_haze_license">Licencované pod Apache License, Verzia 2.0.</string>
-    <string name="action_support_nuvio">Podporiť Nuvio</string>
     <string name="settings_appearance_app_icon">Ikona aplikácie</string>
     <string name="settings_appearance_app_icon_arctic_blue">Arktická modrá</string>
     <string name="settings_appearance_app_icon_android_confirmation_message">Zmena na %1$s zatvorí aplikáciu Nuvio. Ťuknutím na OK pokračujte.</string>
@@ -2258,7 +2122,6 @@
     <string name="settings_custom_poster_description">Zadajte vzor URL adresy pre plagát z externej služby. Ak zástupný znak nemá pre daný titul žiadnu hodnotu, použije sa namiesto neho pôvodný plagát.</string>
     <string name="settings_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
     <string name="settings_custom_poster_active">Vlastný zdroj plagátov je aktívny</string>
-    <string name="settings_custom_poster_none">Nenastavený žiadny vzor</string>
     <string name="settings_custom_poster_save">Uložiť</string>
     <string name="settings_custom_poster_clear">Vymazať</string>
     <string name="settings_custom_poster_apply_to">Použiť vlastné plagáty pre</string>
@@ -2302,7 +2165,6 @@
     <string name="settings_tracking_simkl_recommendations_description">Používať podobné tituly a odporúčania komunity zo služby Simkl.</string>
     <string name="settings_tracking_anime_id_tvdb">Uprednostniť TVDB</string>
     <string name="settings_tracking_anime_id_tvdb_description">Použiť TVDB ID na zoskupenie sérií. Stabilnejšie než IMDB pre anime, ktoré má rozdelené série na IMDB.</string>
-    <string name="settings_tracking_not_connected">Nepripojené</string>
     <string name="trakt_more_like_this_source_simkl">Simkl</string>
     <string name="theme_custom">Vlastná</string>
     <string name="custom_theme_title">Váš vlastný farebný prechod</string>
@@ -2363,7 +2225,6 @@
     <string name="settings_playback_legacy_layout">Pôvodné rozloženie</string>
     <string name="settings_playback_legacy_layout_description">Použiť pôvodné ovládacie prvky prehrávača.</string>
     <string name="compose_player_via">Cez %1$s</string>
-    <string name="compose_player_episode_code">S%1$d E%2$d</string>
     <string name="compose_player_more_actions">Viac ovládacích prvkov</string>
     <string name="compose_player_fewer_actions">Menej ovládacích prvkov</string>
     <string name="compose_player_speed">Rýchlosť prehrávania</string>

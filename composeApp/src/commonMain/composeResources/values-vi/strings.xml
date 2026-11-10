@@ -13,8 +13,6 @@
     <string name="action_back">Quay lại</string>
     <string name="action_cancel">Huỷ</string>
     <string name="action_close">Đóng</string>
-    <string name="action_collapse">Thu gọn</string>
-    <string name="action_expand">Mở rộng</string>
     <string name="action_delete">Xóa</string>
     <string name="action_delete_confirm_message">Bạn có chắc chắn muốn xóa không?</string>
     <string name="action_delete_confirm_title">Xóa?</string>
@@ -33,8 +31,6 @@
     <string name="action_retry">Thử lại</string>
     <string name="action_save">Lưu</string>
     <string name="action_saving">Đang lưu…</string>
-    <string name="action_switch">Chuyển</string>
-    <string name="action_validate">Xác minh</string>
     <string name="addon_installing">Đang cài đặt</string>
     <string name="addon_title">Tiện ích</string>
     <string name="addons_badge_active">Đang hoạt động</string>
@@ -52,8 +48,6 @@
     <string name="addons_appstore_empty_title">Tùy chỉnh Nuvio theo cách của bạn</string>
     <string name="addons_appstore_input_placeholder">URL tiện ích</string>
     <string name="addons_appstore_install_button">Thêm tiện ích</string>
-    <string name="store_empty_unavailable_title">Chưa có gì ở đây</string>
-    <string name="store_empty_unavailable_message">Các tiện ích hiện tại của bạn không có gì để hiển thị ở đây.</string>
     <string name="addons_empty_subtitle">Thêm URL tệp kê khai của tiện ích để Nuvio bắt đầu tải danh mục, siêu dữ liệu, luồng phát hoặc phụ đề.</string>
     <string name="addons_empty_title">Chưa cài đặt tiện ích nào</string>
     <string name="addons_error_enter_url">Nhập URL tiện ích</string>
@@ -93,7 +87,6 @@
     <string name="collections_editor_cover_none">Không có</string>
     <string name="collections_editor_cover">Ảnh bìa</string>
     <string name="collections_editor_create_collection">Tạo bộ sưu tập</string>
-    <string name="collections_editor_done">Xong</string>
     <string name="collections_editor_edit_collection">Chỉnh sửa bộ sưu tập</string>
     <string name="collections_editor_edit_folder">Chỉnh sửa thư mục</string>
     <string name="collections_editor_folder_editor_help">Thiết lập tên nhận diện, cách hiển thị và nguồn danh mục của thư mục theo cùng cấu trúc với trình chỉnh sửa bộ sưu tập chính.</string>
@@ -256,11 +249,8 @@
     <string name="collections_editor_trakt_sort_popular">Phổ biến</string>
     <string name="collections_editor_trakt_sort_percentage">Phần trăm</string>
     <string name="collections_editor_trakt_sort_votes">Lượt bình chọn</string>
-    <string name="collections_editor_trakt_enter_name_url_or_id">Nhập tên, URL hoặc ID danh sách Trakt</string>
-    <string name="collections_editor_trakt_enter_id_or_url">Nhập ID hoặc URL danh sách Trakt</string>
     <string name="collections_editor_trakt_load_failed">Không thể tải danh sách Trakt</string>
     <string name="collections_editor_trakt_no_lists_found">Không tìm thấy danh sách Trakt</string>
-    <string name="collections_editor_trakt_resolved_subtitle">Danh sách Trakt đã xác thực</string>
     <string name="collections_editor_trakt_fallback_title">Danh sách Trakt %1$d</string>
     <string name="collections_editor_tmdb_genre_action">Hành động</string>
     <string name="collections_editor_tmdb_genre_adventure">Phiêu lưu</string>
@@ -427,7 +417,6 @@
     <string name="compose_player_capture_line">Chụp</string>
     <string name="compose_player_close">Đóng trình phát</string>
     <string name="compose_player_color">Màu sắc</string>
-    <string name="compose_player_currently_playing">Đang phát</string>
     <string name="compose_player_episode_code_episode_only">T%1$d</string>
     <string name="compose_player_episode_code_full">M%1$d T%2$d</string>
     <string name="compose_player_episode_title_format">M%1$d T%2$d • %3$s</string>
@@ -486,8 +475,6 @@
     <string name="compose_search_discover_title">Khám phá</string>
     <string name="compose_search_empty_failed_message">Các tiện ích đã cài đặt không trả về kết quả tìm kiếm hợp lệ.</string>
     <string name="compose_search_empty_failed_title">Tìm kiếm thất bại</string>
-    <string name="compose_search_empty_no_active_addons_message">Bật hoặc thêm tiện ích trước khi tìm kiếm.</string>
-    <string name="compose_search_empty_no_active_addons_title">Không có tiện ích nào đang hoạt động</string>
     <string name="compose_search_empty_no_results_message">Các danh mục có thể tìm kiếm đã không trả về bất kỳ kết quả khớp nào cho truy vấn này.</string>
     <string name="compose_search_empty_no_results_title">Không tìm thấy kết quả nào</string>
     <string name="compose_search_empty_no_search_catalogs_message">Các tiện ích đã bật của bạn không hỗ trợ tìm kiếm danh mục.</string>
@@ -531,9 +518,6 @@
     <string name="compose_settings_root_check_updates_description">Tải xuống phiên bản mới nhất</string>
     <string name="compose_settings_root_check_updates_title">Kiểm tra cập nhật</string>
     <string name="compose_settings_root_content_discovery_description">Quản lý các tiện ích và nguồn khám phá.</string>
-    <string name="compose_settings_root_content_discovery_description_appstore">Quản lý các tiện ích và chọn những gì xuất hiện trong Nuvio.</string>
-    <string name="compose_settings_root_downloads_description">Quản lý các phim điện ảnh và tập phim đã tải xuống của bạn.</string>
-    <string name="compose_settings_root_downloads_description_appstore">Quản lý những gì bạn đã lưu trên thiết bị này.</string>
     <string name="compose_settings_root_downloads_title">Tải xuống</string>
     <string name="compose_settings_root_general_section">CHUNG</string>
     <string name="compose_settings_root_integrations_description">Quản lý tích hợp có sẵn</string>
@@ -542,7 +526,6 @@
     <string name="compose_settings_root_streams_description">Hiển thị kết quả luồng và các quy tắc URL của nhãn</string>
     <string name="compose_settings_root_switch_profile_description">Chuyển sang hồ sơ khác</string>
     <string name="compose_settings_root_switch_profile_title">Chuyển hồ sơ</string>
-    <string name="compose_settings_root_trakt_description">Mở màn hình kết nối Trakt</string>
     <string name="compose_settings_root_tracking_description">Kết nối các dịch vụ theo dõi và chọn dịch vụ nào được dùng cho Thư viện và Tiếp tục xem.</string>
     <string name="settings_search_empty">Không tìm thấy cài đặt nào.</string>
     <string name="settings_search_placeholder">Tìm cài đặt...</string>
@@ -602,19 +585,15 @@
     <string name="settings_licenses_attributions_exoplayer_title">AndroidX Media3 ExoPlayer 1.8.0</string>
     <string name="settings_licenses_attributions_exoplayer_body">Được dùng để phát lại trên các bản dựng Android</string>
     <string name="settings_licenses_attributions_exoplayer_license">Cấp phép theo Apache License Version 2.0</string>
-    <string name="compose_trakt_list_picker_loading">Đang tải danh sách Trakt…</string>
-    <string name="compose_trakt_list_picker_subtitle">Chọn danh sách để lưu nội dung này trên Trakt</string>
     <string name="compose_tracking_list_picker_loading">Đang tải danh sách…</string>
     <string name="compose_tracking_list_picker_subtitle">Chọn nơi để lưu nội dung này.</string>
     <string name="action_donate">Ủng hộ</string>
-    <string name="action_support_nuvio">Tài trợ Nuvio</string>
     <string name="cw_action_go_to_details">Xem chi tiết</string>
     <string name="cw_action_remove">Xóa</string>
     <string name="cw_action_start_from_beginning">Xem từ đầu</string>
     <string name="detail_btn_play">Phát</string>
     <string name="detail_comments_badge_rating">%1$d/10</string>
     <string name="detail_comments_badge_review">Đánh giá</string>
-    <string name="detail_comments_badge_spoiler">Nội dung tiết lộ</string>
     <string name="detail_comments_empty">Chưa có đánh giá trên Trakt</string>
     <string name="detail_comments_likes">%1$d lượt thích</string>
     <string name="detail_comments_spoiler_card">Bình luận này có tiết lộ nội dung</string>
@@ -790,7 +769,6 @@
     <string name="settings_custom_poster_description">Cung cấp mẫu URL poster từ một dịch vụ bên ngoài. Nếu một biến giữ chỗ không có giá trị cho tiêu đề cụ thể, poster gốc sẽ được sử dụng thay thế.</string>
     <string name="settings_custom_poster_placeholder">https://example.com/poster?id={id}&amp;id_type={id_type}&amp;type={type}</string>
     <string name="settings_custom_poster_active">Nguồn poster tùy chỉnh đang hoạt động</string>
-    <string name="settings_custom_poster_none">Chưa thiết lập mẫu</string>
     <string name="settings_custom_poster_save">Lưu</string>
     <string name="settings_custom_poster_clear">Xóa</string>
     <!-- Custom Poster URL - Screen Toggles -->
@@ -833,7 +811,6 @@
     <string name="settings_continue_watching_up_next_title">Tiếp theo từ tập xa nhất</string>
     <string name="settings_continue_watching_use_episode_thumbnails_description">Ưu tiên ảnh thu nhỏ của từng tập khi có sẵn</string>
     <string name="settings_continue_watching_use_episode_thumbnails_title">Ưu tiên ảnh thu nhỏ trong Tiếp tục xem</string>
-    <string name="settings_content_discovery_section_home">TRANG CHỦ</string>
     <string name="settings_content_discovery_section_sources">NGUỒN</string>
     <string name="settings_content_discovery_section_search">TÌM KIẾM</string>
     <string name="settings_content_discovery_recent_searches">Các tìm kiếm gần đây</string>
@@ -925,9 +902,7 @@
     <string name="settings_fusion_badge_preview_empty">Không có hình ảnh nhãn kiểu Fusion trong URL này</string>
     <string name="settings_fusion_badge_group_title">Nhóm %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Các nhãn Fusion khác</string>
-    <string name="settings_debrid_key_valid">Mã khóa API hợp lệ</string>
     <string name="settings_debrid_key_invalid">Không thể xác minh mã khóa API này</string>
-    <string name="settings_mdb_add_api_key_first">Thêm mã khóa API MDBList trước khi bật tính năng hiển thị điểm đánh giá</string>
     <string name="settings_mdb_api_key_description">Cần thiết để lấy điểm đánh giá từ MDBList</string>
     <string name="settings_mdb_api_key_label">Mã khóa API</string>
     <string name="settings_mdb_api_key_title">Mã khóa API</string>
@@ -940,8 +915,6 @@
     <string name="settings_meta_actions_description">Phát và lưu nội dung</string>
     <string name="settings_meta_cast">Diễn viên</string>
     <string name="settings_meta_cast_description">Danh sách diễn viên chính</string>
-    <string name="settings_meta_cinematic_background">Ảnh nền điện ảnh</string>
-    <string name="settings_meta_cinematic_background_description">Làm mờ phông nền phía sau nội dung, tương tự màn hình truyền phát</string>
     <string name="settings_meta_background_mode">Chế độ ảnh nền</string>
     <string name="settings_meta_background_mode_description">Chọn cách ảnh hiển thị xuất hiện phía sau các trang siêu dữ liệu.</string>
     <string name="settings_meta_poster_transition">Chuyển cảnh poster</string>
@@ -997,8 +970,6 @@
     <string name="settings_notifications_test_for_title">Gửi thông báo kiểm tra cho %1$s</string>
     <string name="settings_notifications_test_requires_saved_show">Vui lòng lưu chương trình vào thư viện trước để kiểm tra thông báo</string>
     <string name="settings_notifications_test_title">Thông báo kiểm tra</string>
-    <string name="community_section_title">Cộng đồng</string>
-    <string name="community_section_description">Gặp gỡ đội ngũ phát triển và tài trợ Nuvio trên Mobile, TV và Web</string>
     <string name="community_membership_title">Gói thành viên Người tài trợ Nuvio</string>
     <string name="community_membership_description">Việc tài trợ Nuvio giúp chi trả cho cơ sở hạ tầng và hoạt động phát triển liên tục, đồng thời duy trì trải nghiệm cốt lõi miễn phí cho mọi người.</string>
     <string name="community_view_supporter_membership">Xem Gói thành viên Người tài trợ</string>
@@ -1022,7 +993,6 @@
     <string name="community_tab_supporters">Người tài trợ</string>
     <string name="community_open_github">Mở GitHub</string>
     <string name="community_github_profile_unavailable">Không thể mở hồ sơ GitHub</string>
-    <string name="community_no_message_attached">Không có tin nhắn được đính kèm.</string>
     <string name="community_loading_contributors">Đang tải danh sách người đóng góp…</string>
     <string name="community_loading_supporters">Đang tải danh sách người tài trợ…</string>
     <string name="community_load_contributors_failed">Không thể tải danh sách người đóng góp</string>
@@ -1033,7 +1003,6 @@
     <string name="community_error_unable_load_supporters">Không thể tải danh sách người tài trợ</string>
     <string name="community_error_contributors_request_failed">Không thể tải danh sách người đóng góp lúc này.</string>
     <string name="community_error_supporters_request_failed">Không thể tải danh sách người tài trợ lúc này.</string>
-    <string name="community_total_commits">%1$d lượt đóng góp</string>
     <string name="community_month_jan">Th1</string>
     <string name="community_month_feb">Th2</string>
     <string name="community_month_mar">Th3</string>
@@ -1067,7 +1036,6 @@
     <string name="settings_playback_decoder_prefer_app">Ưu tiên bộ giải mã ứng dụng (FFmpeg)</string>
     <string name="settings_playback_decoder_prefer_device">Ưu tiên bộ giải mã thiết bị</string>
     <string name="settings_playback_decoder_priority">Thứ tự ưu tiên bộ giải mã</string>
-    <string name="settings_playback_dialog_close">Chạm bên ngoài để đóng</string>
     <string name="settings_playback_dialog_save_close">Chạm bên ngoài để lưu và đóng</string>
     <string name="settings_playback_duration_day_one">%1$d ngày</string>
     <string name="settings_playback_duration_days">%1$d ngày</string>
@@ -1078,7 +1046,6 @@
     <string name="settings_playback_external_player">Trình phát bên ngoài</string>
     <string name="settings_playback_external_player_app">Ứng dụng trình phát bên ngoài</string>
     <string name="settings_playback_external_player_description_android">Mở phát lại mới bằng ứng dụng video mặc định của Android hoặc trình chọn ứng dụng của hệ thống.</string>
-    <string name="settings_playback_external_player_description_ios">Mở phát lại mới bằng trình phát đã cài đặt được chọn.</string>
     <string name="settings_playback_external_player_forward_subtitles">Chuyển phụ đề sang trình phát bên ngoài</string>
     <string name="settings_playback_external_player_forward_subtitles_description">Lấy phụ đề từ tiện ích theo ngôn ngữ ưu tiên và chuyển sang trình phát bên ngoài</string>
     <string name="settings_playback_external_player_send_skip_segments">Gửi mốc thời gian Giới thiệu và Đoạn kết</string>
@@ -1108,13 +1075,6 @@
     <string name="settings_playback_option_original_hint">Yêu cầu bật tính năng bổ sung dữ liệu từ TMDB.</string>
     <string name="settings_playback_option_forced">Bắt buộc</string>
     <string name="settings_playback_option_none">Không có</string>
-    <string name="settings_playback_addon_subtitle_startup_all">Tất cả phụ đề từ tiện ích</string>
-    <string name="settings_playback_addon_subtitle_startup_all_description">Tải trước và gắn tất cả phụ đề từ tiện ích trước khi phát lại. Khởi động chậm nhất.</string>
-    <string name="settings_playback_addon_subtitle_startup_fast">Khởi động nhanh</string>
-    <string name="settings_playback_addon_subtitle_startup_fast_description">Bắt đầu phát lại ngay lập tức. Chọn phụ đề từ tiện ích có thể làm trình phát tải lại một lần.</string>
-    <string name="settings_playback_addon_subtitle_startup_mode">Tải phụ đề từ tiện ích</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred">Ngôn ngữ ưu tiên</string>
-    <string name="settings_playback_addon_subtitle_startup_preferred_description">Tải trước phụ đề từ tiện ích trước khi phát lại và gắn vào các bản ngôn ngữ ưu tiên/thứ hai.</string>
     <string name="settings_playback_prefer_binge_group">Ưu tiên nhóm phát liên tục (Tập tiếp theo)</string>
     <string name="settings_playback_prefer_binge_group_description">Ưu tiên cùng cấu hình nguồn (cùng tiện ích/nhóm chất lượng) trước các quy tắc tự động phát thông thường.</string>
     <string name="settings_playback_reuse_binge_group">Dùng lại nhóm phát liên tục</string>
@@ -1211,7 +1171,6 @@
     <string name="settings_playback_stream_selection_mode_regex_description">Phát nguồn đầu tiên có văn bản khớp với mẫu biểu thức chính quy.</string>
     <string name="settings_playback_stream_timeout">Thời gian chờ khi chọn luồng</string>
     <string name="settings_playback_stream_timeout_description">Thời gian chờ các tiện ích trước khi chọn luồng</string>
-    <string name="settings_playback_threshold_minutes">Ngưỡng phút</string>
     <string name="settings_playback_threshold_mode">Chế độ Ngưỡng tập tiếp theo</string>
     <string name="settings_playback_threshold_mode_minutes_before_end">Số phút trước khi kết thúc</string>
     <string name="settings_playback_threshold_mode_percentage">Phần trăm</string>
@@ -1280,7 +1239,6 @@
     <string name="settings_tmdb_section_modules">THÀNH PHẦN</string>
     <string name="settings_tmdb_section_title">BỔ SUNG DỮ LIỆU TMDB</string>
     <string name="settings_trakt_approval_redirect">Bạn sẽ được tự động chuyển hướng trở lại sau khi yêu cầu được duyệt</string>
-    <string name="settings_trakt_authentication">XÁC THỰC</string>
     <string name="settings_trakt_comments">Bình luận</string>
     <string name="settings_trakt_comments_description">Hiển thị đánh giá từ Trakt trên các trang siêu dữ liệu</string>
     <string name="settings_trakt_connect">Kết nối Trakt</string>
@@ -1288,7 +1246,6 @@
     <string name="settings_trakt_default_user">Người dùng Trakt</string>
     <string name="settings_trakt_disconnect">Ngắt kết nối</string>
     <string name="settings_trakt_failed_open_browser">Không thể mở trình duyệt</string>
-    <string name="settings_trakt_features">TÍNH NĂNG</string>
     <string name="settings_trakt_finish_sign_in">Hoàn tất phê duyệt kết nối</string>
     <string name="settings_trakt_intro_description">Đồng bộ danh sách muốn xem, tiến độ xem, tiếp tục xem, nhật ký phát lại và danh sách cá nhân với Trakt.</string>
     <string name="settings_trakt_missing_credentials">Thiếu TRAKT_CLIENT_ID / TRAKT_CLIENT_SECRET trong local.properties.</string>
@@ -1357,10 +1314,7 @@
     <string name="settings_simkl_sync_info_library_statuses">Các chương trình nằm trong danh sách Tạm hoãn hoặc Đã bỏ của Simkl sẽ bị ẩn khỏi mục Tiếp tục xem. Chúng vẫn bị ẩn trong suốt thời gian nằm trong một trong hai danh sách đó.</string>
     <string name="settings_simkl_sync_info_docs">Đọc hướng dẫn đồng bộ Simkl</string>
     <string name="settings_simkl_authorization_revoked">Ủy quyền Simkl đã bị thu hồi. Vui lòng kết nối lại.</string>
-    <string name="settings_tracking_not_connected">Chưa kết nối</string>
     <string name="tracking_source_simkl">Simkl</string>
-    <string name="tracking_library_source_simkl_selected">Đã chọn danh sách theo dõi Simkl</string>
-    <string name="tracking_watch_progress_simkl_selected">Nguồn tiến trình xem đã được đặt thành Simkl</string>
     <string name="tracking_watch_progress_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để đọc cho việc tiếp tục phát và mục Tiếp tục xem. Ghi nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ liên kết.</string>
     <string name="trakt_library_source_title">Nguồn thư viện</string>
     <string name="trakt_library_source_subtitle">Chọn thư viện để lưu và quản lý bộ sưu tập</string>
@@ -1368,16 +1322,11 @@
     <string name="trakt_library_source_dialog_subtitle">Chọn dịch vụ mà Nuvio dùng để xem Thư viện của bạn. Nhật ký phát lại vẫn hoạt động trên tất cả dịch vụ liên kết.</string>
     <string name="trakt_library_source_trakt">Trakt</string>
     <string name="trakt_library_source_nuvio">Thư viện Nuvio</string>
-    <string name="trakt_library_source_trakt_selected">Đã chọn thư viện Trakt</string>
-    <string name="trakt_library_source_nuvio_selected">Đã chọn thư viện Nuvio</string>
     <string name="trakt_watch_progress_title">Tiến trình xem</string>
     <string name="trakt_watch_progress_subtitle">Chọn nguồn tiến trình dùng để tiếp tục xem</string>
     <string name="trakt_watch_progress_dialog_title">Tiến trình xem</string>
-    <string name="trakt_watch_progress_dialog_subtitle">Chọn nguồn tiến trình dùng để phát tiếp và tiếp tục xem như Trakt hoặc Đồng bộ Nuvio, trong khi tính năng ghi nhật ký phát lại của Trakt vẫn hoạt động.</string>
     <string name="trakt_watch_progress_source_trakt">Trakt</string>
     <string name="trakt_watch_progress_source_nuvio">Đồng bộ Nuvio</string>
-    <string name="trakt_watch_progress_trakt_selected">Đã đặt nguồn tiến trình xem là Trakt</string>
-    <string name="trakt_watch_progress_nuvio_selected">Đã đặt nguồn tiến trình xem là Đồng bộ Nuvio</string>
     <string name="trakt_more_like_this_source_title">Nguồn Nội dung tương tự</string>
     <string name="trakt_more_like_this_source_subtitle">Chọn nguồn gợi ý được lấy từ đâu trên trang chi tiết.</string>
     <string name="trakt_more_like_this_source_dialog_title">Nguồn Nội dung tương tự</string>
@@ -1518,7 +1467,6 @@
     <string name="lang_zulu">Tiếng Zulu</string>
     <string name="action_clear">Xóa</string>
     <string name="action_continue">Tiếp tục</string>
-    <string name="action_ignore">Bỏ qua</string>
     <string name="action_install">Cài đặt</string>
     <string name="action_later">Để sau</string>
     <string name="action_no">Không</string>
@@ -1558,7 +1506,6 @@
     <string name="discover_empty_no_catalogs_title">Không có danh mục khám phá nào</string>
     <string name="discover_empty_no_results_message">Danh mục và bộ lọc đã chọn không trả về bất kỳ mục nào.</string>
     <string name="discover_empty_no_results_title">Không tìm thấy nội dung</string>
-    <string name="discover_empty_no_active_addons_message">Bật hoặc thêm một tiện ích trước khi duyệt mục Khám phá.</string>
     <string name="discover_select_catalog">Chọn danh mục</string>
     <string name="discover_select_genre">Chọn thể loại</string>
     <string name="discover_select_type">Chọn loại</string>
@@ -1574,7 +1521,6 @@
     <string name="home_continue_watching_watched">Đã xem %1$s</string>
     <string name="home_continue_watching_hours_minutes_left">Còn %1$dg %2$dph</string>
     <string name="home_continue_watching_minutes_left">Còn %1$dph</string>
-    <string name="home_empty_no_active_addons_message">Bật hoặc thêm một tiện ích để xem các danh mục trên Trang chủ.</string>
     <string name="home_empty_no_rows_message">Các tiện ích đã bật của bạn không cung cấp danh mục nào có thể hiển thị trên Trang chủ.</string>
     <string name="home_empty_no_rows_title">Không có sẵn nội dung trên Trang chủ</string>
     <string name="home_load_failed_title">Không thể tải Trang chủ.</string>
@@ -1597,8 +1543,6 @@
     <string name="meta_section_trailers_description">Hàng trailer và phím tắt điều khiển</string>
     <string name="network_back_online">Đã kết nối lại</string>
     <string name="network_cannot_reach_servers">Không thể kết nối đến máy chủ</string>
-    <string name="network_error_empty_response_body">Nội dung phản hồi trống</string>
-    <string name="network_error_request_failed_http">Yêu cầu thất bại (HTTP %1$d)</string>
     <string name="network_no_internet_connection">Không có kết nối Internet</string>
     <string name="person_age">(%1$d tuổi)</string>
     <string name="person_born">Sinh %1$s%2$s</string>
@@ -1664,9 +1608,6 @@
     <string name="streams_empty_load_failed_title">Không thể tải các luồng</string>
     <string name="playback_unavailable">Không thể phát nội dung</string>
     <string name="playback_unavailable_message">Không thể phát nội dung này với thiết lập hiện tại.</string>
-    <string name="streams_empty_no_addons_message">Cài đặt một tiện ích trước để tải các luồng cho nội dung này.</string>
-    <string name="streams_empty_no_stream_addon_message">Các tiện ích đã cài đặt không cung cấp luồng cho loại nội dung này.</string>
-    <string name="streams_empty_no_stream_addon_title">Không có sẵn tiện ích phát trực tuyến nào</string>
     <string name="streams_empty_no_streams_message">Không có tiện ích đã cài đặt nào trả về được luồng cho nội dung này.</string>
     <string name="streams_episode_badge">M%1$d T%2$d</string>
     <string name="streams_episode_fallback_title">Tập</string>
@@ -1707,7 +1648,6 @@
     <string name="trailer_close">Đóng trailer</string>
     <string name="trailer_unable_to_play">Không thể phát trailer</string>
     <string name="trakt_lists_load_failed">Không thể tải danh sách Trakt</string>
-    <string name="trakt_lists_update_failed">Không thể cập nhật danh sách Trakt</string>
     <string name="tracking_lists_update_failed">Không thể cập nhật danh sách theo dõi</string>
     <string name="tracking_list_status_rewritten">%1$s đã đặt nội dung này vào %2$s thay vì %3$s</string>
     <string name="tracking_remove_confirmation_title">Xóa khỏi %1$s?</string>
@@ -1715,11 +1655,8 @@
     <string name="tracking_removal_impact_history">lịch sử đã xem</string>
     <string name="tracking_removal_impact_rating">đánh giá</string>
     <string name="tracking_removal_impact_history_and_rating">lịch sử đã xem và đánh giá</string>
-    <string name="updates_asset_line">%1$s • %2$s</string>
     <string name="updates_check_failed">Không thể kiểm tra cập nhật</string>
     <string name="updates_download_failed">Tải xuống thất bại</string>
-    <string name="updates_download_empty_body">Dữ liệu tải về trống</string>
-    <string name="updates_download_file_missing">Không tìm thấy tệp cập nhật đã tải xuống</string>
     <string name="updates_downloading_progress">Đang tải %1$d%</string>
     <string name="updates_debug_test_complete">Biểu ngữ kiểm tra hoàn tất</string>
     <string name="updates_debug_test_description">Xem trước biểu ngữ và tiến trình tải xuống mô phỏng.</string>
@@ -1727,8 +1664,6 @@
     <string name="updates_install_failed">Không thể bắt đầu cài đặt</string>
     <string name="updates_latest_version">Bạn đang dùng phiên bản mới nhất</string>
     <string name="updates_message_allow_installs">Vui lòng cấp quyền cài đặt ứng dụng cho Nuvio rồi quay lại để tiếp tục</string>
-    <string name="updates_message_downloading">Đang tải bản cập nhật…</string>
-    <string name="updates_message_no_updates">Không có bản cập nhật mới</string>
     <string name="updates_message_ready">Sẵn sàng cài đặt phiên bản mới</string>
     <string name="updates_not_available">Phiên bản này không hỗ trợ cập nhật trong ứng dụng</string>
     <string name="updates_no_release_notes">Không có ghi chú phát hành được cung cấp.</string>
@@ -1736,7 +1671,6 @@
     <string name="updates_release_notes">Ghi chú phát hành</string>
     <string name="updates_title_allow_installs">Cho phép cài đặt để tiếp tục</string>
     <string name="updates_title_available">Có bản cập nhật mới</string>
-    <string name="updates_title_status">Trạng thái cập nhật</string>
     <string name="addon_already_installed">Tiện ích này đã được cài đặt</string>
     <string name="addon_invalid_url">Nhập URL tiện ích hợp lệ</string>
     <string name="addon_load_manifest_failed">Không thể tải tệp kê khai</string>
@@ -1761,17 +1695,12 @@
     <string name="downloads_live_downloading_with_total">Đang tải %1$s • %2$s / %3$s</string>
     <string name="downloads_live_failed">Tải xuống thất bại</string>
     <string name="downloads_live_paused">Đã tạm dừng %1$s</string>
-    <string name="library_remove_confirm">Xóa</string>
-    <string name="library_remove_from_list_message">Xóa %1$s khỏi %2$s?</string>
-    <string name="library_remove_message">Xóa %1$s khỏi thư viện?</string>
-    <string name="library_remove_title">Xóa khỏi thư viện?</string>
     <string name="media_movie">Phim</string>
     <string name="notifications_channel_episode_releases_description">Thông báo khi một tập mới của chương trình đã lưu được phát hành.</string>
     <string name="notifications_test_preview_body">Xem trước thông báo phát hành tập mới.</string>
     <string name="notifications_test_send_failed">Không thể gửi thông báo kiểm tra</string>
     <string name="notifications_test_sent_for">Đã gửi thông báo kiểm tra cho %1$s</string>
     <string name="player_unable_to_play_stream">Không thể phát luồng này</string>
-    <string name="player_engine_unavailable_rebuild">Lõi trình phát MPV không có sẵn. Vui lòng biên dịch lại ứng dụng</string>
     <string name="profile_pin_changed_requires_refresh">Mã PIN hồ sơ này đã thay đổi. Vui lòng kết nối Internet để cập nhật mã PIN mới nhất trên thiết bị này</string>
     <string name="profile_pin_clear_failed">Không thể xóa mã PIN. Vui lòng thử lại</string>
     <string name="profile_pin_clear_requires_internet">Vui lòng kết nối Internet để xóa mã PIN</string>
@@ -1780,13 +1709,10 @@
     <string name="profile_pin_set_requires_internet">Vui lòng kết nối Internet để đặt mã PIN</string>
     <string name="profile_primary_addons_required">Hồ sơ này đang dùng tiện ích chính</string>
     <string name="streams_failed_to_load_scraper">Không thể tải %1$s</string>
-    <string name="stream_default_name">Luồng phát</string>
     <string name="source_embedded">Nhúng</string>
     <string name="trakt_authorization_denied">Quyền truy cập bị từ chối</string>
     <string name="trakt_authorization_expired_reconnect">Quyền truy cập Trakt của bạn không còn hợp lệ. Vui lòng kết nối lại tài khoản Trakt của bạn.</string>
     <string name="trakt_complete_sign_in_browser">Hoàn tất đăng nhập Trakt trong trình duyệt</string>
-    <string name="trakt_connected">Đã kết nối với Trakt</string>
-    <string name="trakt_disconnected">Đã ngắt kết nối từ Trakt</string>
     <string name="trakt_invalid_callback">Phản hồi Trakt không hợp lệ</string>
     <string name="trakt_invalid_callback_state">Trạng thái phản hồi Trakt không hợp lệ</string>
     <string name="trakt_invalid_token_response">Phản hồi mã xác thực Trakt không hợp lệ</string>
@@ -1795,16 +1721,6 @@
     <string name="trakt_missing_auth_code">Trakt đã không trả về mã ủy quyền</string>
     <string name="trakt_missing_credentials">Thiếu thông tin xác thực Trakt</string>
     <string name="trakt_progress_load_failed">Không thể tải tiến trình xem từ Trakt</string>
-    <string name="trakt_public_list">Danh sách công khai Trakt</string>
-    <string name="trakt_public_list_enter_valid_id_or_url">Nhập ID hoặc URL danh sách Trakt hợp lệ</string>
-    <string name="trakt_public_list_items_count">%1$d mục</string>
-    <string name="trakt_public_list_likes_count">%1$d lượt thích</string>
-    <string name="trakt_public_list_missing_credentials">Thiếu thông tin xác thực Trakt trong local.properties (TRAKT_CLIENT_ID)</string>
-    <string name="trakt_public_list_missing_id">Thiếu ID danh sách Trakt</string>
-    <string name="trakt_public_list_missing_numeric_id">Danh sách Trakt không bao gồm ID dạng số</string>
-    <string name="trakt_public_list_not_found_or_not_public">Không tìm thấy danh sách Trakt hoặc danh sách không công khai</string>
-    <string name="trakt_public_list_rate_limit_reached">Đã đạt giới hạn tần suất yêu cầu của Trakt</string>
-    <string name="trakt_public_list_request_failed">Yêu cầu tới Trakt thất bại</string>
     <string name="trakt_sign_in_complete_failed">Không thể hoàn tất đăng nhập Trakt</string>
     <string name="trakt_user_fallback">Người dùng Trakt</string>
     <string name="trakt_watchlist">Danh sách theo dõi</string>
@@ -1818,29 +1734,9 @@
     <string name="trakt_error_add_list_failed">Không thể thêm vào danh sách Trakt</string>
     <string name="trakt_error_missing_ids">Thiếu ID tương thích với Trakt</string>
     <string name="trakt_error_empty_response">Nội dung phản hồi trống</string>
-    <string name="tmdb_sources_collection_fallback_title">Bộ sưu tập TMDB %1$d</string>
-    <string name="tmdb_sources_collection_not_found">Không tìm thấy bộ sưu tập TMDB</string>
-    <string name="tmdb_sources_company_fallback_title">Hãng sản xuất TMDB %1$d</string>
-    <string name="tmdb_sources_company_not_found">Không tìm thấy hãng sản xuất trên TMDB</string>
-    <string name="tmdb_sources_director_fallback_title">Đạo diễn TMDB %1$d</string>
-    <string name="tmdb_sources_discover_no_data">Khám Phá TMDB không trả về dữ liệu</string>
-    <string name="tmdb_sources_discover_title">Khám phá TMDB</string>
-    <string name="tmdb_sources_invalid_id_or_url">Nhập ID hoặc URL TMDB hợp lệ</string>
-    <string name="tmdb_sources_list_fallback_title">Danh sách TMDB %1$d</string>
-    <string name="tmdb_sources_list_not_found">Không tìm thấy danh sách TMDB</string>
-    <string name="tmdb_sources_load_failed">Không thể tải nguồn TMDB</string>
-    <string name="tmdb_sources_missing_collection_id">Thiếu ID bộ sưu tập TMDB</string>
-    <string name="tmdb_sources_missing_list_id">Thiếu ID danh sách TMDB</string>
-    <string name="tmdb_sources_missing_person_id">Thiếu ID hồ sơ TMDB</string>
-    <string name="tmdb_sources_network_fallback_title">Đơn vị phát sóng TMDB %1$d</string>
-    <string name="tmdb_sources_network_not_found">Không tìm thấy đơn vị phát sóng trên TMDB</string>
-    <string name="tmdb_sources_person_credits_not_found">Không có danh sách tham gia của người này trên TMDB</string>
-    <string name="tmdb_sources_person_fallback_title">Hồ sơ TMDB %1$d</string>
-    <string name="tmdb_sources_person_not_found">Không tìm thấy hồ sơ trên TMDB</string>
     <string name="generic_trailer">Trailer</string>
     <string name="generic_unknown">Không xác định</string>
     <string name="generic_addon">Tiện ích</string>
-    <string name="action_saved">Đã lưu</string>
     <string name="action_play_episode">Phát %1$s</string>
     <string name="action_resume_episode">Xem tiếp %1$s</string>
     <string name="collections_import_error_empty_json">JSON trống</string>
@@ -1903,14 +1799,6 @@
     <string name="downloads_enqueue_replaced">Đã thay thế lượt tải trước</string>
     <string name="downloads_enqueue_started">Đã bắt đầu tải xuống</string>
     <string name="downloads_enqueue_unsupported_format">Định dạng luồng không hỗ trợ tải xuống</string>
-    <string name="downloads_error_empty_body">Nội dung phản hồi trống</string>
-    <string name="downloads_error_finalize_failed">Không thể hoàn tất tệp tải xuống</string>
-    <string name="downloads_error_http_failed">Yêu cầu thất bại (HTTP %1$d)</string>
-    <string name="downloads_error_not_initialized">Hệ thống tải xuống chưa được khởi tạo</string>
-    <string name="downloads_error_open_partial_failed">Không thể mở tệp tải xuống một phần.</string>
-    <string name="downloads_error_partial_not_open">Tệp tải xuống một phần không mở được</string>
-    <string name="downloads_error_request_failed">Yêu cầu tải xuống thất bại</string>
-    <string name="downloads_error_write_partial_failed">Không thể ghi dữ liệu vào tệp tải xuống một phần</string>
     <string name="home_catalog_default_title">%1$s - %2$s</string>
     <string name="library_empty_message">Các nội dung đã lưu sẽ xuất hiện ở đây sau khi bạn nhấn Lưu trên màn hình chi tiết.</string>
     <string name="library_empty_title">Thư viện của bạn đang trống</string>
@@ -2002,7 +1890,6 @@
     <string name="unit_bytes_mb">MB</string>
     <string name="unit_bytes_gb">GB</string>
     <!-- PlayerControls a11y -->
-    <string name="player_action_submit_intro">Gửi mốc Giới thiệu</string>
     <string name="player_action_video_settings">Cài đặt video</string>
     <!-- CloudLibrary -->
     <string name="cloud_library_provider_unavailable">Thư viện đám mây không có sẵn cho %1$s</string>
@@ -2136,15 +2023,10 @@
     <string name="settings_debrid_rule_excluded_release_groups_desc">Ẩn các nhóm phát hành đã chọn</string>
     <!-- Submit intro/recap/outro dialog -->
     <string name="submit_intro_title">Gửi mốc thời gian</string>
-    <string name="submit_intro_segment_type">LOẠI PHÂN ĐOẠN</string>
     <string name="submit_intro_segment_intro">Giới thiệu</string>
     <string name="submit_intro_segment_recap">Tóm tắt</string>
     <string name="submit_intro_segment_outro">Đoạn kết</string>
     <string name="submit_intro_segment_preview">Xem trước</string>
-    <string name="submit_intro_start_time">THỜI ĐIỂM BẮT ĐẦU (MM:SS)</string>
-    <string name="submit_intro_end_time">THỜI ĐIỂM KẾT THÚC (MM:SS)</string>
-    <string name="submit_intro_submit">Gửi</string>
-    <string name="submit_intro_capture">Đánh dấu</string>
     <!-- iOS advanced playback -->
     <string name="settings_playback_ios_hw_decoder_dialog">Bộ giải mã phần cứng</string>
     <string name="settings_playback_ios_audio_output_dialog">Đầu ra âm thanh</string>
@@ -2153,7 +2035,6 @@
     <!-- Collection editor -->
     <string name="collections_editor_resolved_trakt_list">Danh sách Trakt đã xác thực</string>
     <string name="collections_editor_tmdb_discover">Khám phá TMDB</string>
-    <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>
     <!-- Collection editor error messages -->
     <string name="collections_editor_trakt_input_required">Nhập tên, URL hoặc ID danh sách Trakt</string>
     <string name="collections_editor_tmdb_invalid_id_error">Nhập ID hoặc URL TMDB hợp lệ</string>
@@ -2170,17 +2051,13 @@
     <!-- Cloud library -->
     <string name="cloud_library_playback_disabled">Thư viện đám mây đang tắt</string>
     <!-- IntroDB settings -->
-    <string name="settings_playback_introdb_invalid_api_key">Mã khóa API không hợp lệ hoặc không thể kết nối</string>
     <string name="addons_manifest_missing_field">Tệp kê khai thiếu \"%1$s\"</string>
     <string name="collections_editor_tmdb_collection_title_format">Bộ sưu tập TMDB %1$s</string>
     <string name="collections_editor_tmdb_director_title_format">Đạo diễn TMDB %1$s</string>
-    <string name="collections_editor_tmdb_discover_title">Khám phá TMDB</string>
-    <string name="collections_editor_tmdb_invalid_id_or_url">Nhập ID hoặc URL TMDB hợp lệ</string>
     <string name="collections_editor_tmdb_list_title_format">Danh sách TMDB %1$s</string>
     <string name="collections_editor_tmdb_network_title_format">Đơn vị phát sóng TMDB %1$s</string>
     <string name="collections_editor_tmdb_person_title_format">Hồ sơ TMDB %1$s</string>
     <string name="collections_editor_tmdb_production_title_format">Hãng sản xuất TMDB %1$s</string>
-    <string name="collections_editor_tmdb_source_load_failed">Không thể tải nguồn TMDB</string>
     <string name="collections_editor_trakt_list_id_format">ID %1$s</string>
     <string name="collections_tmdb_collection_not_found">Không tìm thấy bộ sưu tập TMDB</string>
     <string name="collections_tmdb_company_not_found">Không tìm thấy hãng sản xuất trên TMDB</string>
@@ -2235,19 +2112,13 @@
     <string name="plugins_empty_repos_title">Chưa cài đặt kho lưu trữ trình mở rộng nào</string>
     <string name="plugins_enable_globally_desc">Sử dụng các nhà cung cấp trình mở rộng trong quá trình tìm kiếm luồng phát.</string>
     <string name="plugins_enable_globally_title">Bật nhà cung cấp trình mở rộng trên toàn hệ thống</string>
-    <string name="plugins_error_already_installed">Kho lưu trữ trình mở rộng này đã được cài đặt</string>
     <string name="plugins_error_enter_repo_url">Nhập URL kho lưu trữ trình mở rộng</string>
     <string name="plugins_error_enter_valid_url">Nhập URL kho lưu trữ trình mở rộng hợp lệ</string>
-    <string name="plugins_error_install_failed">Không thể cài đặt kho lưu trữ trình mở rộng</string>
     <string name="plugins_error_provider_not_found">Không tìm thấy nhà cung cấp</string>
-    <string name="plugins_error_refresh_failed">Không thể làm mới kho lưu trữ</string>
     <string name="plugins_error_unavailable_build">Phiên bản này không hỗ trợ trình mở rộng</string>
     <string name="plugins_group_by_repo_desc">Trong danh sách nguồn phát, hiển thị một nhà cung cấp cho mỗi kho lưu trữ thay vì từng nguồn</string>
     <string name="plugins_group_by_repo_title">Nhóm các nhà cung cấp theo kho lưu trữ</string>
     <string name="plugins_input_manifest_placeholder">URL tệp kê khai trình mở rộng</string>
-    <string name="plugins_manifest_error_name_missing">Tên tệp kê khai bị thiếu</string>
-    <string name="plugins_manifest_error_no_providers">Tệp kê khai chưa có nhà cung cấp</string>
-    <string name="plugins_manifest_error_version_missing">Tệp kê khai bị thiếu phiên bản</string>
     <string name="plugins_manifest_name_missing">Tên tệp kê khai bị thiếu</string>
     <string name="plugins_manifest_no_providers">Tệp kê khai chưa có nhà cung cấp</string>
     <string name="plugins_manifest_version_missing">Tệp kê khai bị thiếu phiên bản</string>
@@ -2279,12 +2150,10 @@
     <string name="trakt_connected_status">Đã kết nối với Trakt</string>
     <string name="trakt_disconnected_status">Đã ngắt kết nối từ Trakt</string>
     <string name="unit_bytes_tb">TB</string>
-    <string name="updates_apk_asset_missing">Không tìm thấy tệp APK trong bản phát hành</string>
     <string name="updates_download_failed_http">Tải xuống thất bại (HTTP %1$d)</string>
     <string name="updates_downloaded_file_missing">Không tìm thấy tệp cập nhật đã tải xuống</string>
     <string name="updates_empty_download_body">Dữ liệu tải về trống</string>
     <string name="updates_github_api_error">Lỗi API phát hành của GitHub: %1$d</string>
-    <string name="updates_no_channel_release">Chưa có bản cập nhật nào được phát hành</string>
     <string name="updates_channel_title">Kênh cập nhật</string>
     <string name="updates_channel_description">Chọn loại bản cập nhật ứng dụng muốn nhận</string>
     <string name="updates_channel_stable">Ổn định</string>
@@ -2292,7 +2161,6 @@
     <string name="updates_channel_stable_description">Dành cho sử dụng hàng ngày.</string>
     <string name="updates_channel_beta_description">Các bản cập nhật sớm có thể chứa lỗi, làm hỏng một số tính năng hoặc hoạt động không như mong đợi.</string>
     <string name="updates_waiting_for_stable">Bạn sẽ nhận được bản phát hành ổn định tiếp theo khi có sẵn</string>
-    <string name="updates_release_missing_title">Bản phát hành không có tên hoặc thẻ</string>
     <!-- Continue Watching air date display -->
     <string name="cw_airs_date">Phát sóng %1$s</string>
     <string name="cw_airs_today">Phát sóng hôm nay</string>
@@ -2301,9 +2169,6 @@
         <item quantity="one">Phát sóng sau %1$d ngày</item>
         <item quantity="other">Phát sóng sau %1$d ngày</item>
     </plurals>
-    <string name="cw_airs_date_short">%1$s</string>
-    <string name="cw_airs_today_short">Hôm nay</string>
-    <string name="cw_airs_tomorrow_short">Ngày mai</string>
     <plurals name="cw_airs_in_days_short">
         <item quantity="one">Sau %1$d ngày</item>
         <item quantity="other">Sau %1$d ngày</item>
@@ -2343,10 +2208,7 @@
     <string name="settings_p2p_clear_cache_done">Đã xóa %1$s dữ liệu torrent không hoạt động</string>
     <string name="settings_p2p_clear_cache_failed">Không thể xóa bộ nhớ đệm torrent</string>
     <string name="player_torrent_peer_info">%1$d seed · %2$d peer</string>
-    <string name="player_torrent_buffered_status">Đã đệm %1$s · %2$s · %3$s</string>
-    <string name="player_torrent_status">%1$s · %2$s</string>
     <string name="player_torrent_stats">%1$d peer · %2$d seed · %3$d%%</string>
-    <string name="player_torrent_connecting_peers">Đang kết nối tới các người dùng ngang hàng…</string>
     <string name="player_torrent_starting_engine">Đang khởi động lõi P2P…</string>
     <string name="player_torrent_fetching_metadata">Đang lấy siêu dữ liệu torrent…</string>
     <string name="player_torrent_preparing_stream">Đang chuẩn bị luồng torrent…</string>
@@ -2392,7 +2254,6 @@
      <string name="settings_playback_legacy_layout">Bố cục kiểu cũ</string>
     <string name="settings_playback_legacy_layout_description">Sử dụng các nút điều khiển gốc của trình phát.</string>
     <string name="compose_player_via">Qua %1$s</string>
-    <string name="compose_player_episode_code">M%1$d T%2$d</string>
     <string name="compose_player_more_actions">Thêm nút điều khiển</string>
     <string name="compose_player_fewer_actions">Ẩn nút điều khiển</string>
     <string name="compose_player_speed">Tốc độ phát lại</string>
