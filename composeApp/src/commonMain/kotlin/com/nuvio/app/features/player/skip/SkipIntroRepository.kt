@@ -15,12 +15,27 @@ internal fun skipLookupCacheKey(base: String, durationMs: Long): String =
  * First list wins each category. Movie credits share the ending slot with other credit types.
  * A later post-credits scene stays its own slot so the ending does not erase it.
  */
+/**
+ * A mark the player can show. Unknown types, inverted or empty ranges, and ranges that
+ * end at or before the start of the file are dropped. A range that begins before the file
+ * and ends inside it keeps the part from 0 onward. A dropped mark does not occupy its
+ * category, so a later real mark can still win.
+ */
+internal fun playableSkipInterval(interval: SkipInterval): SkipInterval? {
+    if (segmentCategory(interval.type) == null) return null
+    val end = interval.endTime
+    if (!(end > interval.startTime) || !(end > 0.0)) return null
+    if (interval.startTime >= 0.0) return interval
+    return interval.copy(startTime = 0.0)
+}
+
 internal fun mergeSkipIntervalsByPriority(providerResults: List<List<SkipInterval>>): List<SkipInterval> {
     val chosen = LinkedHashMap<String, SkipInterval>()
     for (result in providerResults) {
         for (interval in result) {
-            val category = segmentCategory(interval.type) ?: continue
-            if (category !in chosen) chosen[category] = interval
+            val playable = playableSkipInterval(interval) ?: continue
+            val category = segmentCategory(playable.type) ?: continue
+            if (category !in chosen) chosen[category] = playable
         }
     }
     return chosen.values.toList()

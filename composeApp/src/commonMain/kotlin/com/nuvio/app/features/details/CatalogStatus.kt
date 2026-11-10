@@ -38,6 +38,27 @@ internal fun catalogTypeLabel(type: String, labels: CatalogLabels): String = whe
     else -> type
 }
 
+/**
+ * Labels for a listed read, in intro / recap / credits / preview order.
+ * Aliases such as "op" and a repeated "intro" become one "Intro".
+ * A type that cannot be marked is kept once, after the known types, with its trimmed text.
+ */
+internal fun listedTypeLabels(types: List<String>, labels: CatalogLabels = CatalogLabels()): List<String> {
+    val canonical = linkedSetOf<String>()
+    val extra = linkedSetOf<String>()
+    for (type in types) {
+        when (val key = SkipMarks.canonicalType(type)) {
+            null -> {
+                val raw = type.trim()
+                if (raw.isNotEmpty()) extra += raw
+            }
+            else -> canonical += key
+        }
+    }
+    val ordered = listOf("intro", "recap", "outro", "preview").filter { it in canonical }
+    return ordered.map { catalogTypeLabel(it, labels) } + extra.toList()
+}
+
 internal fun publicCatalogLine(
     read: CatalogRead,
     types: List<String>,
@@ -46,7 +67,10 @@ internal fun publicCatalogLine(
     CatalogRead.NotChecked -> labels.publicNotChecked
     CatalogRead.None -> labels.publicNone
     CatalogRead.Unavailable -> labels.publicUnavailable
-    CatalogRead.Listed -> "Public · " + types.joinToString(", ") { catalogTypeLabel(it, labels) }
+    CatalogRead.Listed -> {
+        val names = listedTypeLabels(types, labels)
+        if (names.isEmpty()) labels.publicNone else "Public · " + names.joinToString(", ")
+    }
 }
 
 /**
@@ -114,11 +138,8 @@ internal fun downloadSkipLines(
 }
 
 private fun ownMarkLine(marks: Map<String, SkipMark>, labels: CatalogLabels): String {
-    if (marks.isEmpty()) return labels.ownNotSubmitted
-    val names = listOf("intro", "recap", "outro", "preview")
-        .filter { it in marks }
-        .joinToString(", ") { catalogTypeLabel(it, labels) }
-    return if (names.isBlank()) labels.ownNotSubmitted else "Yours · $names"
+    val names = listedTypeLabels(marks.keys.toList(), labels)
+    return if (names.isEmpty()) labels.ownNotSubmitted else "Yours · " + names.joinToString(", ")
 }
 
 internal data class SeasonOverviewRow(
@@ -150,15 +171,16 @@ internal fun seasonOverviewRows(
 ): List<SeasonOverviewRow> = episodes.map { episode ->
     val marks = marksFor(episode)
     val (publicRead, publicTypes) = publicFor(episode)
-    val ownRead = if (marks.isEmpty()) CatalogRead.None else CatalogRead.Listed
+    val canonicalMarks = marks.filterKeys { SkipMarks.canonicalType(it) != null }
+    val ownRead = if (canonicalMarks.isEmpty()) CatalogRead.None else CatalogRead.Listed
     SeasonOverviewRow(
         season = episode.season,
         episode = episode.episode,
         code = episode.code,
         title = episode.title,
         publicLine = publicCatalogLine(publicRead, publicTypes, labels),
-        ownLine = ownCatalogLine(ownRead, hasOwnChips = marks.isNotEmpty(), labels)
-            ?: "Yours · " + marks.keys.joinToString(", ") { catalogTypeLabel(it, labels) },
+        ownLine = ownCatalogLine(ownRead, hasOwnChips = canonicalMarks.isNotEmpty(), labels)
+            ?: ownMarkLine(canonicalMarks, labels),
     )
 }
 
