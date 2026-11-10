@@ -1,19 +1,15 @@
 package com.nuvio.app.features.details.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
@@ -29,22 +25,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.lerp
+import com.nuvio.app.core.ui.DetailChromeHitTarget
+import com.nuvio.app.core.ui.DetailChromeRowHeight
+import com.nuvio.app.core.ui.FullscreenActionButton
 import com.nuvio.app.core.ui.NuvioAsyncImage as AsyncImage
 import com.nuvio.app.core.ui.NuvioBackButton
-import com.nuvio.app.core.ui.FullscreenActionButton
+import com.nuvio.app.core.ui.QuietScrollEdge
 import com.nuvio.app.core.ui.fullscreenActionHorizontalInsetForWidth
 import com.nuvio.app.core.ui.isFullscreenActionSupported
+import com.nuvio.app.core.ui.scrollEdgeInset
 import com.nuvio.app.features.details.MetaDetails
-import com.nuvio.app.isIos
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -59,128 +55,92 @@ fun DetailFloatingHeader(
     onToggleSaved: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val safeAreaTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val headerTopPadding = (safeAreaTop - 6.dp).coerceAtLeast(safeAreaTop * 0.8f)
-    val surfaceColor = backgroundColor ?: if (isIos) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 1.0f)
-    } else {
-        MaterialTheme.colorScheme.background
-    }
+    val inset = scrollEdgeInset()
+    val showTitle = progressProvider() > 0.05f
+    val edgeColor = backgroundColor ?: MaterialTheme.colorScheme.background
     var logoLoadError by remember(meta.id, meta.logo) {
         mutableStateOf(false)
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                val progress = progressProvider()
-                alpha = progress
-                translationY = lerp((-20).dp, 0.dp, progress).toPx()
-                shadowElevation = 4.dp.toPx()
-                shape = RectangleShape
-            },
-    ) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val logoWidth = (maxWidth * 0.6f).coerceAtMost(240.dp)
-        val rightActionsWidth = if (isFullscreenActionSupported) 84.dp else 40.dp
+        val rightActionsWidth = if (isFullscreenActionSupported) 96.dp else 48.dp
         val actionHorizontalInset = fullscreenActionHorizontalInsetForWidth(maxWidth.value)
-
-        Box(
+        QuietScrollEdge(
+            safeTop = inset,
+            contentTop = inset + DetailChromeRowHeight,
+            detailRow = true,
+            color = edgeColor,
+        )
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clipToBounds()
-                .background(surfaceColor),
+                .padding(top = inset, start = actionHorizontalInset, end = actionHorizontalInset)
+                .height(DetailChromeRowHeight),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
+            NuvioBackButton(
+                onClick = onBack,
+                modifier = Modifier.size(DetailChromeHitTarget),
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.onBackground,
+                buttonSize = DetailChromeHitTarget,
+                iconSize = 24.dp,
+            )
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = headerTopPadding, start = actionHorizontalInset, end = actionHorizontalInset)
-                    .height(56.dp)
-                    .graphicsLayer { alpha = progressProvider() },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+                    .weight(1f)
+                    .padding(horizontal = 10.dp)
+                    .graphicsLayer { alpha = if (showTitle) 1f else 0f },
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier
-                        .width(rightActionsWidth)
-                        .height(40.dp),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    if (interactive) {
-                        NuvioBackButton(
-                            onClick = onBack,
-                            modifier = Modifier.size(40.dp),
-                            containerColor = Color.Transparent,
-                            contentColor = MaterialTheme.colorScheme.onBackground,
-                            buttonSize = 40.dp,
-                            iconSize = 24.dp,
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (!meta.logo.isNullOrBlank() && !logoLoadError) {
-                        AsyncImage(
-                            model = meta.logo,
-                            contentDescription = stringResource(Res.string.detail_logo_content_description, meta.name),
-                            modifier = Modifier
-                                .width(logoWidth)
-                                .widthIn(max = 240.dp)
-                                .height(42.dp),
-                            onError = { logoLoadError = true },
-                        )
-                    } else {
-                        Text(
-                            text = meta.name,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.width(rightActionsWidth),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    DetailFloatingHeaderAction(
-                        isSaved = isSaved,
-                        enabled = interactive,
-                        onClick = onToggleSaved,
+                if (showTitle && !meta.logo.isNullOrBlank() && !logoLoadError) {
+                    AsyncImage(
+                        model = meta.logo,
+                        contentDescription = stringResource(Res.string.detail_logo_content_description, meta.name),
+                        modifier = Modifier
+                            .width(logoWidth)
+                            .widthIn(max = 240.dp)
+                            .height(42.dp),
+                        onError = { logoLoadError = true },
                     )
-                    if (isFullscreenActionSupported) {
-                        Spacer(modifier = Modifier.width(4.dp))
-                        FullscreenActionButton(
-                            enabled = interactive,
-                            buttonSize = 40.dp,
-                            iconSize = 22.dp,
-                            contentColor = MaterialTheme.colorScheme.onBackground,
-                        )
-                    }
+                } else if (showTitle) {
+                    Text(
+                        text = meta.name,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-
-            if (isIos) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(0.5.dp)
-                        .background(Color.White.copy(alpha = 0.15f)),
+            Row(
+                modifier = Modifier.width(rightActionsWidth),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                DetailFloatingHeaderAction(
+                    isSaved = isSaved,
+                    enabled = interactive || !showTitle,
+                    onClick = onToggleSaved,
                 )
+                if (isFullscreenActionSupported) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    FullscreenActionButton(
+                        enabled = true,
+                        buttonSize = DetailChromeHitTarget,
+                        iconSize = 22.dp,
+                        contentColor = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
             }
         }
     }
 }
+
 @Composable
 private fun DetailFloatingHeaderAction(
     isSaved: Boolean,
@@ -189,7 +149,7 @@ private fun DetailFloatingHeaderAction(
 ) {
     Box(
         modifier = Modifier
-            .size(40.dp)
+            .size(DetailChromeHitTarget)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

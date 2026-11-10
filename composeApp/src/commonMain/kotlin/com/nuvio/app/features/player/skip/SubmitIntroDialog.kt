@@ -125,6 +125,12 @@ fun SubmitIntroDialog(
                     }
                 }
 
+                com.nuvio.app.features.details.components.IntroDbStatusBlock(
+                    parentMetaId = imdbId,
+                    season = season.takeIf { it > 0 },
+                    episode = episode.takeIf { it > 0 },
+                )
+
                 // Segment Type
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(

@@ -78,6 +78,7 @@ fun DownloadsScreen(
 
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var overviewSeason by remember { mutableStateOf<Int?>(null) }
     val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
 
     val completedEpisodes = remember(uiState.items) {
@@ -148,13 +149,46 @@ fun DownloadsScreen(
                 onDeleteDownload = { downloadPendingDeletionId = it },
             )
         } else {
+            val showEpisodes = if (unwatchedOnly) {
+                completedEpisodes.filterNot { it.id in watchedIds }
+            } else {
+                completedEpisodes
+            }
             downloadsShowContent(
                 showId = selectedShowId.orEmpty(),
-                episodes = if (unwatchedOnly) completedEpisodes.filterNot { it.id in watchedIds } else completedEpisodes,
+                episodes = showEpisodes,
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onOpenOverview = { season -> overviewSeason = season },
             )
         }
+    }
+
+    overviewSeason?.let { season ->
+        val seasonEpisodes = completedEpisodes.filter {
+            it.parentMetaId == selectedShowId && (it.seasonNumber ?: 0) == season
+        }
+        com.nuvio.app.features.details.components.SeasonOverviewSheet(
+            seasonLabel = stringResource(Res.string.episodes_season, season),
+            rows = com.nuvio.app.features.details.seasonOverviewRows(
+                episodes = seasonEpisodes.map { item ->
+                    com.nuvio.app.features.details.SeasonEpisodeRef(
+                        season = item.seasonNumber ?: season,
+                        episode = item.episodeNumber ?: 0,
+                        title = item.episodeTitle ?: item.title,
+                        code = "S${item.seasonNumber ?: season} E${item.episodeNumber ?: 0}",
+                    )
+                },
+                marksFor = { episode ->
+                    com.nuvio.app.features.player.skip.SkipMarks.marksFor(
+                        selectedShowId.orEmpty(),
+                        episode.season,
+                        episode.episode,
+                    )
+                },
+            ),
+            onDismiss = { overviewSeason = null },
+        )
     }
 
     val pendingDeletionId = downloadPendingDeletionId
@@ -304,6 +338,7 @@ private fun LazyListScope.downloadsShowContent(
     episodes: List<DownloadItem>,
     onOpenDownload: (DownloadItem) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onOpenOverview: (Int) -> Unit,
 ) {
     val showEpisodes = episodes
         .filter { it.parentMetaId == showId }
@@ -338,13 +373,29 @@ private fun LazyListScope.downloadsShowContent(
 
     seasons.forEach { (seasonNumber, entries) ->
         item {
-            SectionTitle(
-                if (seasonNumber == 0) {
-                    stringResource(Res.string.episodes_specials)
-                } else {
-                    stringResource(Res.string.episodes_season, seasonNumber)
-                },
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SectionTitle(
+                    if (seasonNumber == 0) {
+                        stringResource(Res.string.episodes_specials)
+                    } else {
+                        stringResource(Res.string.episodes_season, seasonNumber)
+                    },
+                )
+                Text(
+                    text = "Season overview",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .clickable { onOpenOverview(seasonNumber) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
         }
 
         val sortedEpisodes = entries.sortedForSeriesDownloads()
@@ -382,7 +433,7 @@ private fun DownloadRow(
     val speeds by DownloadSpeeds.speeds.collectAsStateWithLifecycle()
     val watchState = rememberDownloadWatchState(item)
     val marksRevision by com.nuvio.app.features.player.skip.SkipMarks.revision.collectAsStateWithLifecycle()
-    val skipLine = remember(item.id, marksRevision) { downloadSkipSourceLine(item) }
+    val skipLines = remember(item.id, marksRevision) { downloadSkipStatusLines(item) }
     val speedLine = if (item.status == DownloadStatus.Downloading) {
         speedAndEta(speeds[item.id], item.remainingBytesOrNull(), ::formatBytes)
     } else null
@@ -441,15 +492,10 @@ private fun DownloadRow(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (skipLine != null) {
-                        Text(
-                            text = skipLine,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
+                    com.nuvio.app.features.details.components.CatalogStatusLines(
+                        publicLine = skipLines.publicLine,
+                        ownLine = skipLines.ownLine,
+                    )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {

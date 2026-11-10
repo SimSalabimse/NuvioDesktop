@@ -172,6 +172,13 @@ fun DetailMetaInfo(
                 style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
             )
         }
+        if (meta.type != "person") {
+            IntroDbStatusBlock(
+                parentMetaId = meta.id,
+                season = null,
+                episode = null,
+            )
+        }
     }
 }
 

@@ -64,6 +64,8 @@ import com.nuvio.app.core.ui.DesktopBackdropVerticalBias
 import com.nuvio.app.core.ui.NuvioDesktopImageScaling
 import com.nuvio.app.core.ui.NuvioAsyncImage as AsyncImage
 import com.nuvio.app.core.ui.NuvioTokens
+import com.nuvio.app.core.ui.QuietScrollEdge
+import com.nuvio.app.core.ui.scrollEdgeInset
 import com.nuvio.app.core.ui.isFullscreenActionSupported
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.heroStretchHeight
@@ -539,7 +541,6 @@ private fun DesktopHomeHeroFrame(
     onItemClick: ((MetaPreview) -> Unit)?,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val opacity = NuvioTokens.Opacity
     val space = NuvioTokens.Space
     val backgroundColor = colorScheme.background
 
@@ -560,19 +561,11 @@ private fun DesktopHomeHeroFrame(
             desktopFrame = true,
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(layout.topFadeHeight)
-                .align(Alignment.TopCenter)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            backgroundColor.copy(alpha = opacity.overlayHeavy),
-                            Color.Transparent,
-                        ),
-                    ),
-                ),
+        QuietScrollEdge(
+            safeTop = scrollEdgeInset(),
+            contentTop = layout.heroHeight,
+            color = backgroundColor,
+            modifier = Modifier.align(Alignment.TopCenter),
         )
 
         Box(

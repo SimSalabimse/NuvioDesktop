@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -118,6 +117,7 @@ import com.nuvio.app.features.details.components.DetailSeriesListEpisode
 import com.nuvio.app.features.details.components.DetailSeriesListHeader
 import com.nuvio.app.features.details.components.DetailTrailersSection
 import com.nuvio.app.features.details.components.EpisodeWatchedActionSheet
+import com.nuvio.app.features.details.components.SeasonOverviewSheet
 import com.nuvio.app.features.details.components.SeasonWatchedActionSheet
 import com.nuvio.app.features.details.components.TabletDetailBackdrop
 import com.nuvio.app.features.details.components.TabletDetailHero
@@ -273,6 +273,7 @@ fun MetaDetailsScreen(
     var selectedEpisodeZoomAnchor by remember(type, id) { mutableStateOf<PosterZoomAnchor?>(null) }
     val episodeOverlayHazeState = rememberHazeState()
     var selectedSeasonForActions by remember(type, id) { mutableStateOf<Int?>(null) }
+    var seasonOverview by remember(type, id) { mutableStateOf<Int?>(null) }
     val commentsEnabled by remember {
         TraktCommentsSettings.ensureLoaded()
         TraktCommentsSettings.enabled
@@ -1064,17 +1065,6 @@ fun MetaDetailsScreen(
                 val headerProgressProvider = remember(headerProgressState) {
                     { headerProgressState.value }
                 }
-                val animatedShowHeroBackButton by remember(headerProgressState) {
-                    derivedStateOf { headerProgressState.value <= 0.05f }
-                }
-                val showHeroBackButton = if (isDesktop) {
-                    !isHeroCollapsed.value
-                } else {
-                    animatedShowHeroBackButton
-                }
-                val headerInteractive by remember(headerProgressState) {
-                    derivedStateOf { headerProgressState.value > 0.05f }
-                }
 
                 val onShuffleClick: (() -> Unit)? = if (showShuffleButton) {
                     {
@@ -1632,45 +1622,16 @@ fun MetaDetailsScreen(
                             )
                         }
 
-                        if (!isDesktop && !useDesktopDetailLayout && showHeroBackButton) {
-                            NuvioBackButton(
-                                onClick = onBackFromDetails,
-                                modifier = Modifier.padding(
-                                    start = 12.dp,
-                                    top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-                                ).zIndex(2f),
-                                containerColor = Color.Transparent,
-                                contentColor = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-
-                        if (isDesktop) {
-                            NuvioBackButton(
-                                onClick = onBackFromDetails,
-                                modifier = Modifier
-                                    .statusBarsPadding()
-                                    .padding(start = desktopPageHorizontalPadding, top = 32.dp)
-                                    .zIndex(2f),
-                                containerColor = Color.Black.copy(alpha = 0.34f),
-                                showContainerOnDesktop = true,
-                                contentColor = MaterialTheme.colorScheme.onBackground,
-                                buttonSize = 48.dp,
-                                iconSize = 24.dp,
-                            )
-                        }
-
-                        if (!isDesktop) {
-                            DetailFloatingHeader(
-                                meta = meta,
-                                isSaved = isSaved,
-                                progressProvider = headerProgressProvider,
-                                interactive = headerInteractive,
-                                backgroundColor = dominantBackdropColor.takeIf { dominantColorEnabled },
-                                onBack = onBackFromDetails,
-                                onToggleSaved = toggleSaved,
-                                modifier = Modifier.zIndex(2f),
-                            )
-                        }
+                        DetailFloatingHeader(
+                            meta = meta,
+                            isSaved = isSaved,
+                            progressProvider = headerProgressProvider,
+                            interactive = true,
+                            backgroundColor = dominantBackdropColor.takeIf { dominantColorEnabled },
+                            onBack = onBackFromDetails,
+                            onToggleSaved = toggleSaved,
+                            modifier = Modifier.zIndex(2f),
+                        )
 
                         selectedEpisodeForActions
                             ?.takeIf { selectedEpisodeZoomAnchor == null }
@@ -1802,6 +1763,37 @@ fun MetaDetailsScreen(
                                         areCurrentlyWatched = false,
                                     )
                                 },
+                                onOpenOverview = { seasonOverview = selectedSeason },
+                            )
+                        }
+
+                        seasonOverview?.let { overviewSeason ->
+                            val overviewEpisodes = remember(meta, overviewSeason, todayIsoDate) {
+                                meta.releasedEpisodesForSeason(
+                                    seasonNumber = overviewSeason,
+                                    todayIsoDate = todayIsoDate,
+                                )
+                            }
+                            SeasonOverviewSheet(
+                                seasonLabel = stringResource(Res.string.episodes_season, overviewSeason),
+                                rows = seasonOverviewRows(
+                                    episodes = overviewEpisodes.map { video ->
+                                        SeasonEpisodeRef(
+                                            season = video.season ?: overviewSeason,
+                                            episode = video.episode ?: 0,
+                                            title = video.title,
+                                            code = "S${video.season ?: overviewSeason} E${video.episode ?: 0}",
+                                        )
+                                    },
+                                    marksFor = { episode ->
+                                        com.nuvio.app.features.player.skip.SkipMarks.marksFor(
+                                            meta.id,
+                                            episode.season,
+                                            episode.episode,
+                                        )
+                                    },
+                                ),
+                                onDismiss = { seasonOverview = null },
                             )
                         }
 

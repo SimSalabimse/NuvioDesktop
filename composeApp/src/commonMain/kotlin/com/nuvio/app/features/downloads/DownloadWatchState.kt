@@ -40,6 +40,35 @@ internal fun rememberDownloadWatchState(item: DownloadItem): DownloadWatchState 
     return remember(item.id, watched, progress) { downloadWatchState(item) }
 }
 
+/** Public catalogue line and this account's line, including the recap token when one is known. */
+internal fun downloadSkipStatusLines(
+    item: DownloadItem,
+    recapOutcome: String? = null,
+    durationMs: Long = 0L,
+): com.nuvio.app.features.details.DownloadSkipLines {
+    val isMovie = !item.isEpisode
+    val marks = SkipMarks.marksFor(
+        item.parentMetaId,
+        if (isMovie) null else item.seasonNumber,
+        if (isMovie) null else item.episodeNumber,
+    )
+    val recap = marks["recap"]?.let { mark ->
+        com.nuvio.app.features.analysis.UserSegment(
+            startMs = mark.startMs,
+            endMs = mark.endMs,
+            imported = mark.imported,
+            durationMs = durationMs,
+        )
+    }
+    return com.nuvio.app.features.details.downloadSkipLines(
+        isEpisode = item.isEpisode,
+        ownMarks = marks,
+        recapOutcome = recapOutcome,
+        userRecap = recap,
+        durationMs = durationMs,
+    )
+}
+
 /** "Skip: Intro · Credits (your marks)" when the user has own marks for this download, else null. */
 internal fun downloadSkipSourceLine(item: DownloadItem): String? {
     val isMovie = !item.isEpisode
