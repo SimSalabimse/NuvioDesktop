@@ -2,7 +2,9 @@ package com.nuvio.app.core.ui
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
@@ -42,8 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import com.nuvio.app.core.a11y.largeTextLineLimit
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -55,6 +63,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.nuvio.app.core.a11y.ReducedMotion
 import com.nuvio.app.isDesktop
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.home_view_all
@@ -146,12 +155,28 @@ fun <T> NuvioShelfSection(
     }
 }
 
+private fun Modifier.shelfArrowKeys(scrollBy: (Float) -> Unit): Modifier =
+    onPreviewKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        when (event.key) {
+            Key.DirectionRight -> {
+                scrollBy(160f)
+                true
+            }
+            Key.DirectionLeft -> {
+                scrollBy(-160f)
+                true
+            }
+            else -> false
+        }
+    }
+
 internal fun Modifier.nuvioDesktopDragScroll(
     state: LazyListState,
 ): Modifier {
     if (!isDesktop) return this
 
-    return pointerInput(state) {
+    return shelfArrowKeys { state.dispatchRawDelta(it) }.pointerInput(state) {
         awaitEachGesture {
             val down = awaitFirstDown(pass = PointerEventPass.Initial)
             var totalDx = 0f
@@ -192,7 +217,7 @@ internal fun Modifier.nuvioDesktopDragScroll(
 ): Modifier {
     if (!isDesktop) return this
 
-    return pointerInput(state) {
+    return shelfArrowKeys { state.dispatchRawDelta(it) }.pointerInput(state) {
         awaitEachGesture {
             val down = awaitFirstDown(pass = PointerEventPass.Initial)
             var totalDx = 0f
@@ -365,7 +390,7 @@ fun NuvioPosterCard(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = tokens.colors.textPrimary,
-                maxLines = 1,
+                maxLines = largeTextLineLimit(),
                 overflow = TextOverflow.Ellipsis,
             )
             if (!detailLine.isNullOrBlank()) {
@@ -373,7 +398,7 @@ fun NuvioPosterCard(
                     text = detailLine,
                     style = MaterialTheme.typography.labelSmall,
                     color = tokens.colors.textMuted,
-                    maxLines = 1,
+                    maxLines = largeTextLineLimit(),
                     overflow = TextOverflow.Ellipsis,
                 )
             } else {
@@ -409,7 +434,7 @@ private fun NuvioShelfSectionHeader(
                     .then(if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier),
                 style = MaterialTheme.typography.titleLarge,
                 color = tokens.colors.textPrimary,
-                maxLines = 1,
+                maxLines = largeTextLineLimit(),
                 overflow = TextOverflow.Ellipsis,
             )
             val viewAllPlaceholderModifier = if (onViewAllClick == null) {
@@ -559,12 +584,18 @@ internal fun Modifier.desktopPosterHoverScale(
     if (!enabled || !isDesktop) return this
 
     val hovered by interactionSource.collectIsHoveredAsState()
+    ReducedMotion.ensureLoaded()
+    val reduceMotion by ReducedMotion.enabled.collectAsState()
     val scale by animateFloatAsState(
         targetValue = if (hovered) DesktopPosterHoverScale else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow,
-        ),
+        animationSpec = if (reduceMotion) {
+            snap()
+        } else {
+            spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+            )
+        },
         label = "desktop_poster_hover_scale",
     )
 

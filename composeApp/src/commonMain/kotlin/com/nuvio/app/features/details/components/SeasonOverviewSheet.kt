@@ -148,7 +148,7 @@ private fun SeasonOverviewEpisodeRow(row: SeasonOverviewRow) {
                 text = row.title.ifBlank { row.code },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
+                maxLines = com.nuvio.app.core.a11y.largeTextLineLimit(),
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.testTag("season-title-${row.season}-${row.episode}"),
             )

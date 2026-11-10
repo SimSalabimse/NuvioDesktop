@@ -39,6 +39,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -89,6 +90,7 @@ import com.nuvio.app.features.trailer.TrailerPlaybackSource
 import com.nuvio.app.features.tracking.TrackingMembershipApplyResult
 import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.watching.application.WatchingActions
+import com.nuvio.app.core.a11y.ReducedMotion
 import com.nuvio.app.isDesktop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -163,10 +165,19 @@ internal fun HomePosterHoverPreview(
         )
     }
 
+    ReducedMotion.ensureLoaded()
+    val reduceMotion by ReducedMotion.enabled.collectAsState()
+    val openDelayMillis = if (reduceMotion) 0L else posterCardStyle.hoverPreviewOpenDelayMillis.toLong()
+    val closeDelayMillis = if (reduceMotion) 0L else HoverPreviewCloseDelayMillis
+    val exitMillis = if (reduceMotion) 0 else HoverPreviewExitDurationMillis
+    val enterMillis = if (reduceMotion) 0 else HoverPreviewEnterDurationMillis
+
     LaunchedEffect(
         anchorHovered,
         previewHovered,
-        posterCardStyle.hoverPreviewOpenDelayMillis,
+        openDelayMillis,
+        closeDelayMillis,
+        exitMillis,
         previewDismissedByScroll,
     ) {
         if (previewDismissedByScroll) {
@@ -177,15 +188,15 @@ internal fun HomePosterHoverPreview(
         }
         if (anchorHovered || previewHovered) {
             if (!popupMounted) {
-                delay(posterCardStyle.hoverPreviewOpenDelayMillis.toLong())
+                delay(openDelayMillis)
                 popupMounted = true
                 withFrameNanos { }
             }
             previewVisible = true
         } else if (popupMounted) {
-            delay(HoverPreviewCloseDelayMillis)
+            delay(closeDelayMillis)
             previewVisible = false
-            delay(HoverPreviewExitDurationMillis.toLong())
+            delay(exitMillis.toLong())
             popupMounted = false
         }
     }
@@ -289,29 +300,29 @@ internal fun HomePosterHoverPreview(
                     visible = previewVisible,
                     enter = fadeIn(
                         animationSpec = tween(
-                            durationMillis = HoverPreviewEnterDurationMillis,
+                            durationMillis = enterMillis,
                             easing = NuvioTokens.Motion.decelerate,
                         ),
                     ) + scaleIn(
                         animationSpec = tween(
-                            durationMillis = HoverPreviewEnterDurationMillis,
+                            durationMillis = enterMillis,
                             easing = NuvioTokens.Motion.emphasized,
                         ),
                         initialScale = 0.9f,
                     ) + slideInVertically(
                         animationSpec = tween(
-                            durationMillis = HoverPreviewEnterDurationMillis,
+                            durationMillis = enterMillis,
                             easing = NuvioTokens.Motion.decelerate,
                         ),
                         initialOffsetY = { height -> height / 18 },
                     ),
                     exit = fadeOut(
-                        animationSpec = tween(HoverPreviewExitDurationMillis),
+                        animationSpec = tween(exitMillis),
                     ) + scaleOut(
-                        animationSpec = tween(HoverPreviewExitDurationMillis),
+                        animationSpec = tween(exitMillis),
                         targetScale = 0.97f,
                     ) + slideOutVertically(
-                        animationSpec = tween(HoverPreviewExitDurationMillis),
+                        animationSpec = tween(exitMillis),
                         targetOffsetY = { height -> height / 32 },
                     ),
                 ) {

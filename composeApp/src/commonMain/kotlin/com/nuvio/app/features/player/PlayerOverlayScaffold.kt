@@ -12,12 +12,22 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.nuvio.app.core.a11y.ReducedMotion
 import com.nuvio.app.core.ui.PlatformBackHandler
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.a11y_dismiss_player_controls
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun PlayerOverlayScaffold(
@@ -29,24 +39,33 @@ internal fun PlayerOverlayScaffold(
     content: @Composable BoxScope.() -> Unit,
 ) {
     PlatformBackHandler(enabled = visible, onBack = onDismiss)
+    ReducedMotion.ensureLoaded()
+    val reduceMotion by ReducedMotion.enabled.collectAsState()
+    val fadeInMillis = if (reduceMotion) 0 else 250
+    val fadeOutMillis = if (reduceMotion) 0 else 200
+    val dismissDescription = stringResource(Res.string.a11y_dismiss_player_controls)
 
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(250)),
-        exit = fadeOut(tween(200)),
+        enter = fadeIn(tween(fadeInMillis)),
+        exit = fadeOut(tween(fadeOutMillis)),
         modifier = modifier,
     ) {
         val interactionSource = remember { MutableInteractionSource() }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onDismiss,
-                ),
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .focusProperties { canFocus = false }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        role = Role.Button,
+                        onClick = onDismiss,
+                    )
+                    .semantics { contentDescription = dismissDescription },
+            )
             Box(
                 modifier = Modifier
                     .fillMaxSize()

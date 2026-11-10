@@ -689,6 +689,8 @@
     <string name="settings_account_status_signed_in">Signed in</string>
     <string name="settings_appearance_amoled_black">AMOLED Black</string>
     <string name="settings_appearance_amoled_description">Use pure black backgrounds for OLED screens.</string>
+    <string name="settings_reduced_motion">Reduce motion</string>
+    <string name="settings_reduced_motion_description">Play fades and poster hovers immediately. This follows the system setting until you change it.</string>
     <string name="settings_appearance_app_icon">App Icon</string>
     <string name="settings_appearance_app_icon_arctic_blue">Arctic Blue</string>
     <string name="settings_appearance_app_icon_android_confirmation_message">Changing to %1$s requires restarting Nuvio. Tap OK to continue.</string>
@@ -1498,6 +1500,13 @@
     <string name="player_next_episode_unaired">Unaired</string>
     <string name="player_skip">Skip</string>
     <string name="player_skip_intro">Skip Intro</string>
+    <string name="a11y_skip_intro">Skip the intro.</string>
+    <string name="a11y_skip_recap">Skip the recap.</string>
+    <string name="a11y_skip_outro">Skip the credits.</string>
+    <string name="a11y_skip_post_credits">Skip to the scene after the credits.</string>
+    <string name="a11y_skip">Skip ahead.</string>
+    <string name="a11y_dismiss_player_controls">Dismiss the player controls.</string>
+    <string name="a11y_buffering_action">Buffering. %1$s</string>
     <string name="player_skip_outro">Skip Outro</string>
     <string name="player_skip_recap">Skip Recap</string>
     <string name="player_skip_preview">Skip Preview</string>

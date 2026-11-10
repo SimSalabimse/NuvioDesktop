@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -76,7 +77,7 @@ fun DetailFloatingHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = inset, start = actionHorizontalInset, end = actionHorizontalInset)
-                .height(DetailChromeRowHeight),
+                .heightIn(min = DetailChromeRowHeight),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -112,7 +113,7 @@ fun DetailFloatingHeader(
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center,
-                        maxLines = 1,
+                        maxLines = com.nuvio.app.core.a11y.largeTextLineLimit(),
                         overflow = TextOverflow.Ellipsis,
                     )
                 }

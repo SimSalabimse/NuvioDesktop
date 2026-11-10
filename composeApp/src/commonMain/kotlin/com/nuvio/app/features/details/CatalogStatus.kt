@@ -88,6 +88,27 @@ internal fun ownCatalogLine(
     CatalogRead.Listed -> null
 }
 
+/** Spoken form of a visible catalogue fragment. The painted text stays the short line. */
+internal fun catalogStatusSentence(line: String, labels: CatalogLabels = CatalogLabels()): String {
+    val names = line.substringAfter("·", missingDelimiterValue = "").trim().trimEnd('.')
+    return when (line) {
+        labels.publicNotChecked -> "The public catalogue has not been checked."
+        labels.publicNone -> "The public catalogue lists no skip marks."
+        labels.publicUnavailable -> "The public catalogue is unavailable."
+        labels.ownNotChecked -> "Your skip marks have not been checked."
+        labels.ownNotSubmitted -> "You have not submitted skip marks."
+        labels.ownUnavailable -> "Your skip marks are unavailable."
+        labels.ownReady -> "Your skip marks are ready."
+        labels.ownNoRecap -> "No recap was found."
+        else -> when {
+            line.startsWith("Public · ") && names.isNotEmpty() -> "The public catalogue lists $names."
+            line.startsWith("Yours · ") && names.isNotEmpty() -> "Your skip marks include $names."
+            line.endsWith(".") -> line
+            else -> "$line."
+        }
+    }
+}
+
 internal data class DownloadSkipLines(
     val publicLine: String,
     val ownLine: String,
