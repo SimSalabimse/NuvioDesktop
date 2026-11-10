@@ -20,7 +20,7 @@ captures
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
 logs/
-analysis/
+/analysis/
 Docs
 SUPPORTER_COSMETICS.md
 supabase/migrations/
