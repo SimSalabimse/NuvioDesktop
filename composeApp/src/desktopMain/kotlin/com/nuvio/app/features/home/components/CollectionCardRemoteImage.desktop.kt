@@ -229,17 +229,8 @@ internal actual fun CollectionCardRemoteImage(
 
     var composeBitmap by remember(imageUrl) { mutableStateOf<ImageBitmap?>(null) }
 
-    // Prefetch as soon as the card becomes visible (not on hover) so the codec is already
-    // downloaded/decoded and cached by the time the user actually hovers - hover then reads
-    // straight from gifCodecCache with zero network/decode delay.
-    if (animateIfPossible) {
-        LaunchedEffect(imageUrl) {
-            if (synchronized(gifCodecCache) { !gifCodecCache.containsKey(imageUrl) }) {
-                loadDesktopGifCodec(imageUrl)
-            }
-        }
-    }
-
+    // The focus asset loads only once the card is hovered, or when there is no still cover.
+    // A visible card that still shows its cover must not fetch the animation.
     if (shouldAnimate) {
         var codecHolder by remember(imageUrl) {
             mutableStateOf(synchronized(gifCodecCache) { gifCodecCache[imageUrl] })
