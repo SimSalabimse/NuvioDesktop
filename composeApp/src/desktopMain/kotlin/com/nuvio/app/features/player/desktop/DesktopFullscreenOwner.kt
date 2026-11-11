@@ -31,25 +31,46 @@ internal class DesktopFullscreenOwner(
      * windowed geometry to persist.
      */
     val isAwaitingMaximizedRestore: Boolean
-        get() = pendingTarget == WindowPlacement.Maximized
+        get() = pendingTarget == WindowPlacement.Maximized || awaitingMaximizedPublish
 
     private var windowsWasMaximized: Boolean = false
 
     /**
-     * Placement to publish after macOS has actually left fullscreen.
+     * Placement to publish after the window itself has left fullscreen.
      * Null when no exit is waiting on AppKit or on the compose fallback.
      */
     private var pendingTarget: WindowPlacement? = null
 
+    /** Maximized was published and has not been observed on the window yet. */
+    private var awaitingMaximizedPublish: Boolean = false
+
     /**
-     * True after this owner publishes fullscreen and before that publish is
-     * observed. A trailing windowed frame from the exit we just cancelled must
-     * not be treated as a new external exit.
+     * A toggle arrived while a native exit was still showing Fullscreen in
+     * WindowState. Apply the enter only after the window reports it has left
+     * fullscreen, so Compose's placement updater has a change to apply.
+     */
+    private var reenterAfterExit: Boolean = false
+
+    /**
+     * True after this owner publishes fullscreen onto a placement Compose had
+     * not already applied. A trailing windowed frame from the exit just
+     * cancelled must not be treated as a new external exit.
      */
     private var awaitingFullscreen: Boolean = false
 
-    fun toggle(frameMaximized: Boolean = false): List<FullscreenCommand> =
-        if (isFullscreen) exit() else enter(frameMaximized)
+    fun toggle(
+        frameMaximized: Boolean = false,
+        statePlacement: WindowPlacement = placement,
+    ): List<FullscreenCommand> {
+        if (platform == FullscreenPlatform.Macos &&
+            pendingTarget != null &&
+            statePlacement == WindowPlacement.Fullscreen
+        ) {
+            reenterAfterExit = !reenterAfterExit
+            return emptyList()
+        }
+        return if (isFullscreen) exit() else enter(frameMaximized, statePlacement)
+    }
 
     /** Window teardown already left borderless fullscreen. Keep the flag in step. */
     fun abandonWindowsFullscreen() {
@@ -62,6 +83,7 @@ internal class DesktopFullscreenOwner(
         if (platform != FullscreenPlatform.Macos) return emptyList()
         val target = (pendingTarget ?: windowedPlacement).asWindowedPlacement()
         pendingTarget = target
+        reenterAfterExit = false
         isFullscreen = false
         if (accepted) {
             // The logical placement is updated here. Publishing it as well would
@@ -72,13 +94,17 @@ internal class DesktopFullscreenOwner(
         }
         // Fallback has one writer and one placement. Floating is the only
         // placement that clears Compose's fullscreen flag. Maximized, when
-        // that is the real target, is published once fullscreen is observed gone.
+        // that is the real target, stays pending until the window itself
+        // reports that fullscreen is gone. The Floating write is not that report.
         placement = WindowPlacement.Floating
         if (target == WindowPlacement.Floating) pendingTarget = null
         return listOf(FullscreenCommand.PublishPlacement(WindowPlacement.Floating))
     }
 
-    fun onPlacementObserved(observed: WindowPlacement): List<FullscreenCommand> {
+    fun onPlacementObserved(
+        observed: WindowPlacement,
+        windowPlacement: WindowPlacement = observed,
+    ): List<FullscreenCommand> {
         if (platform == FullscreenPlatform.Windows) {
             if (!isFullscreen && observed != WindowPlacement.Fullscreen) {
                 placement = observed
@@ -87,28 +113,41 @@ internal class DesktopFullscreenOwner(
             return emptyList()
         }
         if (awaitingFullscreen) {
-            if (observed == WindowPlacement.Fullscreen) {
+            if (windowPlacement == WindowPlacement.Fullscreen) {
                 awaitingFullscreen = false
                 isFullscreen = true
                 placement = WindowPlacement.Fullscreen
             }
             return emptyList()
         }
+        if (awaitingMaximizedPublish) {
+            if (windowPlacement == WindowPlacement.Maximized) {
+                awaitingMaximizedPublish = false
+                placement = WindowPlacement.Maximized
+                windowedPlacement = WindowPlacement.Maximized
+                isFullscreen = false
+            }
+            return emptyList()
+        }
         val pending = pendingTarget
         if (pending != null) {
-            if (observed == WindowPlacement.Fullscreen) return emptyList()
+            if (windowPlacement == WindowPlacement.Fullscreen) return emptyList()
+            if (reenterAfterExit) {
+                return publishFullscreen(windowPlacement)
+            }
             pendingTarget = null
             windowedPlacement = pending
             placement = pending
             isFullscreen = false
-            return if (observed == pending) {
+            return if (windowPlacement == pending) {
                 emptyList()
             } else {
+                awaitingMaximizedPublish = pending == WindowPlacement.Maximized
                 listOf(FullscreenCommand.PublishPlacement(pending))
             }
         }
-        if (observed == placement) return emptyList()
-        if (observed == WindowPlacement.Fullscreen) {
+        if (windowPlacement == placement) return emptyList()
+        if (windowPlacement == WindowPlacement.Fullscreen) {
             if (placement != WindowPlacement.Fullscreen) {
                 windowedPlacement = placement.asWindowedPlacement()
             }
@@ -117,8 +156,8 @@ internal class DesktopFullscreenOwner(
             return emptyList()
         }
         isFullscreen = false
-        placement = observed
-        windowedPlacement = observed.asWindowedPlacement()
+        placement = windowPlacement
+        windowedPlacement = windowPlacement.asWindowedPlacement()
         return emptyList()
     }
 
@@ -145,6 +184,8 @@ internal class DesktopFullscreenOwner(
             -> {
                 pendingTarget = null
                 awaitingFullscreen = false
+                awaitingMaximizedPublish = false
+                reenterAfterExit = false
                 isFullscreen = true
                 placement = WindowPlacement.Fullscreen
                 listOf(FullscreenCommand.PublishPlacement(WindowPlacement.Fullscreen))
@@ -152,7 +193,10 @@ internal class DesktopFullscreenOwner(
         }
     }
 
-    private fun enter(frameMaximized: Boolean): List<FullscreenCommand> = when (platform) {
+    private fun enter(
+        frameMaximized: Boolean,
+        statePlacement: WindowPlacement,
+    ): List<FullscreenCommand> = when (platform) {
         FullscreenPlatform.Windows -> {
             windowsWasMaximized = frameMaximized
             isFullscreen = true
@@ -160,16 +204,23 @@ internal class DesktopFullscreenOwner(
         }
         FullscreenPlatform.Linux -> enterPlacementFullscreen(enforceLinux = true)
         FullscreenPlatform.Compose -> enterPlacementFullscreen(enforceLinux = false)
-        FullscreenPlatform.Macos -> {
-            pendingTarget = null
-            awaitingFullscreen = true
-            if (placement != WindowPlacement.Fullscreen) {
-                windowedPlacement = placement.asWindowedPlacement()
-            }
-            isFullscreen = true
-            placement = WindowPlacement.Fullscreen
-            listOf(FullscreenCommand.PublishPlacement(WindowPlacement.Fullscreen))
+        FullscreenPlatform.Macos -> publishFullscreen(statePlacement)
+    }
+
+    private fun publishFullscreen(appliedPlacement: WindowPlacement): List<FullscreenCommand> {
+        val remembered = when {
+            pendingTarget == WindowPlacement.Maximized -> WindowPlacement.Maximized
+            placement != WindowPlacement.Fullscreen -> placement.asWindowedPlacement()
+            else -> windowedPlacement
         }
+        pendingTarget = null
+        reenterAfterExit = false
+        awaitingMaximizedPublish = false
+        awaitingFullscreen = appliedPlacement != WindowPlacement.Fullscreen
+        windowedPlacement = remembered.asWindowedPlacement()
+        isFullscreen = true
+        placement = WindowPlacement.Fullscreen
+        return listOf(FullscreenCommand.PublishPlacement(WindowPlacement.Fullscreen))
     }
 
     private fun exit(): List<FullscreenCommand> = when (platform) {
@@ -184,6 +235,7 @@ internal class DesktopFullscreenOwner(
         FullscreenPlatform.Compose -> exitToWindowedPlacement(enforceLinux = false)
         FullscreenPlatform.Macos -> {
             awaitingFullscreen = false
+            reenterAfterExit = false
             pendingTarget = windowedPlacement.asWindowedPlacement()
             isFullscreen = false
             listOf(FullscreenCommand.RequestMacosNativeExit)
@@ -233,6 +285,29 @@ internal sealed interface FullscreenCommand {
 
 internal fun WindowPlacement.asWindowedPlacement(): WindowPlacement =
     if (this == WindowPlacement.Fullscreen) WindowPlacement.Floating else this
+
+internal data class WindowedGeometryPersistSample(
+    val placement: WindowPlacement,
+    val fullscreen: Boolean,
+    val awaitingMaximizedRestore: Boolean,
+)
+
+internal fun shouldPersistWindowedGeometry(sample: WindowedGeometryPersistSample): Boolean =
+    sample.placement == WindowPlacement.Floating &&
+        !sample.fullscreen &&
+        !sample.awaitingMaximizedRestore
+
+/**
+ * Player Esc sends 1 and the fullscreen button sends 0. Both are one toggle.
+ */
+internal fun commandsForPlayerFullscreenToggle(
+    owner: DesktopFullscreenOwner,
+    value: Double,
+    statePlacement: WindowPlacement,
+): List<FullscreenCommand> {
+    require(value == 0.0 || value == 1.0)
+    return owner.toggle(statePlacement = statePlacement)
+}
 
 internal fun DesktopHostOs.toFullscreenPlatform(): FullscreenPlatform = when (this) {
     DesktopHostOs.MACOS -> FullscreenPlatform.Macos

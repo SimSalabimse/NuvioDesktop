@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player.desktop
 
+import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import java.awt.Frame
@@ -71,6 +72,12 @@ internal fun toggleDesktopAppFullscreen(window: Window? = null) {
     DesktopAppFullscreen.toggle(window)
 }
 
+/** Player Esc reports 1 and the fullscreen button reports 0. Both toggle. */
+@Suppress("UNUSED_PARAMETER")
+internal fun toggleDesktopAppFullscreenFromPlayer(window: Window?, value: Double) {
+    toggleDesktopAppFullscreen(window)
+}
+
 internal fun isDesktopAppFullscreen(window: Window? = null): Boolean =
     DesktopAppFullscreen.isFullscreen(window)
 
@@ -81,6 +88,11 @@ internal class DesktopAppFullscreenController(
     initialPlacement: WindowPlacement = WindowPlacement.Floating,
     initialWindowedPlacement: WindowPlacement = initialPlacement.asWindowedPlacement(),
     private val platform: FullscreenPlatform = DesktopHostOs.current.toFullscreenPlatform(),
+    private val nativeExit: ((Window) -> Boolean)? = null,
+    private val windowsEnter: ((Window, WindowState, Boolean) -> Unit)? = null,
+    private val readWindowPlacement: (Window, WindowPlacement) -> WindowPlacement = { window, statePlacement ->
+        (window as? ComposeWindow)?.placement ?: statePlacement
+    },
 ) {
     private val owner = DesktopFullscreenOwner(
         platform = platform,
@@ -89,21 +101,60 @@ internal class DesktopAppFullscreenController(
     )
     private var windowsFullscreenState: WindowsFullscreenState? = null
 
-    fun toggle(window: Window, windowState: WindowState) {
+    fun toggle(window: Window, windowState: WindowState): List<FullscreenCommand> =
+        toggleFromPlayer(window, windowState, value = 0.0)
+
+    /** [value] is the player event: Esc sends 1 and the button sends 0. */
+    @Suppress("UNUSED_PARAMETER")
+    fun toggleFromPlayer(
+        window: Window,
+        windowState: WindowState,
+        value: Double,
+    ): List<FullscreenCommand> {
+        val produced = mutableListOf<FullscreenCommand>()
         if (platform != FullscreenPlatform.Windows) {
-            apply(owner.onPlacementObserved(windowState.placement), window, windowState)
+            val statePlacement = windowState.placement
+            val sync = owner.onPlacementObserved(
+                observed = statePlacement,
+                windowPlacement = reportedWindowPlacement(window, statePlacement),
+            )
+            produced += sync
+            apply(sync, window, windowState)
         }
         val frameMaximized = if (platform == FullscreenPlatform.Windows) {
             frameIsMaximized(window, windowState)
         } else {
             false
         }
-        apply(owner.toggle(frameMaximized = frameMaximized), window, windowState)
+        val commands = owner.toggle(
+            frameMaximized = frameMaximized,
+            statePlacement = windowState.placement,
+        )
+        produced += commands
+        produced += apply(commands, window, windowState)
+        return produced
     }
 
-    fun onWindowPlacementChanged(window: Window, windowState: WindowState, observed: WindowPlacement) {
+    fun onWindowPlacementChanged(
+        window: Window,
+        windowState: WindowState,
+        observedState: WindowPlacement,
+        observedWindow: WindowPlacement = readWindowPlacement(window, observedState),
+    ) {
         val before = owner.isFullscreen
-        apply(owner.onPlacementObserved(observed), window, windowState)
+        val reportedWindow = if (platform == FullscreenPlatform.Macos) {
+            observedWindow
+        } else {
+            observedState
+        }
+        apply(
+            owner.onPlacementObserved(
+                observed = observedState,
+                windowPlacement = reportedWindow,
+            ),
+            window,
+            windowState,
+        )
         if (platform == FullscreenPlatform.Macos && owner.isFullscreen != before) {
             DesktopAppFullscreen.noteExternalFullscreenChange()
         }
@@ -183,26 +234,45 @@ internal class DesktopAppFullscreenController(
 
     fun isAwaitingMaximizedRestore(): Boolean = owner.isAwaitingMaximizedRestore
 
+    private fun reportedWindowPlacement(window: Window, statePlacement: WindowPlacement): WindowPlacement =
+        if (platform == FullscreenPlatform.Macos) {
+            readWindowPlacement(window, statePlacement)
+        } else {
+            statePlacement
+        }
+
     private fun apply(
         commands: List<FullscreenCommand>,
         window: Window,
         windowState: WindowState,
-    ) {
+    ): List<FullscreenCommand> {
+        val applied = mutableListOf<FullscreenCommand>()
         for (command in commands) {
             when (command) {
                 is FullscreenCommand.PublishPlacement -> windowState.placement = command.placement
                 FullscreenCommand.RequestMacosNativeExit -> {
-                    val accepted = requestNativeComposeFullscreenExit(window)
-                    apply(owner.onMacosNativeExitResult(accepted), window, windowState)
+                    val accepted = nativeExit?.invoke(window) ?: requestNativeComposeFullscreenExit(window)
+                    applied += apply(owner.onMacosNativeExitResult(accepted), window, windowState)
                 }
                 is FullscreenCommand.WindowsBorderless -> if (command.enter) {
-                    enterWindowsFullscreen(window, windowState, command.wasMaximized)
+                    try {
+                        val enter = windowsEnter
+                        if (enter != null) {
+                            enter(window, windowState, command.wasMaximized)
+                        } else {
+                            enterWindowsFullscreen(window, windowState, command.wasMaximized)
+                        }
+                    } catch (error: Throwable) {
+                        if (windowsFullscreenState == null) owner.abandonWindowsFullscreen()
+                        throw error
+                    }
                 } else {
                     exitWindowsFullscreen(window, windowState)
                 }
                 FullscreenCommand.EnforceLinuxDeviceFullscreen -> enforceLinuxFullscreen(window, windowState)
             }
         }
+        return applied
     }
 
     private fun requestNativeComposeFullscreenExit(window: Window): Boolean {

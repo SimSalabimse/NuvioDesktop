@@ -35,6 +35,8 @@ import com.nuvio.app.features.player.desktop.DesktopWindowModeStorage
 import com.nuvio.app.features.player.desktop.desktopFullscreenChanges
 import com.nuvio.app.features.player.desktop.NativePlayerBridge
 import com.nuvio.app.features.player.desktop.applyNativeDesktopWindowChrome
+import com.nuvio.app.features.player.desktop.WindowedGeometryPersistSample
+import com.nuvio.app.features.player.desktop.shouldPersistWindowedGeometry
 import com.nuvio.app.features.player.desktop.windowedPlacementAfterFullscreenRestore
 import com.nuvio.app.features.player.desktop.configureMacosWindowBeforePeer
 import com.nuvio.app.features.player.desktop.installDesktopAppFullscreenShortcuts
@@ -202,39 +204,60 @@ fun main(args: Array<String>) {
             LaunchedEffect(windowState) {
                 // Covers OS-driven placement changes too (the macOS green button
                 // and the system Enter Full Screen menu item), not just our own shortcuts.
-                snapshotFlow { windowState.placement }
-                    .collect { placement ->
-                        fullscreenController.onWindowPlacementChanged(window, windowState, placement)
-                        if (DesktopHostOs.current != DesktopHostOs.WINDOWS) {
-                            DesktopWindowModeStorage.saveWasFullscreen(
-                                fullscreenController.isFullscreen(window, windowState),
-                            )
-                        }
+                // The window placement is read here, beside the state placement, so a
+                // Floating value this owner just wrote is not treated as the window
+                // having left fullscreen while AppKit still reports fullscreen.
+                snapshotFlow {
+                    val statePlacement = windowState.placement
+                    val windowPlacement = if (DesktopHostOs.current == DesktopHostOs.MACOS) {
+                        window.placement
+                    } else {
+                        statePlacement
                     }
+                    statePlacement to windowPlacement
+                }.collect { (statePlacement, windowPlacement) ->
+                    fullscreenController.onWindowPlacementChanged(
+                        window,
+                        windowState,
+                        statePlacement,
+                        windowPlacement,
+                    )
+                    if (DesktopHostOs.current != DesktopHostOs.WINDOWS) {
+                        DesktopWindowModeStorage.saveWasFullscreen(
+                            fullscreenController.isFullscreen(window, windowState),
+                        )
+                    }
+                }
             }
             LaunchedEffect(windowState) {
                 // Only persist geometry while windowed: fullscreen/native-Windows-fullscreen
                 // coordinates aren't a meaningful "windowed position" to restore later.
-                snapshotFlow { Triple(windowState.placement, windowState.position, windowState.size) }
-                    .collect { (placement, position, size) ->
-                        val isFullscreen = fullscreenController.isFullscreen(window, windowState)
-                        if (!isFullscreen && restoresMaximizedWindowPlacement) {
-                            DesktopWindowModeStorage.saveWasMaximized(placement == WindowPlacement.Maximized)
-                        }
-                        val isWindowed = placement == WindowPlacement.Floating &&
-                            !isFullscreen &&
-                            !fullscreenController.isAwaitingMaximizedRestore()
-                        if (isWindowed && position.isSpecified) {
-                            DesktopWindowModeStorage.saveWindowedGeometry(
-                                DesktopWindowGeometry(
-                                    x = position.x.value,
-                                    y = position.y.value,
-                                    width = size.width.value,
-                                    height = size.height.value,
-                                ),
-                            )
-                        }
+                // The restore flag is read in this lambda so the sample is the value at
+                // apply time, while a maximized restore is still pending.
+                snapshotFlow {
+                    val sample = WindowedGeometryPersistSample(
+                        placement = windowState.placement,
+                        fullscreen = fullscreenController.isFullscreen(window, windowState),
+                        awaitingMaximizedRestore = fullscreenController.isAwaitingMaximizedRestore(),
+                    )
+                    Triple(sample, windowState.position, windowState.size)
+                }.collect { (sample, position, size) ->
+                    if (!sample.fullscreen && restoresMaximizedWindowPlacement) {
+                        DesktopWindowModeStorage.saveWasMaximized(
+                            sample.placement == WindowPlacement.Maximized,
+                        )
                     }
+                    if (shouldPersistWindowedGeometry(sample) && position.isSpecified) {
+                        DesktopWindowModeStorage.saveWindowedGeometry(
+                            DesktopWindowGeometry(
+                                x = position.x.value,
+                                y = position.y.value,
+                                width = size.width.value,
+                                height = size.height.value,
+                            ),
+                        )
+                    }
+                }
             }
             DisposableEffect(window, windowState) {
                 val unregisterFullscreenToggle = registerDesktopAppFullscreenToggle(
