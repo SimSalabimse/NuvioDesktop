@@ -15,7 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import com.nuvio.app.core.perf.ScrollProbeCounters
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -112,6 +114,9 @@ private fun PosterGridTile(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
 ) {
+    if (ScrollProbeCounters.enabled) {
+        SideEffect { ScrollProbeCounters.posterComposed() }
+    }
     HomePosterHoverPreview(
         item = item,
         isWatched = isWatched,

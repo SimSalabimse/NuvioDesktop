@@ -94,6 +94,7 @@ fun CatalogScreen(
     onPosterClick: ((MetaPreview) -> Unit)? = null,
     onPosterLongClick: ((MetaPreview) -> Unit)? = null,
     modifier: Modifier = Modifier,
+    probeGridState: androidx.compose.foundation.lazy.grid.LazyGridState? = null,
 ) {
     val uiState by CatalogRepository.uiState.collectAsStateWithLifecycle()
     val homeCatalogSettingsUiState by HomeCatalogSettingsRepository.uiState.collectAsStateWithLifecycle()
@@ -112,10 +113,11 @@ fun CatalogScreen(
             target = target,
         )
     }
-    val gridState = rememberLazyGridState(
+    val rememberedGridState = rememberLazyGridState(
         initialFirstVisibleItemIndex = initialScrollPosition.firstVisibleItemIndex,
         initialFirstVisibleItemScrollOffset = initialScrollPosition.firstVisibleItemScrollOffset,
     )
+    val gridState = probeGridState ?: rememberedGridState
     var headerHeightPx by remember { mutableIntStateOf(0) }
     var observedOfflineState by remember { mutableStateOf(false) }
 

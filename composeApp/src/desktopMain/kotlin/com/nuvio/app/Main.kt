@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.deeplink.handleAppUrl
 import com.nuvio.app.core.diagnostics.SentryInitializer
 import com.nuvio.app.core.perf.DesktopStartupProbe
+import com.nuvio.app.core.perf.runScrollProbe
+import com.nuvio.app.core.perf.scrollProbeRequested
 import com.nuvio.app.core.ui.NuvioTheme
 import com.nuvio.app.core.ui.ProvideDesktopWindowInsets
 import com.nuvio.app.features.discordrpc.DiscordPresenceManager
@@ -54,6 +56,10 @@ private const val MacosDarkAquaAppearance = "NSAppearanceNameDarkAqua"
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main(args: Array<String>) {
+    if (scrollProbeRequested()) {
+        runScrollProbe()
+        return
+    }
     DesktopStartupProbe.arm()
     // On Linux, initialize GTK BEFORE AWT/Compose/Skia to prevent GdkDisplayManager
     // type registration conflict (Skiko partially loads GDK without full GTK init).
