@@ -544,7 +544,10 @@ internal class NativePlayerController(
                 if (DesktopPlayerPictureInPicture.isEnabled) {
                     DesktopPlayerPictureInPicture.toggle()
                 } else {
-                    toggleDesktopAppFullscreen(SwingUtilities.getWindowAncestor(host))
+                    toggleDesktopAppFullscreenFromPlayer(
+                        window = SwingUtilities.getWindowAncestor(host),
+                        value = value,
+                    )
                     onDesktopFullscreenChanged()
                 }
             }
