@@ -35,8 +35,6 @@ import com.nuvio.app.features.player.desktop.DesktopWindowModeStorage
 import com.nuvio.app.features.player.desktop.desktopFullscreenChanges
 import com.nuvio.app.features.player.desktop.NativePlayerBridge
 import com.nuvio.app.features.player.desktop.applyNativeDesktopWindowChrome
-import com.nuvio.app.features.player.desktop.WindowedGeometryPersistSample
-import com.nuvio.app.features.player.desktop.shouldPersistWindowedGeometry
 import com.nuvio.app.features.player.desktop.windowedPlacementAfterFullscreenRestore
 import com.nuvio.app.features.player.desktop.configureMacosWindowBeforePeer
 import com.nuvio.app.features.player.desktop.installDesktopAppFullscreenShortcuts
@@ -232,32 +230,29 @@ fun main(args: Array<String>) {
             LaunchedEffect(windowState) {
                 // Only persist geometry while windowed: fullscreen/native-Windows-fullscreen
                 // coordinates aren't a meaningful "windowed position" to restore later.
-                // The restore flag is read in this lambda so the sample is the value at
-                // apply time, while a maximized restore is still pending.
-                snapshotFlow {
-                    val sample = WindowedGeometryPersistSample(
-                        placement = windowState.placement,
-                        fullscreen = fullscreenController.isFullscreen(window, windowState),
-                        awaitingMaximizedRestore = fullscreenController.isAwaitingMaximizedRestore(),
-                    )
-                    Triple(sample, windowState.position, windowState.size)
-                }.collect { (sample, position, size) ->
-                    if (!sample.fullscreen && restoresMaximizedWindowPlacement) {
-                        DesktopWindowModeStorage.saveWasMaximized(
-                            sample.placement == WindowPlacement.Maximized,
-                        )
+                // The owner decides whether this placement is savable. That answer stays
+                // false for the transitional Floating frame until Maximized is observed,
+                // whichever collector runs first.
+                snapshotFlow { Triple(windowState.placement, windowState.position, windowState.size) }
+                    .collect { (placement, position, size) ->
+                        val isFullscreen = fullscreenController.isFullscreen(window, windowState)
+                        if (!isFullscreen && restoresMaximizedWindowPlacement) {
+                            DesktopWindowModeStorage.saveWasMaximized(placement == WindowPlacement.Maximized)
+                        }
+                        if (
+                            fullscreenController.shouldPersistWindowedGeometry(placement) &&
+                            position.isSpecified
+                        ) {
+                            DesktopWindowModeStorage.saveWindowedGeometry(
+                                DesktopWindowGeometry(
+                                    x = position.x.value,
+                                    y = position.y.value,
+                                    width = size.width.value,
+                                    height = size.height.value,
+                                ),
+                            )
+                        }
                     }
-                    if (shouldPersistWindowedGeometry(sample) && position.isSpecified) {
-                        DesktopWindowModeStorage.saveWindowedGeometry(
-                            DesktopWindowGeometry(
-                                x = position.x.value,
-                                y = position.y.value,
-                                width = size.width.value,
-                                height = size.height.value,
-                            ),
-                        )
-                    }
-                }
             }
             DisposableEffect(window, windowState) {
                 val unregisterFullscreenToggle = registerDesktopAppFullscreenToggle(

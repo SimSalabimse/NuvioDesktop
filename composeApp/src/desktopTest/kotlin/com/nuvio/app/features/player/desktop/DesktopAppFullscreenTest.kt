@@ -402,14 +402,7 @@ class DesktopAppFullscreenTest {
             assertTrue(it.controller.isAwaitingMaximizedRestore())
             assertFalse(it.controller.isFullscreen(it.frame, it.state))
 
-            val geometryAtApply = shouldPersistWindowedGeometry(
-                WindowedGeometryPersistSample(
-                    placement = it.state.placement,
-                    fullscreen = it.controller.isFullscreen(it.frame, it.state),
-                    awaitingMaximizedRestore = it.controller.isAwaitingMaximizedRestore(),
-                ),
-            )
-            assertFalse(geometryAtApply)
+            assertFalse(it.controller.shouldPersistWindowedGeometry(WindowPlacement.Floating))
 
             it.windowPlacement = WindowPlacement.Fullscreen
             it.controller.onWindowPlacementChanged(
@@ -421,15 +414,7 @@ class DesktopAppFullscreenTest {
             assertEquals(WindowPlacement.Floating, it.state.placement)
             assertTrue(it.controller.isAwaitingMaximizedRestore())
             assertFalse(it.controller.isFullscreen(it.frame, it.state))
-            assertFalse(
-                shouldPersistWindowedGeometry(
-                    WindowedGeometryPersistSample(
-                        placement = it.state.placement,
-                        fullscreen = it.controller.isFullscreen(it.frame, it.state),
-                        awaitingMaximizedRestore = it.controller.isAwaitingMaximizedRestore(),
-                    ),
-                ),
-            )
+            assertFalse(it.controller.shouldPersistWindowedGeometry(WindowPlacement.Floating))
 
             it.windowPlacement = WindowPlacement.Floating
             it.controller.onWindowPlacementChanged(
@@ -440,7 +425,7 @@ class DesktopAppFullscreenTest {
             )
             assertEquals(WindowPlacement.Maximized, it.state.placement)
             assertTrue(it.controller.isAwaitingMaximizedRestore())
-            assertFalse(geometryAtApply)
+            assertFalse(it.controller.shouldPersistWindowedGeometry(WindowPlacement.Floating))
 
             it.windowPlacement = WindowPlacement.Maximized
             it.controller.onWindowPlacementChanged(
@@ -451,6 +436,25 @@ class DesktopAppFullscreenTest {
             )
             assertFalse(it.controller.isAwaitingMaximizedRestore())
             assertEquals(WindowPlacement.Maximized, it.state.placement)
+            assertTrue(it.controller.shouldPersistWindowedGeometry(WindowPlacement.Floating))
+        }
+    }
+
+    @Test
+    fun `placement collector cannot make the transitional floating frame persistable`() {
+        val harness = MacWindowHarness(initial = WindowPlacement.Maximized, nativeExit = { false })
+        harness.use {
+            it.enter()
+            it.controller.toggle(it.frame, it.state)
+            it.windowPlacement = WindowPlacement.Fullscreen
+            it.controller.onWindowPlacementChanged(
+                it.frame,
+                it.state,
+                observedState = it.state.placement,
+                observedWindow = it.windowPlacement,
+            )
+            assertFalse(it.controller.shouldPersistWindowedGeometry(WindowPlacement.Floating))
+            assertTrue(it.controller.isAwaitingMaximizedRestore())
         }
     }
 

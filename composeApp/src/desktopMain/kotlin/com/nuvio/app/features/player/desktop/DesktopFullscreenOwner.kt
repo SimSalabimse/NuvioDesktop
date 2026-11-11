@@ -45,9 +45,10 @@ internal class DesktopFullscreenOwner(
     private var awaitingMaximizedPublish: Boolean = false
 
     /**
-     * A toggle arrived while a native exit was still showing Fullscreen in
-     * WindowState. Apply the enter only after the window reports it has left
-     * fullscreen, so Compose's placement updater has a change to apply.
+     * Rule: a toggle that arrives while a native exit is queued and WindowState
+     * is still fullscreen is queued. It is applied once, after the window
+     * placement leaves fullscreen. It does not publish fullscreen onto the
+     * placement Compose already has, and it does not cancel the exit.
      */
     private var reenterAfterExit: Boolean = false
 
@@ -66,11 +67,21 @@ internal class DesktopFullscreenOwner(
             pendingTarget != null &&
             statePlacement == WindowPlacement.Fullscreen
         ) {
-            reenterAfterExit = !reenterAfterExit
+            reenterAfterExit = true
             return emptyList()
         }
         return if (isFullscreen) exit() else enter(frameMaximized, statePlacement)
     }
+
+    /**
+     * Whether [placement] is a windowed frame worth saving.
+     * While a maximized restore is open, the Floating sample is rejected here,
+     * before and after the placement collector runs.
+     */
+    fun shouldPersistWindowedGeometry(placement: WindowPlacement): Boolean =
+        placement == WindowPlacement.Floating &&
+            !isFullscreen &&
+            !isAwaitingMaximizedRestore
 
     /** Window teardown already left borderless fullscreen. Keep the flag in step. */
     fun abandonWindowsFullscreen() {
@@ -285,17 +296,6 @@ internal sealed interface FullscreenCommand {
 
 internal fun WindowPlacement.asWindowedPlacement(): WindowPlacement =
     if (this == WindowPlacement.Fullscreen) WindowPlacement.Floating else this
-
-internal data class WindowedGeometryPersistSample(
-    val placement: WindowPlacement,
-    val fullscreen: Boolean,
-    val awaitingMaximizedRestore: Boolean,
-)
-
-internal fun shouldPersistWindowedGeometry(sample: WindowedGeometryPersistSample): Boolean =
-    sample.placement == WindowPlacement.Floating &&
-        !sample.fullscreen &&
-        !sample.awaitingMaximizedRestore
 
 /**
  * Player Esc sends 1 and the fullscreen button sends 0. Both are one toggle.

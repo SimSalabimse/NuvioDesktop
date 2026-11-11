@@ -234,6 +234,9 @@ internal class DesktopAppFullscreenController(
 
     fun isAwaitingMaximizedRestore(): Boolean = owner.isAwaitingMaximizedRestore
 
+    fun shouldPersistWindowedGeometry(placement: WindowPlacement): Boolean =
+        owner.shouldPersistWindowedGeometry(placement)
+
     private fun reportedWindowPlacement(window: Window, statePlacement: WindowPlacement): WindowPlacement =
         if (platform == FullscreenPlatform.Macos) {
             readWindowPlacement(window, statePlacement)
