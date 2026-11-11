@@ -1,6 +1,5 @@
 package com.nuvio.app.features.player.desktop
 
-import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import java.awt.Frame
@@ -53,6 +52,10 @@ private object DesktopAppFullscreen {
     fun isFullscreen(window: Window? = null): Boolean =
         fullscreenStateProvider?.invoke(window) == true
 
+    fun noteExternalFullscreenChange() {
+        notifyChanged()
+    }
+
     private fun notifyChanged() {
         _changes.value += 1
     }
@@ -74,18 +77,35 @@ internal fun isDesktopAppFullscreen(window: Window? = null): Boolean =
 internal val desktopFullscreenChanges: StateFlow<Int>
     get() = DesktopAppFullscreen.changes
 
-internal class DesktopAppFullscreenController {
-    private var restoreWindowPlacement = WindowPlacement.Floating
+internal class DesktopAppFullscreenController(
+    initialPlacement: WindowPlacement = WindowPlacement.Floating,
+    initialWindowedPlacement: WindowPlacement = initialPlacement.asWindowedPlacement(),
+    private val platform: FullscreenPlatform = DesktopHostOs.current.toFullscreenPlatform(),
+) {
+    private val owner = DesktopFullscreenOwner(
+        platform = platform,
+        initialPlacement = initialPlacement,
+        initialWindowedPlacement = initialWindowedPlacement,
+    )
     private var windowsFullscreenState: WindowsFullscreenState? = null
 
     fun toggle(window: Window, windowState: WindowState) {
-        if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
-            toggleWindowsFullscreen(window, windowState)
+        if (platform != FullscreenPlatform.Windows) {
+            apply(owner.onPlacementObserved(windowState.placement), window, windowState)
+        }
+        val frameMaximized = if (platform == FullscreenPlatform.Windows) {
+            frameIsMaximized(window, windowState)
         } else {
-            toggleComposeFullscreen(window, windowState)
-            if (DesktopHostOs.current == DesktopHostOs.LINUX) {
-                enforceLinuxFullscreen(window, windowState)
-            }
+            false
+        }
+        apply(owner.toggle(frameMaximized = frameMaximized), window, windowState)
+    }
+
+    fun onWindowPlacementChanged(window: Window, windowState: WindowState, observed: WindowPlacement) {
+        val before = owner.isFullscreen
+        apply(owner.onPlacementObserved(observed), window, windowState)
+        if (platform == FullscreenPlatform.Macos && owner.isFullscreen != before) {
+            DesktopAppFullscreen.noteExternalFullscreenChange()
         }
     }
 
@@ -113,6 +133,7 @@ internal class DesktopAppFullscreenController {
 
     fun dispose(window: Window) {
         exitWindowsFullscreen(window)
+        owner.abandonWindowsFullscreen()
     }
 
     /**
@@ -127,48 +148,60 @@ internal class DesktopAppFullscreenController {
         windowedPlacement: WindowPlacement = WindowPlacement.Floating,
     ) {
         if (!fullscreen) return
-        if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
+        if (platform == FullscreenPlatform.Windows) {
             SwingUtilities.invokeLater {
-                enterWindowsFullscreen(window, windowState)
+                val frameMaximized = frameIsMaximized(window, windowState)
+                apply(
+                    owner.restoreSession(
+                        fullscreen = true,
+                        windowedPlacement = windowedPlacement,
+                        frameMaximized = frameMaximized,
+                    ),
+                    window,
+                    windowState,
+                )
             }
-        } else {
-            // Launch already set placement to Fullscreen, so the current placement
-            // is not the windowed mode to return to.
-            restoreWindowPlacement = windowedPlacement
-                .takeUnless { it == WindowPlacement.Fullscreen }
-                ?: WindowPlacement.Floating
-            windowState.placement = WindowPlacement.Fullscreen
+            return
         }
+        apply(
+            owner.restoreSession(
+                fullscreen = true,
+                windowedPlacement = windowedPlacement,
+            ),
+            window,
+            windowState,
+        )
     }
 
-    fun isFullscreen(window: Window, windowState: WindowState): Boolean =
-        if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
-            windowsFullscreenState?.window === window
-        } else {
-            windowState.placement == WindowPlacement.Fullscreen
+    @Suppress("UNUSED_PARAMETER")
+    fun isFullscreen(window: Window, windowState: WindowState): Boolean {
+        if (platform == FullscreenPlatform.Windows) {
+            return windowsFullscreenState?.window === window && owner.isFullscreen
         }
+        return owner.isFullscreen
+    }
 
-    private fun toggleComposeFullscreen(window: Window, windowState: WindowState) {
-        if (isFullscreen(window, windowState)) {
-            if (DesktopHostOs.current == DesktopHostOs.MACOS) {
-                applyMacosComposeFullscreenExit(
-                    restorePlacement = restoreWindowPlacement,
-                    requestNativeFullscreenExit = { requestNativeComposeFullscreenExit(window) },
-                    clearComposeFullscreen = {
-                        (window as? ComposeWindow)?.placement = WindowPlacement.Floating
-                    },
-                    setStatePlacement = { placement ->
-                        windowState.placement = placement
-                    },
-                )
-            } else {
-                windowState.placement = restoreWindowPlacement
+    fun isAwaitingMaximizedRestore(): Boolean = owner.isAwaitingMaximizedRestore
+
+    private fun apply(
+        commands: List<FullscreenCommand>,
+        window: Window,
+        windowState: WindowState,
+    ) {
+        for (command in commands) {
+            when (command) {
+                is FullscreenCommand.PublishPlacement -> windowState.placement = command.placement
+                FullscreenCommand.RequestMacosNativeExit -> {
+                    val accepted = requestNativeComposeFullscreenExit(window)
+                    apply(owner.onMacosNativeExitResult(accepted), window, windowState)
+                }
+                is FullscreenCommand.WindowsBorderless -> if (command.enter) {
+                    enterWindowsFullscreen(window, windowState, command.wasMaximized)
+                } else {
+                    exitWindowsFullscreen(window, windowState)
+                }
+                FullscreenCommand.EnforceLinuxDeviceFullscreen -> enforceLinuxFullscreen(window, windowState)
             }
-        } else {
-            restoreWindowPlacement = windowState.placement
-                .takeUnless { it == WindowPlacement.Fullscreen }
-                ?: WindowPlacement.Floating
-            windowState.placement = WindowPlacement.Fullscreen
         }
     }
 
@@ -182,24 +215,21 @@ internal class DesktopAppFullscreenController {
         }.isSuccess
     }
 
-    private fun toggleWindowsFullscreen(window: Window, windowState: WindowState) {
-        if (windowsFullscreenState?.window === window) {
-            exitWindowsFullscreen(window, windowState)
-        } else {
-            enterWindowsFullscreen(window, windowState)
-        }
-    }
+    private fun frameIsMaximized(window: Window, windowState: WindowState): Boolean =
+        (window as? Frame)?.extendedState == Frame.MAXIMIZED_BOTH ||
+            windowState.placement == WindowPlacement.Maximized
 
-    private fun enterWindowsFullscreen(window: Window, windowState: WindowState) {
+    private fun enterWindowsFullscreen(
+        window: Window,
+        windowState: WindowState,
+        wasMaximized: Boolean,
+    ) {
         val gc = window.graphicsConfiguration
             ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
         val screenBounds = gc.bounds
         val transform = gc.defaultTransform
         val scaleX = transform.scaleX
         val scaleY = transform.scaleY
-
-        val wasMaximized = (window as? Frame)?.extendedState == Frame.MAXIMIZED_BOTH ||
-            windowState.placement == WindowPlacement.Maximized
 
         val hwnd = AwtNativeViewResolver.resolveNativeViewPointer(window)
         NativePlayerBridge.setWindowBorderlessFullscreen(
@@ -254,13 +284,6 @@ internal class DesktopAppFullscreenController {
 }
 
 /**
- * ComposeWindow does not clear its fullscreen flag when placement is changed directly from
- * Fullscreen to Maximized on macOS. Let AppKit complete its asynchronous fullscreen exit and let
- * Compose's native window listener restore WindowState; writing Maximized during that transition
- * can alter the frame AppKit is restoring. The Compose fallback is only used if the native macOS
- * request cannot be made.
- */
-/**
  * The windowed placement to return to after a launch that starts in fullscreen.
  * Mirrors startup placement with the fullscreen branch removed: a saved
  * "not maximized" choice stays floating, and hosts that restore maximized
@@ -275,21 +298,6 @@ internal fun windowedPlacementAfterFullscreenRestore(
     wasMaximized == false && hasSavedGeometry -> WindowPlacement.Floating
     restoresMaximizedWindowPlacement -> WindowPlacement.Maximized
     else -> WindowPlacement.Floating
-}
-
-internal fun applyMacosComposeFullscreenExit(
-    restorePlacement: WindowPlacement,
-    requestNativeFullscreenExit: () -> Boolean,
-    clearComposeFullscreen: () -> Unit,
-    setStatePlacement: (WindowPlacement) -> Unit,
-) {
-    if (requestNativeFullscreenExit()) return
-
-    val targetPlacement = restorePlacement
-        .takeUnless { it == WindowPlacement.Fullscreen }
-        ?: WindowPlacement.Floating
-    clearComposeFullscreen()
-    setStatePlacement(targetPlacement)
 }
 
 internal fun installDesktopAppFullscreenShortcuts(window: Window): () -> Unit {

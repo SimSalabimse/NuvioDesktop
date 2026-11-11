@@ -32,6 +32,7 @@ import com.nuvio.app.features.player.desktop.DesktopAppFullscreenController
 import com.nuvio.app.features.player.desktop.DesktopHostOs
 import com.nuvio.app.features.player.desktop.DesktopWindowGeometry
 import com.nuvio.app.features.player.desktop.DesktopWindowModeStorage
+import com.nuvio.app.features.player.desktop.desktopFullscreenChanges
 import com.nuvio.app.features.player.desktop.NativePlayerBridge
 import com.nuvio.app.features.player.desktop.applyNativeDesktopWindowChrome
 import com.nuvio.app.features.player.desktop.windowedPlacementAfterFullscreenRestore
@@ -90,6 +91,11 @@ fun main(args: Array<String>) {
         val wasMaximizedOnLastExit = remember { DesktopWindowModeStorage.loadWasMaximized() }
         val savedGeometry = remember { DesktopWindowModeStorage.loadWindowedGeometry() }
         val restoresMaximizedWindowPlacement = DesktopHostOs.current != DesktopHostOs.MACOS
+        val restoredWindowedPlacement = windowedPlacementAfterFullscreenRestore(
+            wasMaximized = wasMaximizedOnLastExit,
+            hasSavedGeometry = savedGeometry != null,
+            restoresMaximizedWindowPlacement = restoresMaximizedWindowPlacement,
+        )
         val initialPlacement = when {
             wasFullscreenOnLastExit && DesktopHostOs.current != DesktopHostOs.WINDOWS -> {
                 WindowPlacement.Fullscreen
@@ -128,7 +134,16 @@ fun main(args: Array<String>) {
             // rather than driven by WindowPlacement, so it's restored separately below.
             placement = initialPlacement,
         )
-        val fullscreenController = remember { DesktopAppFullscreenController() }
+        val fullscreenController = remember {
+            DesktopAppFullscreenController(
+                initialPlacement = initialPlacement,
+                initialWindowedPlacement = if (initialPlacement == WindowPlacement.Fullscreen) {
+                    restoredWindowedPlacement
+                } else {
+                    initialPlacement
+                },
+            )
+        }
 
         SwingWindow(
             onCloseRequest = {
@@ -181,22 +196,21 @@ fun main(args: Array<String>) {
                     window = window,
                     windowState = windowState,
                     fullscreen = wasFullscreenOnLastExit,
-                    windowedPlacement = windowedPlacementAfterFullscreenRestore(
-                        wasMaximized = wasMaximizedOnLastExit,
-                        hasSavedGeometry = savedGeometry != null,
-                        restoresMaximizedWindowPlacement = restoresMaximizedWindowPlacement,
-                    ),
+                    windowedPlacement = restoredWindowedPlacement,
                 )
             }
             LaunchedEffect(windowState) {
-                // Covers OS-driven placement changes too (e.g. the native macOS
-                // green-button fullscreen toggle), not just our own shortcuts.
-                if (DesktopHostOs.current != DesktopHostOs.WINDOWS) {
-                    snapshotFlow { windowState.placement }
-                        .collect { placement ->
-                            DesktopWindowModeStorage.saveWasFullscreen(placement == WindowPlacement.Fullscreen)
+                // Covers OS-driven placement changes too (the macOS green button
+                // and the system Enter Full Screen menu item), not just our own shortcuts.
+                snapshotFlow { windowState.placement }
+                    .collect { placement ->
+                        fullscreenController.onWindowPlacementChanged(window, windowState, placement)
+                        if (DesktopHostOs.current != DesktopHostOs.WINDOWS) {
+                            DesktopWindowModeStorage.saveWasFullscreen(
+                                fullscreenController.isFullscreen(window, windowState),
+                            )
                         }
-                }
+                    }
             }
             LaunchedEffect(windowState) {
                 // Only persist geometry while windowed: fullscreen/native-Windows-fullscreen
@@ -207,7 +221,9 @@ fun main(args: Array<String>) {
                         if (!isFullscreen && restoresMaximizedWindowPlacement) {
                             DesktopWindowModeStorage.saveWasMaximized(placement == WindowPlacement.Maximized)
                         }
-                        val isWindowed = placement == WindowPlacement.Floating && !isFullscreen
+                        val isWindowed = placement == WindowPlacement.Floating &&
+                            !isFullscreen &&
+                            !fullscreenController.isAwaitingMaximizedRestore()
                         if (isWindowed && position.isSpecified) {
                             DesktopWindowModeStorage.saveWindowedGeometry(
                                 DesktopWindowGeometry(
@@ -246,7 +262,11 @@ fun main(args: Array<String>) {
             }
 
             if (smokePlayerUrl == null) {
-                ProvideDesktopWindowInsets(isFullscreen = windowState.placement == WindowPlacement.Fullscreen) {
+                val fullscreenEpoch by desktopFullscreenChanges.collectAsState()
+                fullscreenEpoch
+                ProvideDesktopWindowInsets(
+                    isFullscreen = fullscreenController.isFullscreen(window, windowState),
+                ) {
                     DesktopStartupProbe.mark("app")
                     App()
                 }
