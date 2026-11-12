@@ -170,6 +170,25 @@ step "scan self-tests" python3 -m unittest scripts.ci.test_scans
 step "name denylist" python3 -m scripts.ci.name_denylist --repo "$REPO" --base "$BASE_SHA" --head "$SHA"
 step "secrets scan" python3 -m scripts.ci.secrets_scan --repo "$REPO" --base "$BASE_SHA" --head "$SHA"
 
+# GitHub's Ubuntu image provides g++ as c++. Prefer g++ when the c++ on PATH
+# cannot see the C++ standard library (clang without libstdc++ headers).
+prefer_libstdcxx() {
+  if printf '%s\n' '#include <type_traits>' | c++ -std=c++17 -fsyntax-only -x c++ - >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! command -v g++ >/dev/null 2>&1; then
+    echo "c++ cannot compile the C++ standard library and g++ is not installed"
+    return 1
+  fi
+  CXX_SHIM="$(mktemp -d "${TMPDIR:-/tmp}/nuvio-cxx.XXXXXX")"
+  ln -s "$(command -v g++)" "${CXX_SHIM}/c++"
+  if command -v gcc >/dev/null 2>&1; then
+    ln -s "$(command -v gcc)" "${CXX_SHIM}/cc"
+  fi
+  export PATH="${CXX_SHIM}:${PATH}"
+  echo "using g++ as c++ because the default c++ cannot see the standard library"
+}
+
 desktop_job() {
   # gradle.properties asks for a 12g daemon and an 8g Kotlin daemon. The
   # command below keeps this run inside a smaller heap. --no-daemon makes
@@ -177,6 +196,10 @@ desktop_job() {
   # uses the java on PATH.
   (
     cd "$WT" || exit 1
+    CXX_SHIM=""
+    if [[ "$HOST_OS" == "Linux" ]]; then
+      prefer_libstdcxx || exit 1
+    fi
     export GRADLE_OPTS="${GRADLE_OPTS:--Xmx4g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8}"
     export GRADLE_OPTS="${GRADLE_OPTS} -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
     if [[ "$HOST_OS" == "Linux" ]]; then
@@ -197,6 +220,9 @@ desktop_job() {
     python3 -m scripts.ci.junit_summary \
       "${WT}/composeApp/build/test-results/desktopTest" \
       --label "desktopTest" || true
+    if [[ -n "${CXX_SHIM}" ]]; then
+      rm -rf "${CXX_SHIM}"
+    fi
     exit "$rc"
   )
 }

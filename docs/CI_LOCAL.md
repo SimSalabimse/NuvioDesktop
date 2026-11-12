@@ -36,6 +36,7 @@ Each run writes `~/agent-tools/ci-local/<ref>-<timestamp>.log` (override with `N
 Rules the script enforces:
 
 - Release workflows pin Temurin 17. This script uses the `java` on PATH.
+- On Linux, desktop compile uses `g++` when the `c++` on PATH cannot see the C++ standard library. The player bridge is compiled with that compiler. The script does not use sudo to install it.
 - `DEVELOPER_DIR` on macOS must not point at a beta Xcode. The script never runs `sudo`.
 - The name scan reads `NAME_DENYLIST` from the environment or `~/.config/nuvio/name-denylist`. A missing list fails the run instead of skipping. The list never goes into the repo or the log.
 - The secrets scan reads only the text added since the merge base with `--base` (default `origin/enhanced`). It reports the kind and the path, not the matched text.
