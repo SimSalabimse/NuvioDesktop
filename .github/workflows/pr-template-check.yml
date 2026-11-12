@@ -1,8 +1,11 @@
 name: PR Template Check
 
+# GitHub Actions may be blocked by billing, so this check no longer runs on
+# pull_request. Restore that trigger to turn it back on:
+#   pull_request:
+#     types: [opened, edited, synchronize, reopened]
 on:
-  pull_request:
-    types: [opened, edited, synchronize, reopened]
+  workflow_dispatch:
 
 permissions:
   pull-requests: read
