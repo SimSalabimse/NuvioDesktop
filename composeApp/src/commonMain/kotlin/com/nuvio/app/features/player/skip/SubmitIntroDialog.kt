@@ -88,11 +88,7 @@ fun SubmitIntroDialog(
     var isSubmitting by remember { mutableStateOf(false) }
     
     // If the currently selected type is disabled, switch to first available type
-    val availableTypes = listOf("intro", "recap", "credits", "preview")
-    val enabledTypes = availableTypes.filter { it !in existingSegmentTypes }
-    if (segmentType in existingSegmentTypes && enabledTypes.isNotEmpty()) {
-        onSegmentTypeChange(enabledTypes.first())
-    }
+    val ownSubmitted = existingSegmentTypes.toSet()
 
     DialogSurface(
         onDismissRequest = onDismiss,
@@ -157,18 +153,26 @@ fun SubmitIntroDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             SegmentTypeButton(
-                                label = stringResource(Res.string.submit_intro_segment_intro),
+                                label = submittedSegmentButtonLabel(
+                                    stringResource(Res.string.submit_intro_segment_intro),
+                                    "intro",
+                                    ownSubmitted,
+                                ),
                                 icon = Icons.Rounded.PlayCircleOutline,
                                 selected = segmentType == "intro",
-                                enabled = "intro" !in existingSegmentTypes,
+                                enabled = true,
                                 onClick = { onSegmentTypeChange("intro") },
                                 modifier = Modifier.weight(1f)
                             )
                             SegmentTypeButton(
-                                label = stringResource(Res.string.submit_intro_segment_recap),
+                                label = submittedSegmentButtonLabel(
+                                    stringResource(Res.string.submit_intro_segment_recap),
+                                    "recap",
+                                    ownSubmitted,
+                                ),
                                 icon = Icons.Rounded.Replay,
                                 selected = segmentType == "recap",
-                                enabled = "recap" !in existingSegmentTypes,
+                                enabled = true,
                                 onClick = { onSegmentTypeChange("recap") },
                                 modifier = Modifier.weight(1f)
                             )
@@ -178,18 +182,26 @@ fun SubmitIntroDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             SegmentTypeButton(
-                                label = stringResource(Res.string.submit_intro_segment_outro),
+                                label = submittedSegmentButtonLabel(
+                                    stringResource(Res.string.submit_intro_segment_outro),
+                                    "credits",
+                                    ownSubmitted,
+                                ),
                                 icon = Icons.Rounded.StopCircle,
                                 selected = segmentType == "credits",
-                                enabled = "credits" !in existingSegmentTypes,
+                                enabled = true,
                                 onClick = { onSegmentTypeChange("credits") },
                                 modifier = Modifier.weight(1f)
                             )
                             SegmentTypeButton(
-                                label = stringResource(Res.string.submit_intro_segment_preview),
+                                label = submittedSegmentButtonLabel(
+                                    stringResource(Res.string.submit_intro_segment_preview),
+                                    "preview",
+                                    ownSubmitted,
+                                ),
                                 icon = Icons.Rounded.Visibility,
                                 selected = segmentType == "preview",
-                                enabled = "preview" !in existingSegmentTypes,
+                                enabled = true,
                                 onClick = { onSegmentTypeChange("preview") },
                                 modifier = Modifier.weight(1f)
                             )

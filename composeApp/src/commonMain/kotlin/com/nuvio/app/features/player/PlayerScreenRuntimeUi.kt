@@ -39,6 +39,8 @@ import com.nuvio.app.features.player.skip.SkipInterval
 import com.nuvio.app.features.player.skip.SkipIntroRepository
 import com.nuvio.app.features.player.skip.ManualIntroTimeCheck
 import com.nuvio.app.features.player.skip.TheIntroDb
+import com.nuvio.app.features.player.skip.TheIntroDbSubmitResult
+import com.nuvio.app.features.player.skip.ownSubmittedSegmentTypes
 import com.nuvio.app.features.player.skip.canShowManualIntroSubmit
 import com.nuvio.app.features.player.skip.checkManualIntroTimes
 import com.nuvio.app.features.player.skip.submitIntroTitleRef
@@ -412,7 +414,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroEndTime = submitIntroEndTimeStr,
         isSubmitIntroSubmitting = isSubmitIntroSubmitting,
         submitIntroStatusMessage = submitIntroStatusMessage.orEmpty(),
-        existingSegmentTypes = calculateExistingSegmentTypes(skipIntervals, submittedSegmentTypesInSession),
+        existingSegmentTypes = ownSubmittedSegmentTypesForControls(),
         showP2pConsent = playerControlsPendingP2pSwitch != null,
         subtitleActiveTab = activeSubtitleTab.name,
         subtitleLanguageItems = playerControlSubtitleSelection.languages,
@@ -1271,17 +1273,18 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         val fallbackTheIntroKey = introDbAppKey.takeIf { it.isNotBlank() && !it.startsWith("idb_", ignoreCase = true) }.orEmpty()
         val resolvedTheIntroKey = theIntroDbKey.ifBlank { fallbackTheIntroKey }
         
-        var submitted = false
+        var introDbSent = false
+        var theIntroResult: TheIntroDbSubmitResult = TheIntroDbSubmitResult.Failed
         
         if (introDbAppKey.startsWith("idb_", ignoreCase = true) && !isMovie && imdbId != null && imdbId.startsWith("tt") && season != null && episode != null && start != null && end != null && end > start) {
-            submitted = SkipIntroRepository.submitIntro(
+            introDbSent = SkipIntroRepository.submitIntro(
                 imdbId = imdbId,
                 season = season,
                 episode = episode,
                 startSec = start,
                 endSec = end,
                 segmentType = submitIntroSegmentType,
-            ) || submitted
+            )
         }
         
         if (resolvedTheIntroKey.isNotBlank()) {
@@ -1293,7 +1296,7 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
             )?.toIntOrNull()
             
             if (resolvedTmdb != null && resolvedTmdb > 0) {
-                submitted = TheIntroDb.submitTimestamp(
+                theIntroResult = TheIntroDb.submitTimestamp(
                     apiKey = resolvedTheIntroKey,
                     tmdbId = resolvedTmdb,
                     imdbId = imdbId,
@@ -1304,9 +1307,10 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
                     startSec = start,
                     endSec = end,
                     videoDurationMs = playbackSnapshot.durationMs,
-                ) || submitted
+                )
             }
         }
+        val submitted = introDbSent || theIntroResult.accepted
         
         isSubmitIntroSubmitting = false
         val markStart = start ?: 0.0
@@ -1322,7 +1326,10 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
             )
             skipIntervals = withUserSkipMarks(skipIntervals)
         }
-        if (submitted) {
+        if (theIntroResult is TheIntroDbSubmitResult.AlreadySubmitted && !introDbSent) {
+            submittedSegmentTypesInSession.add(submitIntroSegmentType)
+            submitIntroStatusMessage = "Already submitted."
+        } else if (submitted) {
             submittedSegmentTypesInSession.add(submitIntroSegmentType)
             submitIntroStartTimeSec = 0.0
             submitIntroEndTimeSec = 0.0
@@ -2026,7 +2033,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onSubmitIntroStartTimeChanged = { submitIntroStartTimeStr = it },
         submitIntroEndTimeStr = submitIntroEndTimeStr,
         onSubmitIntroEndTimeChanged = { submitIntroEndTimeStr = it },
-        existingSegmentTypes = calculateExistingSegmentTypes(skipIntervals, submittedSegmentTypesInSession),
+        existingSegmentTypes = ownSubmittedSegmentTypesForControls(),
         onSubmitIntroDismissed = { showSubmitIntroModal = false },
         onSubmitIntroSuccess = {
             submittedSegmentTypesInSession.add(submitIntroSegmentType)
@@ -2055,8 +2062,15 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
     )
 }
 
-private fun calculateExistingSegmentTypes(skipIntervals: List<SkipInterval>, submittedInSession: Set<String>): List<String> {
-    return submittedInSession.toList()
+/** Types this account submitted. Public skip intervals are not included. */
+private fun PlayerScreenRuntime.ownSubmittedSegmentTypesForControls(): List<String> {
+    val movie = parentMetaType.equals("movie", ignoreCase = true)
+    val stored = com.nuvio.app.features.player.skip.SkipMarks.marksFor(
+        parentMetaId = parentMetaId,
+        season = if (movie) null else activeSeasonNumber,
+        episode = if (movie) null else activeEpisodeNumber,
+    ).keys
+    return ownSubmittedSegmentTypes(stored, submittedSegmentTypesInSession).toList()
 }
 
 /** "1:12–2:41 · TheIntroDB" after the Skip button text. */

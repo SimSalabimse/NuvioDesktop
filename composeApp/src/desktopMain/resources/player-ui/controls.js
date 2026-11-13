@@ -2082,20 +2082,13 @@ const renderSubmitIntroModal = () => {
   
   buttons.forEach(button => {
     const segmentType = button.dataset.segment;
-    const isExisting = existingTypes.includes(segmentType);
-    button.disabled = isExisting;
-    button.classList.toggle("disabled", isExisting);
+    const isOwn = existingTypes.includes(segmentType);
+    const baseLabel = button.textContent.replace(/ · Submitted$/, "");
+    button.textContent = isOwn ? `${baseLabel} · Submitted` : baseLabel;
+    button.disabled = false;
+    button.classList.toggle("disabled", false);
     button.classList.toggle("selected", segmentType === submitIntroDraft.segmentType);
   });
-  
-  // If the currently selected type is now disabled, switch to the first available type
-  if (existingTypes.includes(submitIntroDraft.segmentType)) {
-    const firstAvailable = buttons.find(btn => !btn.disabled);
-    if (firstAvailable) {
-      submitIntroDraft.segmentType = firstAvailable.dataset.segment;
-      submitIntroDraft.status = "";
-    }
-  }
   
   const allowsFromStart = submitIntroDraft.segmentType === "intro" || submitIntroDraft.segmentType === "recap";
   const allowsToEnd = submitIntroDraft.segmentType === "credits" || submitIntroDraft.segmentType === "preview";

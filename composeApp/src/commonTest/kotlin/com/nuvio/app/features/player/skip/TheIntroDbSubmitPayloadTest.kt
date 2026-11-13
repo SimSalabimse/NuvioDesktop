@@ -37,6 +37,30 @@ class TheIntroDbSubmitPayloadTest {
         assertEquals(5_400_000L, payload.getValue("start_ms").jsonPrimitive.long)
         assertFalse(payload.containsKey("end_ms"))
         assertEquals(7_200_000L, payload.getValue("video_duration_ms").jsonPrimitive.long)
+        assertFalse(payload.containsKey("start_sec"))
+        assertFalse(payload.containsKey("end_sec"))
+        assertFalse(payload.containsKey("startSec"))
+        assertFalse(payload.containsKey("endSec"))
+    }
+
+    @Test
+    fun submitStatusTreats409AsAlreadySubmittedAnd429AsAWait() {
+        assertIs<TheIntroDbSubmitResult.Sent>(theIntroDbSubmitResult(201))
+        assertIs<TheIntroDbSubmitResult.AlreadySubmitted>(theIntroDbSubmitResult(409))
+        assertTrue(theIntroDbSubmitResult(409).accepted)
+        assertIs<TheIntroDbSubmitResult.Failed>(theIntroDbSubmitResult(500))
+        assertEquals(2_000L, theIntroDbRetryWaitMillis(429, "2", nowEpochMs = 0L))
+        assertNull(theIntroDbRetryWaitMillis(409, "2", nowEpochMs = 0L))
+        assertNull(theIntroDbRetryWaitMillis(429, "121", nowEpochMs = 0L))
+        assertEquals("30", retryAfterHeaderValue(mapOf("Retry-After" to "30")))
+    }
+
+    @Test
+    fun submittedMarkIsOnlyTheAccountsOwnTypes() {
+        val own = ownSubmittedSegmentTypes(storedCanonicalTypes = listOf("intro", "outro"), submittedThisSession = listOf("preview"))
+        assertEquals(setOf("intro", "credits", "preview"), own)
+        assertEquals("Intro · Submitted", submittedSegmentButtonLabel("Intro", "intro", own))
+        assertEquals("Recap", submittedSegmentButtonLabel("Recap", "recap", own))
     }
 
     @Test

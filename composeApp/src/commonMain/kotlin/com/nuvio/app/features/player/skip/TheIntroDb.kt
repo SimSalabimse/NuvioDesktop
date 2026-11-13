@@ -1,8 +1,11 @@
 package com.nuvio.app.features.player.skip
 
+import com.nuvio.app.core.network.retryAfterDelayMillis
 import com.nuvio.app.features.addons.httpGetText
 import com.nuvio.app.features.addons.httpRequestRaw
+import io.ktor.util.date.GMTDate
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -61,6 +64,7 @@ internal data class TheIntroDbSubmitDraft(
 /**
  * One POST /v4/submit body. Movies never include season or episode.
  * A TV episode with no season or episode stops here.
+ * Times are milliseconds only (`start_ms` / `end_ms`), never mixed with seconds.
  * Null start or end omits that millisecond field (from start / to end).
  * [videoDurationMs] is sent only inside 5 minutes..6 hours.
  */
@@ -152,6 +156,68 @@ internal fun checkManualIntroTimes(
     }
     return ManualIntroTimeCheck.Ok
 }
+
+/** Result of one manual POST /v4/submit. A catalogue guess is never sent here. */
+internal sealed interface TheIntroDbSubmitResult {
+    val accepted: Boolean
+
+    data object Sent : TheIntroDbSubmitResult {
+        override val accepted: Boolean = true
+    }
+
+    /** HTTP 409: this account already submitted this segment. */
+    data object AlreadySubmitted : TheIntroDbSubmitResult {
+        override val accepted: Boolean = true
+    }
+
+    data object Failed : TheIntroDbSubmitResult {
+        override val accepted: Boolean = false
+    }
+}
+
+internal fun theIntroDbSubmitResult(status: Int): TheIntroDbSubmitResult = when (status) {
+    200, 201 -> TheIntroDbSubmitResult.Sent
+    409 -> TheIntroDbSubmitResult.AlreadySubmitted
+    else -> TheIntroDbSubmitResult.Failed
+}
+
+/** How long to wait before one retry of a 429. Longer than two minutes is not waited out. */
+internal fun theIntroDbRetryWaitMillis(status: Int, retryAfterHeader: String?, nowEpochMs: Long): Long? {
+    if (status != 429) return null
+    val wait = retryAfterDelayMillis(
+        retryAfterHeader = retryAfterHeader,
+        nowEpochMs = nowEpochMs,
+        fallbackDelayMs = 1_000L,
+    )
+    return wait.takeIf { it in 0L..THE_INTRO_DB_MAX_RETRY_WAIT_MS }
+}
+
+internal const val THE_INTRO_DB_MAX_RETRY_WAIT_MS = 120_000L
+
+internal fun retryAfterHeaderValue(headers: Map<String, String>): String? =
+    headers.entries.firstOrNull { (name, _) -> name.equals("retry-after", ignoreCase = true) }?.value
+
+/**
+ * Segment buttons the account has submitted. Public catalogue types are not passed in.
+ * `outro` and `credits` share the credits button. A type stays in the set so a second
+ * segment of that type can still be submitted; the label only gains "Submitted".
+ */
+internal fun ownSubmittedSegmentTypes(
+    storedCanonicalTypes: Collection<String>,
+    submittedThisSession: Collection<String>,
+): Set<String> {
+    fun submitType(type: String): String? = when (SkipMarks.canonicalType(type)) {
+        "intro" -> "intro"
+        "recap" -> "recap"
+        "outro" -> "credits"
+        "preview" -> "preview"
+        else -> null
+    }
+    return (storedCanonicalTypes + submittedThisSession).mapNotNull(::submitType).toSet()
+}
+
+internal fun submittedSegmentButtonLabel(base: String, type: String, ownSubmittedTypes: Set<String>): String =
+    if (type in ownSubmittedTypes) "$base · Submitted" else base
 
 internal object TheIntroDb {
 
@@ -315,8 +381,10 @@ internal object TheIntroDb {
         startSec: Double?,
         endSec: Double?,
         videoDurationMs: Long? = null,
-    ): Boolean {
-        if (apiKey.isBlank()) return false
+        nowEpochMs: () -> Long = { GMTDate().timestamp },
+        pause: suspend (Long) -> Unit = { delay(it) },
+    ): TheIntroDbSubmitResult {
+        if (apiKey.isBlank()) return TheIntroDbSubmitResult.Failed
         val body = theIntroDbSubmitBody(
             TheIntroDbSubmitDraft(
                 tmdbId = tmdbId,
@@ -329,22 +397,38 @@ internal object TheIntroDb {
                 endSec = endSec,
                 videoDurationMs = videoDurationMs,
             ),
-        ) ?: return false
+        ) ?: return TheIntroDbSubmitResult.Failed
         return try {
-            val response = httpRequestRaw(
-                method = "POST",
-                url = SUBMIT_URL,
-                headers = mapOf(
-                    "Authorization" to "Bearer $apiKey",
-                    "Content-Type" to "application/json",
-                ),
-                body = body,
-            )
-            response.status == 200 || response.status == 201
+            var retried = false
+            while (true) {
+                val response = httpRequestRaw(
+                    method = "POST",
+                    url = SUBMIT_URL,
+                    headers = mapOf(
+                        "Authorization" to "Bearer $apiKey",
+                        "Content-Type" to "application/json",
+                    ),
+                    body = body,
+                )
+                val result = theIntroDbSubmitResult(response.status)
+                if (result !is TheIntroDbSubmitResult.Failed) return result
+                val wait = if (!retried) {
+                    theIntroDbRetryWaitMillis(
+                        status = response.status,
+                        retryAfterHeader = retryAfterHeaderValue(response.headers),
+                        nowEpochMs = nowEpochMs(),
+                    )
+                } else {
+                    null
+                }
+                if (wait == null) return TheIntroDbSubmitResult.Failed
+                retried = true
+                pause(wait)
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            false
+            TheIntroDbSubmitResult.Failed
         }
     }
 }
