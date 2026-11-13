@@ -16,6 +16,10 @@ internal data class SkipMark(
     val endMs: Long,
     val atMs: Long = 0L,
     val imported: Boolean = false,
+    val presence: String = "range",
+    val durationMs: Long = 0L,
+    val segmentIndex: Int = 0,
+    val fromDevice: String? = null,
 )
 
 /**
@@ -34,7 +38,8 @@ internal object SkipMarks {
     private val revisionState = MutableStateFlow(0L)
     val revision: StateFlow<Long> = revisionState.asStateFlow()
 
-    fun isUserProvider(provider: String): Boolean = provider == PROVIDER || provider == PROVIDER_IMPORTED
+    fun isUserProvider(provider: String): Boolean =
+        provider == PROVIDER || provider == PROVIDER_IMPORTED || provider.startsWith("sync:")
 
     /** intro / recap / outro / preview, or null for types that cannot be marked. */
     fun canonicalType(type: String): String? = when (type.trim().lowercase()) {
@@ -73,12 +78,30 @@ internal object SkipMarks {
     }
 
     @OptIn(ExperimentalTime::class)
-    fun record(parentMetaId: String, season: Int?, episode: Int?, type: String, startMs: Long, endMs: Long): Boolean {
+    fun record(
+        parentMetaId: String,
+        season: Int?,
+        episode: Int?,
+        type: String,
+        startMs: Long,
+        endMs: Long,
+        durationMs: Long = 0L,
+    ): Boolean {
         val category = canonicalType(type) ?: return false
         if (parentMetaId.isBlank() || endMs <= startMs || startMs < 0L) return false
         ensureLoaded()
         val key = keyFor(parentMetaId, season, episode)
-        marks[key] = marks[key].orEmpty() + (category to SkipMark(startMs, endMs, Clock.System.now().toEpochMilliseconds()))
+        marks[key] = marks[key].orEmpty() + (
+            category to SkipMark(
+                startMs = startMs,
+                endMs = endMs,
+                atMs = Clock.System.now().toEpochMilliseconds(),
+                presence = "range",
+                durationMs = durationMs.coerceAtLeast(0L),
+                segmentIndex = 0,
+                fromDevice = null,
+            )
+            )
         persist()
         Logger.withTag("SkipMarks").i { "mark key=$key type=$category $startMs-$endMs" }
         return true
@@ -98,6 +121,30 @@ internal object SkipMarks {
 
     fun flushImports() = persist()
 
+    fun snapshot(): Map<String, Map<String, SkipMark>> {
+        ensureLoaded()
+        return marks.mapValues { (_, value) -> value.toMap() }
+    }
+
+    fun upsert(parentMetaId: String, season: Int?, episode: Int?, type: String, mark: SkipMark) {
+        val category = canonicalType(type) ?: return
+        if (parentMetaId.isBlank()) return
+        ensureLoaded()
+        val key = keyFor(parentMetaId, season, episode)
+        marks[key] = marks[key].orEmpty() + (category to mark)
+        persist()
+    }
+
+    fun remove(parentMetaId: String, season: Int?, episode: Int?, type: String) {
+        val category = canonicalType(type) ?: return
+        if (parentMetaId.isBlank()) return
+        ensureLoaded()
+        val key = keyFor(parentMetaId, season, episode)
+        val next = marks[key].orEmpty() - category
+        if (next.isEmpty()) marks.remove(key) else marks[key] = next
+        persist()
+    }
+
     /**
      * [intervals] with the user's marks for this episode in place of the fetched times of the
      * same type. Movie credits keep the movie-credits type so post-credits handling still works.
@@ -108,14 +155,20 @@ internal object SkipMarks {
         season: Int?,
         episode: Int?,
         isMovie: Boolean,
+        fileDurationMs: Long = 0L,
     ): List<SkipInterval> {
         val mine = marksFor(parentMetaId, season, episode)
         if (mine.isEmpty()) return intervals
+        val active = mine.filter { (_, mark) ->
+            mark.presence == "none" || markCoversFile(mark.durationMs, fileDurationMs)
+        }
+        if (active.isEmpty()) return intervals
         val kept = intervals.filter { interval ->
             val category = canonicalType(interval.type)
-            category == null || category !in mine
+            category == null || category !in active
         }
-        val added = mine.map { (category, mark) ->
+        val added = active.mapNotNull { (category, mark) ->
+            if (mark.presence == "none") return@mapNotNull null
             val type = when {
                 category == "outro" && isMovie -> "movie-credits"
                 else -> category
@@ -124,22 +177,38 @@ internal object SkipMarks {
                 startTime = mark.startMs / 1000.0,
                 endTime = mark.endMs / 1000.0,
                 type = type,
-                provider = if (mark.imported) PROVIDER_IMPORTED else PROVIDER,
+                provider = when {
+                    mark.fromDevice != null -> "sync:${mark.fromDevice}"
+                    mark.imported -> PROVIDER_IMPORTED
+                    else -> PROVIDER
+                },
             )
         }
         return (kept + added).sortedBy { it.startTime }
     }
 }
 
+/** A duration of 0 covers every file. A positive duration covers the same cut, within 30 seconds. */
+private fun markCoversFile(markDurationMs: Long, fileDurationMs: Long): Boolean {
+    if (markDurationMs == 0L) return true
+    if (markDurationMs <= 0L || fileDurationMs <= 0L) return false
+    val delta = if (markDurationMs > fileDurationMs) markDurationMs - fileDurationMs else fileDurationMs - markDurationMs
+    return delta <= 30_000L
+}
+
 /** Where a skip's times came from, for the Skip button and Downloads. */
-internal fun skipSourceLabel(provider: String): String = when (provider.trim().lowercase()) {
-    SkipMarks.PROVIDER -> "Your mark"
-    SkipMarks.PROVIDER_IMPORTED -> "Your TheIntroDB mark"
-    TheIntroDb.PROVIDER -> "TheIntroDB"
-    "introdb" -> "IntroDB"
-    "aniskip" -> "AniSkip"
-    "animeskip" -> "Anime-Skip"
-    else -> provider
+internal fun skipSourceLabel(provider: String): String {
+    val trimmed = provider.trim()
+    if (trimmed.startsWith("sync:")) return "From ${trimmed.removePrefix("sync:")}"
+    return when (trimmed.lowercase()) {
+        SkipMarks.PROVIDER -> "Your mark"
+        SkipMarks.PROVIDER_IMPORTED -> "Your TheIntroDB mark"
+        TheIntroDb.PROVIDER -> "TheIntroDB"
+        "introdb" -> "IntroDB"
+        "aniskip" -> "AniSkip"
+        "animeskip" -> "Anime-Skip"
+        else -> provider
+    }
 }
 
 /** "1:12–2:41" (or "1:02:03–1:04:00" past an hour). */

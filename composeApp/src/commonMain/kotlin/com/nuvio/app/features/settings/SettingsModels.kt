@@ -31,6 +31,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_plugins
 import nuvio.composeapp.generated.resources.compose_settings_page_poster_customization
 import nuvio.composeapp.generated.resources.compose_settings_page_root
 import nuvio.composeapp.generated.resources.compose_settings_page_streams
+import nuvio.composeapp.generated.resources.compose_settings_page_sync
 import nuvio.composeapp.generated.resources.compose_settings_page_supporters_contributors
 import nuvio.composeapp.generated.resources.compose_settings_page_tmdb_enrichment
 import nuvio.composeapp.generated.resources.compose_settings_page_trakt
@@ -150,6 +151,11 @@ internal enum class SettingsPage(
     ),
     Integrations(
         titleRes = Res.string.compose_settings_page_integrations,
+        category = SettingsCategory.General,
+        parentPage = Root,
+    ),
+    Sync(
+        titleRes = Res.string.compose_settings_page_sync,
         category = SettingsCategory.General,
         parentPage = Root,
     ),

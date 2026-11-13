@@ -2,6 +2,8 @@ package com.nuvio.app.features.settings
 
 import com.nuvio.app.AppScreenTab
 import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.features.analyzeddetails.analyzedDetailsSyncPage
+import com.nuvio.app.features.analyzeddetails.analyzedDetailsSyncSupported
 import com.nuvio.app.isDesktop
 
 import androidx.compose.foundation.background
@@ -124,6 +126,7 @@ private fun SettingsPage.isEnabledByPolicy(): Boolean =
         SettingsPage.Notifications -> AppFeaturePolicy.notificationsEnabled
         SettingsPage.Plugins -> AppFeaturePolicy.pluginsEnabled
         SettingsPage.SupportersContributors -> AppFeaturePolicy.supportersContributorsPageEnabled
+        SettingsPage.Sync -> analyzedDetailsSyncSupported
         else -> true
     }
 
@@ -701,6 +704,9 @@ private fun MobileSettingsScreen(
                             onNotificationsClick = { onPageChange(SettingsPage.Notifications) },
                             onContentDiscoveryClick = { onPageChange(SettingsPage.ContentDiscovery) },
                             onIntegrationsClick = { onPageChange(SettingsPage.Integrations) },
+                            onSyncClick = { onPageChange(SettingsPage.Sync) }.takeIf {
+                                analyzedDetailsSyncSupported
+                            },
                             onTrackingClick = { onPageChange(SettingsPage.TraktAuthentication) },
                             onSupportersContributorsClick = onSupportersContributorsClick,
                             onLicensesAttributionsClick = onLicensesAttributionsClick,
@@ -851,6 +857,7 @@ private fun MobileSettingsScreen(
                     isTablet = false,
                     settings = debridSettings,
                 )
+                SettingsPage.Sync -> analyzedDetailsSyncPage(isTablet = false)
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
                     traktUiState = traktAuthUiState,
@@ -1171,6 +1178,9 @@ private fun TabletSettingsScreen(
                                         onNotificationsClick = { openInlinePage(SettingsPage.Notifications) },
                                         onContentDiscoveryClick = { openInlinePage(SettingsPage.ContentDiscovery) },
                                         onIntegrationsClick = { openInlinePage(SettingsPage.Integrations) },
+                                        onSyncClick = { openInlinePage(SettingsPage.Sync) }.takeIf {
+                                            analyzedDetailsSyncSupported
+                                        },
                                         onTrackingClick = { openInlinePage(SettingsPage.TraktAuthentication) },
                                         onSupportersContributorsClick = { openInlinePage(SettingsPage.SupportersContributors) },
                                         onLicensesAttributionsClick = { openInlinePage(SettingsPage.LicensesAttributions) },
@@ -1326,6 +1336,7 @@ private fun TabletSettingsScreen(
                                 isTablet = true,
                                 settings = debridSettings,
                             )
+                            SettingsPage.Sync -> analyzedDetailsSyncPage(isTablet = true)
                             SettingsPage.TraktAuthentication -> trackingSettingsContent(
                                 isTablet = true,
                                 traktUiState = traktAuthUiState,
