@@ -87,6 +87,12 @@ class SecretsScanTests(unittest.TestCase):
         self.addCleanup(tmp.cleanup)
         self.assertEqual(scan_secrets(tmp.name, base, head), [])
 
+    def test_example_query_fixture_is_ignored(self) -> None:
+        line = 'val url = "https://cdn.example/file.mkv?token=spike-secret-token"\n'
+        tmp, base, head = _repo_with(line, "ordinary message")
+        self.addCleanup(tmp.cleanup)
+        self.assertEqual(scan_secrets(tmp.name, base, head), [])
+
 
 if __name__ == "__main__":
     unittest.main()

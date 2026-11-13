@@ -14,7 +14,7 @@ from scripts.ci.diff_text import added_lines, commit_texts
 
 PLACEHOLDER = re.compile(
     r"(?i)(?:changeme|example|placeholder|your[-_]|redacted|\bx{3,}\b|todo|"
-    r"ci-test-secret|<.*>|\$\{)"
+    r"ci-test-secret|spike-secret|dummy|fake-token|<.*>|\$\{)"
 )
 
 RULES: list[tuple[str, re.Pattern[str]]] = [
@@ -62,8 +62,8 @@ def _hits_in(text: str) -> list[str]:
         match = pattern.search(text)
         if match is None:
             continue
-        if kind in {"assigned-secret", "query-secret", "torbox-key", "addon-url"} and PLACEHOLDER.search(
-            match.group(0)
+        if kind in {"assigned-secret", "query-secret", "torbox-key", "addon-url"} and (
+            PLACEHOLDER.search(match.group(0)) or PLACEHOLDER.search(text)
         ):
             continue
         kinds.append(kind)
