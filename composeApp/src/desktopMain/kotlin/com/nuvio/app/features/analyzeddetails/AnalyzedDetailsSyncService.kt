@@ -7,11 +7,14 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 internal actual val analyzedDetailsSyncSupported: Boolean = true
@@ -53,6 +56,7 @@ internal actual fun noteTheIntroDbSubmissions(accountKey: String, notes: List<An
 
 internal object AnalyzedDetailsSyncService {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val gate = Mutex()
     private val debounce = SyncDebounce()
     private val transport = SwitchingSyncTransport()
     private val engine by lazy {
@@ -69,22 +73,30 @@ internal object AnalyzedDetailsSyncService {
     val state: StateFlow<SyncSession> = stateFlow
     private val busyFlow = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = busyFlow
+    @Volatile private var mergedCache: MergedState? = null
 
     fun start() {
-        stateFlow.value = engine.session()
         scope.launch {
             SkipMarks.revision.drop(1).collect {
                 schedule()
             }
         }
-        scope.launch(Dispatchers.IO) {
-            val current = engine.session()
-            stateFlow.value = current
-            if (current.joined) {
-                transport.baseUrl = current.baseUrl
-                stateFlow.value = engine.sync()
+        scope.launch {
+            gate.withLock {
+                val current = withContext(Dispatchers.IO) { engine.session() }
+                publish(current)
+                if (current.joined) {
+                    transport.baseUrl = current.baseUrl
+                    publish(withContext(Dispatchers.IO) { engine.sync() })
+                }
             }
         }
+    }
+
+    /** Stops queued syncs and tells an in-flight sync to drop its writes. */
+    fun shutdown() {
+        engine.abandon()
+        scope.cancel()
     }
 
     fun create(baseUrl: String, enrollSecret: String, passphrase: String) = runBusy {
@@ -107,12 +119,19 @@ internal object AnalyzedDetailsSyncService {
         }
     }
 
-    fun leave() = runBusy { engine.leave() }
+    fun leave() {
+        engine.abandon()
+        runBusy { engine.leave() }
+    }
 
     fun note(accountScope: String, notes: List<SubmissionNote>) {
-        val saved = engine.noteSubmissions(accountScope, notes)
-        stateFlow.value = saved
-        if (saved.joined) schedule()
+        scope.launch {
+            gate.withLock {
+                val saved = withContext(Dispatchers.IO) { engine.noteSubmissions(accountScope, notes) }
+                publish(saved)
+                if (saved.joined) schedule()
+            }
+        }
     }
 
     fun overlay(
@@ -123,11 +142,12 @@ internal object AnalyzedDetailsSyncService {
         fileDurationMs: Long,
         isMovie: Boolean,
     ): List<SkipInterval> {
-        val current = stateFlow.value.takeIf { it.joined } ?: engine.session()
-        if (!current.joined) return intervals
+        val current = stateFlow.value
+        val merged = mergedCache
+        if (!current.joined || merged == null) return intervals
         return overlaySyncedSkips(
             intervals = intervals,
-            merged = mergedFromSession(current, System.currentTimeMillis()),
+            merged = merged,
             parentMetaId = parentMetaId,
             season = season,
             episode = episode,
@@ -141,22 +161,32 @@ internal object AnalyzedDetailsSyncService {
         scope.launch {
             delay(SYNC_DEBOUNCE_MS)
             if (!debounce.shouldRun(token)) return@launch
-            val current = engine.session()
-            if (!current.joined) return@launch
-            transport.baseUrl = current.baseUrl
-            stateFlow.value = withContext(Dispatchers.IO) { engine.sync() }
+            gate.withLock {
+                if (!debounce.shouldRun(token)) return@withLock
+                val current = engine.session()
+                if (!current.joined) return@withLock
+                transport.baseUrl = current.baseUrl
+                publish(withContext(Dispatchers.IO) { engine.sync() })
+            }
         }
     }
 
     private fun runBusy(block: () -> SyncSession) {
-        scope.launch(Dispatchers.IO) {
-            busyFlow.value = true
-            try {
-                stateFlow.value = block()
-            } finally {
-                busyFlow.value = false
+        scope.launch {
+            gate.withLock {
+                busyFlow.value = true
+                try {
+                    publish(withContext(Dispatchers.IO) { block() })
+                } finally {
+                    busyFlow.value = false
+                }
             }
         }
+    }
+
+    private fun publish(session: SyncSession) {
+        stateFlow.value = session
+        mergedCache = if (session.joined) mergedFromSession(session, System.currentTimeMillis()) else null
     }
 }
 

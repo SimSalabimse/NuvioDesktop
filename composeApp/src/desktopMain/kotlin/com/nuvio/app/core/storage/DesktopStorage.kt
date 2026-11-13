@@ -2,9 +2,11 @@ package com.nuvio.app.core.storage
 
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.util.Comparator
 import java.util.Locale
 import java.util.Properties
@@ -78,6 +80,7 @@ internal object DesktopStorage {
         private val lock = Any()
         private val properties = Properties()
         private var loaded = false
+        private var corrupt = false
 
         fun contains(key: String): Boolean = synchronized(lock) {
             ensureLoaded()
@@ -91,6 +94,7 @@ internal object DesktopStorage {
 
         fun putString(key: String, value: String?) = synchronized(lock) {
             ensureLoaded()
+            if (corrupt) return
             val changed = if (value == null) {
                 properties.remove(key) != null
             } else {
@@ -131,11 +135,13 @@ internal object DesktopStorage {
 
         fun remove(key: String) = synchronized(lock) {
             ensureLoaded()
+            if (corrupt) return
             if (properties.remove(key) != null) persist()
         }
 
         fun removeAll(keys: Iterable<String>) = synchronized(lock) {
             ensureLoaded()
+            if (corrupt) return
             var changed = false
             keys.forEach { key ->
                 if (properties.remove(key) != null) changed = true
@@ -153,17 +159,32 @@ internal object DesktopStorage {
             loaded = true
             properties.clear()
             if (!file.exists()) return
-            runCatching {
+            val ok = runCatching {
                 Files.newInputStream(file).use { input ->
                     properties.load(input)
                 }
+            }.isSuccess
+            if (!ok) {
+                corrupt = true
+                properties.clear()
             }
         }
 
         private fun persist() {
             Files.createDirectories(file.parent)
-            Files.newOutputStream(file).use { output ->
-                properties.store(output, "Nuvio desktop preferences")
+            val temp = Files.createTempFile(file.parent, "${file.fileName}.", ".tmp")
+            try {
+                Files.newOutputStream(temp).use { output ->
+                    properties.store(output, "Nuvio desktop preferences")
+                }
+                try {
+                    Files.move(temp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+                } catch (_: AtomicMoveNotSupportedException) {
+                    Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING)
+                }
+            } catch (error: Exception) {
+                runCatching { Files.deleteIfExists(temp) }
+                throw error
             }
         }
     }

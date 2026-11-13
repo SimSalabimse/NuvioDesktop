@@ -1,7 +1,15 @@
 package com.nuvio.app.features.analyzeddetails
 
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import com.nuvio.app.core.storage.DesktopStorage
 import java.nio.file.Files
+import java.nio.file.attribute.AclEntryPermission
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.PosixFilePermission
 import java.security.SecureRandom
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -95,21 +103,88 @@ class AnalyzedDetailsSyncTest {
         assertEquals(normShowId("imdb:tt0000100"), normShowId("imdb:tt100"))
         assertEquals("tt0000100", parentMetaIdForShow("imdb:tt0000100"))
         assertEquals("tmdb:100", parentMetaIdForShow("tmdb:100"))
+        val mobile = parseMobileAnalysisKey("tmdb_100__s1e8")
+        assertEquals(episode?.showId, mobile?.showId)
+        assertEquals(episode?.episodeKey, mobile?.episodeKey)
+        assertEquals("none/tmdb:100/s1e8/intro", noneRecordId(episode!!, "intro"))
+        assertEquals(noneRecordId(episode, "intro"), noneRecordId(mobile!!, "intro"))
+        assertEquals(
+            "det/tmdb:100/s1e8/intro/0/3600000/a1",
+            detectionRecordId(episode, "intro", 0, 3_600_000, 1),
+        )
+        val mobileImdb = parseMobileAnalysisKey("tt0000100__s1e8")
+        assertEquals(imdb?.showId, mobileImdb?.showId)
+        assertEquals("s1e8", mobileImdb?.episodeKey)
+        assertEquals("none/imdb:tt0000100/s1e8/credits", noneRecordId(imdb!!, "credits"))
+        val mobileBare = parseMobileAnalysisKey("100__s1e8")
+        assertEquals("tmdb:100", mobileBare?.showId)
+        assertEquals("s1e8", mobileBare?.episodeKey)
+        assertEquals("tmdb:100", parseDesktopMarkKey("tmdb_100:1:8")?.showId)
+        assertNull(normalizeSyncBaseUrl("http://example.com"))
+        assertEquals("https://example.com", normalizeSyncBaseUrl("https://example.com"))
+        assertEquals("http://127.0.0.1:9", normalizeSyncBaseUrl("http://127.0.0.1:9"))
     }
 
     @Test
     fun secretStoresDoNotPutThePassphraseOnTheCommandLine() {
         val secret = "test-passphrase-not-a-secret"
         assertEquals(listOf("/usr/bin/security", "-w", "***"), redactSecretArguments(listOf("/usr/bin/security", "-w", secret)))
-        assertFalse(WindowsCredentialSecretStore().commandHasSecret(secret))
+        val argv = mutableListOf<List<String>>()
+        var stdin: String? = null
+        val mac = MacKeychainSecretStore { args, input ->
+            argv += args
+            stdin = input
+            ProcessResult(0, "")
+        }
+        mac.put("profile/1", secret)
+        assertEquals(listOf(listOf("/usr/bin/security", "-i")), argv)
+        assertFalse(argv.single().any { secret in it })
+        assertTrue(stdin!!.contains(secret))
+        assertEquals("'it'\\''s'", securityQuote("it's"))
+        assertFailsWith<IllegalStateException> { mac.put("profile/1", "line\nbreak") }
+        val windows = WindowsCredentialSecretStore()
+        val line = windows.commandLine()
+        assertEquals("Hidden", line[line.indexOf("-WindowStyle") + 1])
+        assertEquals("Bypass", line[line.indexOf("-ExecutionPolicy") + 1])
+        assertFalse(windows.commandHasSecret(secret))
+        val script = windows.previewScript("write", "profile/1", secret)
+        assertFalse(script.contains(secret))
+        assertFailsWith<IllegalArgumentException> { windows.previewScript("write", "foo';calc", secret) }
         val directory = Files.createTempDirectory("nuvio-sync-secrets")
         val store = EncryptedFileSecretStore(directory)
         store.put("profile/1", secret)
         assertEquals(secret, store.get("profile/1"))
         val saved = Files.readString(directory.resolve("values.json"))
         assertFalse(saved.contains(secret))
+        assertEquals(
+            setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
+            Files.getPosixFilePermissions(directory.resolve("key")),
+        )
+        val owner = Files.getOwner(directory.resolve("key"))
+        val entry = ownerOnlyAclEntry(owner)
+        assertEquals(AclEntryType.ALLOW, entry.type())
+        assertEquals(owner, entry.principal())
+        assertTrue(entry.flags().isEmpty())
+        assertTrue(entry.permissions().contains(AclEntryPermission.READ_DATA))
+        val primary = object : SyncSecretStore {
+            override val kind: String = "macos-keychain"
+            override fun get(account: String): String? = null
+            override fun put(account: String, secret: String) = error("Keychain update failed.")
+            override fun delete(account: String) = Unit
+        }
+        val fallback = FallbackSecretStore(primary, store)
+        fallback.put("profile/1", secret)
+        assertEquals("encrypted-file", fallback.kind)
+        assertEquals(secret, fallback.get("profile/1"))
         store.delete("profile/1")
         assertNull(store.get("profile/1"))
+        val clipboard = ReadOnlyClipboard(object : ClipboardManager {
+            override fun getText(): AnnotatedString = AnnotatedString("kept")
+            override fun setText(annotatedString: AnnotatedString) = error("copied")
+            override fun hasText(): Boolean = true
+        })
+        clipboard.setText(AnnotatedString(secret))
+        assertEquals("kept", clipboard.getText()?.text)
     }
 
     @Test
@@ -130,7 +205,8 @@ class AnalyzedDetailsSyncTest {
         val enroll = "test-enroll-secret"
         FakeSyncServer(enroll).use { server ->
             val now = longArrayOf(1_700_000_000_000)
-            val left = device(server, "device-a") { now[0] }
+            val pauses = mutableListOf<Long>()
+            val left = device(server, "device-a", pause = { pauses += it }) { now[0] }
             val right = device(server, "device-b") { now[0] }
             val created = left.create(server.baseUrl, enroll, passphrase)
             assertTrue(created.joined, created.statusText)
@@ -141,6 +217,7 @@ class AnalyzedDetailsSyncTest {
             server.retryAfter = 3
             val limited = left.sync()
             assertEquals("The server asked us to wait 3 seconds.", limited.statusText)
+            assertEquals(listOf(3_000L, 3_000L, 3_000L), pauses.toList())
             server.failPullStatus = null
             right.join(server.baseUrl, created.joinCode(), "not-the-passphrase")
             assertEquals("Wrong passphrase.", right.session().statusText)
@@ -260,6 +337,185 @@ class AnalyzedDetailsSyncTest {
         assertTrue(overlay.any { it.type == "recap" && it.provider == "sync:device-a" })
     }
 
+    @Test
+    fun firstSyncKeepsUnrelatedMarksAndDoesNotInventNone() {
+        FakeSyncServer("test-enroll-secret").use { server ->
+            val now = longArrayOf(1_700_000_000_000L)
+            val device = device(server, "device-a") { now[0] }
+            assertTrue(device.create(server.baseUrl, "test-enroll-secret", "test-passphrase-not-a-secret").joined)
+            assertEquals("Synced.", device.sync().statusText)
+            assertTrue(device.directory.list().isEmpty())
+            device.directory.upsert(mark("tmdb:100", 1, 8, "intro", 10_000, 20_000))
+            device.directory.upsert(mark("tmdb:200", 2, 3, "recap", 4_000, 5_000))
+            device.directory.upsert(mark("not-a-show", 1, 1, "intro", 7, 8))
+            val keys = device.keysForTest()!!
+            assertEquals("Synced.", device.sync().statusText)
+            assertEquals(setOf(10_000L, 4_000L, 7L), device.directory.list().map { it.startMs }.toSet())
+            assertTrue(device.directory.list().none { it.presence == "none" })
+            val localId = device.session().slots.single { it.startMs == 10_000L }.recordId
+            server.putBlob(
+                id = "22222222-2222-4222-8222-222222222221",
+                kind = "mark",
+                deviceId = "device-b",
+                nonce = SyncCrypto.encodeB64(SyncCrypto.decodeB64("EBESExQVFhcYGRob")!!),
+                ciphertext = encryptRecord(
+                    keys,
+                    device.session().spaceId,
+                    "22222222-2222-4222-8222-222222222221",
+                    "device-b",
+                    rangeMarkRecord(
+                        id = "mark/00000000-0000-4000-8000-000000000001",
+                        hlc = ClockStamp(1_600_000_000_000, 0, "device-b"),
+                        showId = "tmdb:100",
+                        season = 1,
+                        episode = 8,
+                        segmentType = "intro",
+                        segmentIndex = 0,
+                        startMs = 30_000,
+                        endMs = 40_000,
+                        durationMs = 3_600_000,
+                    )!!,
+                ),
+            )
+            assertEquals("Synced.", device.sync().statusText)
+            assertEquals(10_000L, device.directory.list().single { it.segmentLocal == "intro" && it.parentMetaId == "tmdb:100" }.startMs)
+            assertFalse(device.session().slots.single { it.recordId == localId }.deleted)
+            val before = server.calls.size
+            assertEquals("Synced.", device.sync().statusText)
+            assertTrue(plaintexts(server.calls.drop(before), keys).none { it.contains("\"deleted\":true") })
+            server.putBlob(
+                id = "22222222-2222-4222-8222-222222222222",
+                kind = "mark",
+                deviceId = "device-b",
+                nonce = SyncCrypto.encodeB64(SyncCrypto.decodeB64("EBESExQVFhcYGRob")!!),
+                ciphertext = encryptRecord(
+                    keys,
+                    device.session().spaceId,
+                    "22222222-2222-4222-8222-222222222222",
+                    "device-b",
+                    noneMarkRecord(
+                        hlc = ClockStamp(now[0] + 1_000, 0, "device-b"),
+                        showId = "tmdb:100",
+                        season = 1,
+                        episode = 8,
+                        segmentType = "intro",
+                        durationMs = 3_600_000,
+                    )!!,
+                ),
+            )
+            assertEquals("Synced.", device.sync().statusText)
+            assertEquals("none", device.directory.list().single { it.parentMetaId == "tmdb:100" && it.segmentLocal == "intro" }.presence)
+            assertFalse(device.session().slots.single { it.recordId == localId }.deleted)
+            assertEquals(4_000L, device.directory.list().single { it.parentMetaId == "tmdb:200" }.startMs)
+            assertEquals(7L, device.directory.list().single { it.parentMetaId == "not-a-show" }.startMs)
+            val afterNone = server.calls.size
+            assertEquals("Synced.", device.sync().statusText)
+            assertTrue(plaintexts(server.calls.drop(afterNone), keys).none { it.contains("\"deleted\":true") })
+        }
+    }
+
+    @Test
+    fun aFailedPushKeepsThePullAndAConflictRetriesTheSameBody() {
+        FakeSyncServer("test-enroll-secret").use { server ->
+            val device = device(server, "device-a") { 1_700_000_000_000 }
+            val created = device.create(server.baseUrl, "test-enroll-secret", "test-passphrase-not-a-secret")
+            assertTrue(created.joined, created.statusText)
+            device.directory.upsert(mark("tmdb:100", 1, 8, "intro", 10_000, 20_000))
+            server.failPushStatus = 409
+            server.failPushRemaining = 1
+            assertEquals("Synced.", device.sync().statusText)
+            val pushes = server.calls.filter { it.method == "POST" && it.path.endsWith("/batches") }
+            assertEquals(2, pushes.size)
+            assertEquals(pushes[0].body, pushes[1].body)
+            server.failPushStatus = null
+            server.putBlob(
+                id = "44444444-4444-4444-8444-444444444441",
+                kind = "mark",
+                deviceId = "device-b",
+                nonce = SyncCrypto.encodeB64(SyncCrypto.decodeB64("EBESExQVFhcYGRob")!!),
+                ciphertext = encryptRecord(
+                    device.keysForTest()!!,
+                    created.spaceId,
+                    "44444444-4444-4444-8444-444444444441",
+                    "device-b",
+                    rangeMarkRecord(
+                        id = "mark/11111111-1111-4111-8111-111111111111",
+                        hlc = ClockStamp(1_700_000_000_000, 0, "device-b"),
+                        showId = "tmdb:100",
+                        season = 1,
+                        episode = 9,
+                        segmentType = "recap",
+                        segmentIndex = 0,
+                        startMs = 4_000,
+                        endMs = 5_000,
+                        durationMs = 3_600_000,
+                    )!!,
+                ),
+            )
+            device.directory.upsert(mark("tmdb:300", 1, 1, "recap", 8_000, 9_000))
+            server.failPushStatus = 500
+            server.failPushRemaining = 1
+            val failed = device.sync()
+            assertEquals("The server returned 500.", failed.statusText)
+            assertEquals(server.highSeq(), failed.pullCursor)
+            assertTrue(failed.knownCanonical.isNotEmpty())
+            assertEquals(setOf(10_000L, 8_000L), device.directory.list().map { it.startMs }.toSet())
+            server.failPushStatus = null
+            assertEquals("Synced.", device.sync().statusText)
+            assertEquals(setOf(10_000L, 8_000L, 4_000L), device.directory.list().map { it.startMs }.toSet())
+            val batches = server.calls.count { it.method == "POST" && it.path.endsWith("/batches") }
+            server.failPushStatus = 409
+            server.failPushBody = """{"error":"conflict","message":"Nonce already used"}"""
+            server.failPushRemaining = 5
+            device.directory.upsert(mark("tmdb:300", 1, 1, "recap", 8_500, 9_000))
+            val rejected = device.sync()
+            assertEquals("The server rejected the sync.", rejected.statusText)
+            assertEquals(batches + 1, server.calls.count { it.method == "POST" && it.path.endsWith("/batches") })
+        }
+    }
+
+    @Test
+    fun leavingDuringAPullDoesNotRestoreTheJoinedSession() {
+        FakeSyncServer("test-enroll-secret").use { server ->
+            val device = device(server, "device-a") { 1_700_000_000_000 }
+            assertTrue(device.create(server.baseUrl, "test-enroll-secret", "test-passphrase-not-a-secret").joined)
+            device.directory.upsert(mark("tmdb:100", 1, 8, "intro", 10_000, 20_000))
+            val entered = CountDownLatch(1)
+            val gate = CountDownLatch(1)
+            server.pullEntered = entered
+            server.pullGate = gate
+            val worker = Thread { device.sync() }
+            worker.start()
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            device.engine.abandon()
+            val left = device.leave()
+            gate.countDown()
+            worker.join(10_000)
+            assertFalse(worker.isAlive)
+            assertFalse(left.joined)
+            assertFalse(device.session().joined)
+            assertEquals(listOf(10_000L), device.directory.list().map { it.startMs })
+        }
+    }
+
+    @Test
+    fun aCorruptStoreIsNotTreatedAsEmpty() {
+        val root = Files.createTempDirectory("nuvio-sync-corrupt")
+        val sessionFile = root.resolve("session.json")
+        Files.writeString(sessionFile, "{")
+        val sessions = FileSyncSessionStore { sessionFile }
+        assertFalse(sessions.load(1).readable)
+        sessions.save(1, SyncSession(joined = true, statusText = "wiped"))
+        assertEquals("{", Files.readString(sessionFile))
+        assertFalse(sessions.load(1).readable)
+        val marks = root.resolve("marks.properties")
+        Files.writeString(marks, "nuvio_skip_marks=\\uZZZZ\n")
+        val store = DesktopStorage.Store(marks)
+        store.putString("playback", "gone")
+        assertEquals("nuvio_skip_marks=\\uZZZZ\n", Files.readString(marks))
+        assertNull(store.getString("playback"))
+    }
+
     private fun assertScenario(root: JsonVal.Obj) {
         val records = (root.value["records"] as JsonVal.Arr).value
         val now = (root.value["nowMs"] as JsonVal.Num).value
@@ -344,7 +600,12 @@ class AnalyzedDetailsSyncTest {
     private fun resource(name: String): String =
         checkNotNull(javaClass.classLoader.getResourceAsStream("sync/v1/$name")) { name }.bufferedReader().readText()
 
-    private fun device(server: FakeSyncServer, deviceId: String, now: () -> Long): TestDevice {
+    private fun device(
+        server: FakeSyncServer,
+        deviceId: String,
+        pause: (Long) -> Unit = {},
+        now: () -> Long,
+    ): TestDevice {
         val directory = MemoryMarkDirectory()
         val engine = AnalyzedDetailsSync(
             transport = SyncHttpClient(server.baseUrl),
@@ -354,6 +615,7 @@ class AnalyzedDetailsSyncTest {
             now = now,
             random = SecureRandom(),
             newDeviceId = { deviceId },
+            pause = pause,
         )
         return TestDevice(engine, directory)
     }
@@ -397,6 +659,13 @@ class AnalyzedDetailsSyncTest {
         val plain = canonicalJson(record.wire).encodeToByteArray()
         val nonce = SyncCrypto.decodeB64("EBESExQVFhcYGRob")!!
         val aad = SyncCrypto.associatedData(RoutingAad(1, spaceId, blobId, deviceId, "detection"))
+        return SyncCrypto.encodeB64(SyncCrypto.encrypt(keys.encKey, nonce, aad, plain))
+    }
+
+    private fun encryptRecord(keys: DerivedKeys, spaceId: String, blobId: String, deviceId: String, record: SyncRecord): String {
+        val plain = canonicalJson(record.wire).encodeToByteArray()
+        val nonce = SyncCrypto.decodeB64("EBESExQVFhcYGRob")!!
+        val aad = SyncCrypto.associatedData(RoutingAad(1, spaceId, blobId, deviceId, record.kind))
         return SyncCrypto.encodeB64(SyncCrypto.encrypt(keys.encKey, nonce, aad, plain))
     }
 

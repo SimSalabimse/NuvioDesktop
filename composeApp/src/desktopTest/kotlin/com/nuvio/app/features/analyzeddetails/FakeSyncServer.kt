@@ -5,7 +5,9 @@ import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 internal class FakeSyncServer(
     enrollSecret: String,
@@ -37,6 +39,11 @@ internal class FakeSyncServer(
     val calls = CopyOnWriteArrayList<Call>()
     var failPullStatus: Int? = null
     var retryAfter: Long? = null
+    var failPushStatus: Int? = null
+    var failPushBody: String = """{"error":"conflict","message":"Retry the batch"}"""
+    var failPushRemaining: Int = 0
+    var pullEntered: CountDownLatch? = null
+    var pullGate: CountDownLatch? = null
 
     val baseUrl: String = "http://127.0.0.1:${server.address.port}"
 
@@ -109,6 +116,11 @@ internal class FakeSyncServer(
     }
 
     private fun push(spaceId: String, headers: Map<String, String>, body: String): Response {
+        val forced = failPushStatus
+        if (forced != null && failPushRemaining > 0) {
+            failPushRemaining -= 1
+            return Response(forced, failPushBody, if (forced == 429) retryAfter else null)
+        }
         val space = spaces[spaceId] ?: return Response(404, """{"error":"not_found","message":"Not found"}""")
         if (!authorized(space, headers)) return Response(401, """{"error":"unauthorized","message":"Unauthorized"}""")
         val root = parseJsonOrNull(body) as? JsonVal.Obj ?: return Response(400, """{"error":"bad_request","message":"Invalid batch"}""")
@@ -130,6 +142,8 @@ internal class FakeSyncServer(
     }
 
     private fun pull(spaceId: String, headers: Map<String, String>, query: String): Response {
+        pullEntered?.countDown()
+        pullGate?.await(5, TimeUnit.SECONDS)
         val forced = failPullStatus
         if (forced != null) return Response(forced, """{"error":"rate_limited","message":"slow down"}""", retryAfter)
         val space = spaces[spaceId] ?: return Response(404, """{"error":"not_found","message":"Not found"}""")

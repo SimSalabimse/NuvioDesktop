@@ -77,8 +77,13 @@ internal fun normalizeSyncBaseUrl(raw: String): String? {
     if (trimmed.isEmpty()) return null
     val uri = runCatching { URI(trimmed) }.getOrNull() ?: return null
     val scheme = uri.scheme?.lowercase()
-    if (scheme != "https" && scheme != "http") return null
-    if (uri.host.isNullOrBlank()) return null
+    val host = uri.host?.lowercase() ?: return null
+    if (host.isBlank()) return null
+    if (scheme == "http") {
+        if (host != "localhost" && host != "127.0.0.1" && host != "::1") return null
+    } else if (scheme != "https") {
+        return null
+    }
     if (uri.userInfo != null) return null
     return trimmed
 }

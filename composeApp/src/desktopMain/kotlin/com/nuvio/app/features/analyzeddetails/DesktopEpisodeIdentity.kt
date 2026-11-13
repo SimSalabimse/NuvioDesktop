@@ -22,6 +22,15 @@ internal fun showIdForParent(parentMetaId: String): String? {
     if (isShowId(id)) return id
     if (Regex("^[1-9][0-9]{0,9}$").matches(id)) return "tmdb:$id"
     if (id.startsWith("tt") && isShowId("imdb:$id")) return "imdb:$id"
+    // Mobile's analysis files replace ":" with "_" (`tmdb:100` is stored as `tmdb_100`).
+    if (id.startsWith("tmdb_")) {
+        val converted = "tmdb:" + id.removePrefix("tmdb_")
+        if (isShowId(converted)) return converted
+    }
+    if (id.startsWith("imdb_tt")) {
+        val converted = "imdb:" + id.removePrefix("imdb_")
+        if (isShowId(converted)) return converted
+    }
     return null
 }
 
@@ -31,6 +40,40 @@ internal fun parentMetaIdForShow(showId: String): String? = when {
     showId.startsWith("imdb:tt") && isShowId(showId) -> showId.removePrefix("imdb:")
     showId.startsWith("raw:") && isShowId(showId) -> showId.removePrefix("raw:")
     else -> null
+}
+
+/** `none/{showId}/{episodeKey}/{segmentType}`. */
+internal fun noneRecordId(ref: DesktopEpisodeRef, wireSegment: String): String =
+    "none/${ref.showId}/${ref.episodeKey}/$wireSegment"
+
+/** `det/{showId}/{episodeKey}/{segmentType}/{index}/{durationMs}/a{algorithmVersion}`. */
+internal fun detectionRecordId(
+    ref: DesktopEpisodeRef,
+    wireSegment: String,
+    segmentIndex: Int,
+    durationMs: Long,
+    algorithmVersion: Int,
+): String = "det/${ref.showId}/${ref.episodeKey}/$wireSegment/$segmentIndex/$durationMs/a$algorithmVersion"
+
+/**
+ * Mobile analysis files are `{show}__s{season}e{episode}` or `{show}__movie`.
+ * `show` is the sanitized parent id (`:` becomes `_`). The record id uses the
+ * spec show id, the same one [parseDesktopMarkKey] produces for `id:season:episode`.
+ */
+internal fun parseMobileAnalysisKey(key: String): DesktopEpisodeRef? {
+    val split = key.lastIndexOf("__")
+    if (split <= 0 || split + 2 >= key.length) return null
+    val show = key.substring(0, split)
+    val rest = key.substring(split + 2)
+    val showId = showIdForParent(show) ?: return null
+    if (rest == "movie") {
+        return DesktopEpisodeRef(show, null, null, showId, "movie", key)
+    }
+    val match = Regex("^s(0|[1-9][0-9]*)e([1-9][0-9]*)$").matchEntire(rest) ?: return null
+    val season = match.groupValues[1].toIntOrNull() ?: return null
+    val episode = match.groupValues[2].toIntOrNull() ?: return null
+    val episodeKey = episodeKey(season.toLong(), episode.toLong()) ?: return null
+    return DesktopEpisodeRef(show, season, episode, showId, episodeKey, key)
 }
 
 internal fun parseDesktopMarkKey(key: String): DesktopEpisodeRef? {

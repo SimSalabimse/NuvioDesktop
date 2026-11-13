@@ -154,6 +154,7 @@ fun main(args: Array<String>) {
 
         SwingWindow(
             onCloseRequest = {
+                com.nuvio.app.features.analyzeddetails.AnalyzedDetailsSyncService.shutdown()
                 P2pStreamingEngine.shutdown()
                 DiscordPresenceManager.shutdown()
                 SentryInitializer.close()

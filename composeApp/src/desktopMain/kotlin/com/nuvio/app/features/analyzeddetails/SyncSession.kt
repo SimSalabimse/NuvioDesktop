@@ -4,8 +4,10 @@ import com.nuvio.app.core.storage.DesktopStorage
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 @Serializable
 internal data class SyncSlot(
@@ -24,6 +26,8 @@ internal data class SyncSlot(
     val hlcWallMs: Long = 0,
     val hlcCounter: Int = 0,
     val hlcDeviceId: String = "",
+    /** True when this record is what the local mark list is showing. A hidden record is not a delete. */
+    val reflected: Boolean = true,
 )
 
 @Serializable
@@ -57,6 +61,7 @@ internal data class SyncSession(
     val statusText: String = "Not joined.",
     val statusError: Boolean = false,
     val joined: Boolean = false,
+    val readable: Boolean = true,
 )
 
 internal interface SyncSessionStore {
@@ -66,9 +71,9 @@ internal interface SyncSessionStore {
 
 internal class MemorySessionStore : SyncSessionStore {
     private val values = mutableMapOf<Int, SyncSession>()
-    override fun load(profileId: Int): SyncSession = values[profileId] ?: SyncSession()
+    override fun load(profileId: Int): SyncSession = synchronized(values) { values[profileId] ?: SyncSession() }
     override fun save(profileId: Int, session: SyncSession) {
-        values[profileId] = session
+        synchronized(values) { values[profileId] = session }
     }
 }
 
@@ -80,13 +85,37 @@ internal class FileSyncSessionStore(
     override fun load(profileId: Int): SyncSession {
         val file = fileFor(profileId)
         if (!Files.exists(file)) return SyncSession()
-        return runCatching { json.decodeFromString<SyncSession>(Files.readString(file)) }.getOrDefault(SyncSession())
+        val text = runCatching { Files.readString(file) }.getOrNull() ?: return unreadable()
+        return runCatching { json.decodeFromString<SyncSession>(text) }.getOrElse { unreadable() }
     }
 
     override fun save(profileId: Int, session: SyncSession) {
         val file = fileFor(profileId)
-        Files.createDirectories(file.parent)
-        Files.writeString(file, json.encodeToString(session))
+        if (Files.exists(file) && !load(profileId).readable) return
+        writeTextAtomic(file, json.encodeToString(session))
+    }
+
+    private fun unreadable(): SyncSession = SyncSession(
+        statusText = "Sync data on this computer couldn't be read. Existing marks were left as they are.",
+        statusError = true,
+        joined = false,
+        readable = false,
+    )
+}
+
+internal fun writeTextAtomic(file: Path, text: String) {
+    Files.createDirectories(file.parent)
+    val temp = Files.createTempFile(file.parent, "${file.fileName}.", ".tmp")
+    try {
+        Files.writeString(temp, text)
+        try {
+            Files.move(temp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: AtomicMoveNotSupportedException) {
+            Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING)
+        }
+    } catch (error: Exception) {
+        runCatching { Files.deleteIfExists(temp) }
+        throw error
     }
 }
 

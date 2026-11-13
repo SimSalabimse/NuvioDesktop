@@ -10,12 +10,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.settings.SettingsSecretTextField
@@ -37,6 +46,7 @@ import nuvio.composeapp.generated.resources.settings_sync_now
 import nuvio.composeapp.generated.resources.settings_sync_passphrase
 import nuvio.composeapp.generated.resources.settings_sync_server_url
 import nuvio.composeapp.generated.resources.settings_sync_status
+import nuvio.composeapp.generated.resources.settings_sync_syncing
 import nuvio.composeapp.generated.resources.settings_sync_store_file
 import nuvio.composeapp.generated.resources.settings_sync_store_macos
 import nuvio.composeapp.generated.resources.settings_sync_store_windows
@@ -54,11 +64,13 @@ internal fun AnalyzedDetailsSyncSettingsPage(isTablet: Boolean, preview: SyncSes
     val session = preview ?: liveSession
     val busy = if (preview == null) liveBusy else false
     var serverUrl by rememberSaveable { mutableStateOf("") }
-    var enrollSecret by rememberSaveable { mutableStateOf("") }
-    var passphrase by rememberSaveable { mutableStateOf("") }
+    var enrollSecret by remember { mutableStateOf("") }
+    var passphrase by remember { mutableStateOf("") }
     var joinCode by rememberSaveable { mutableStateOf("") }
-    var joinPassphrase by rememberSaveable { mutableStateOf("") }
+    var joinPassphrase by remember { mutableStateOf("") }
     val gap = if (isTablet) 20.dp else 16.dp
+    val clipboard = LocalClipboardManager.current
+    val secretClipboard = remember(clipboard) { ReadOnlyClipboard(clipboard) }
 
     LaunchedEffect(session.joined) {
         if (session.joined) {
@@ -89,20 +101,22 @@ internal fun AnalyzedDetailsSyncSettingsPage(isTablet: Boolean, preview: SyncSes
                         supportingText = { Text("https://nuvio-sync.tullebukktil1000.workers.dev") },
                         enabled = !busy,
                     )
-                    SettingsSecretTextField(
-                        value = enrollSecret,
-                        onValueChange = { enrollSecret = it },
-                        label = stringResource(Res.string.settings_sync_enroll_secret),
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                    )
-                    SettingsSecretTextField(
-                        value = passphrase,
-                        onValueChange = { passphrase = it },
-                        label = stringResource(Res.string.settings_sync_passphrase),
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                    )
+                    CompositionLocalProvider(LocalClipboardManager provides secretClipboard) {
+                        SettingsSecretTextField(
+                            value = enrollSecret,
+                            onValueChange = { enrollSecret = it },
+                            label = stringResource(Res.string.settings_sync_enroll_secret),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !busy,
+                        )
+                        SettingsSecretTextField(
+                            value = passphrase,
+                            onValueChange = { passphrase = it },
+                            label = stringResource(Res.string.settings_sync_passphrase),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !busy,
+                        )
+                    }
                     Button(
                         onClick = { AnalyzedDetailsSyncService.create(serverUrl, enrollSecret, passphrase) },
                         enabled = !busy,
@@ -129,13 +143,15 @@ internal fun AnalyzedDetailsSyncSettingsPage(isTablet: Boolean, preview: SyncSes
                         label = { Text(stringResource(Res.string.settings_sync_join_code)) },
                         enabled = !busy,
                     )
-                    SettingsSecretTextField(
-                        value = joinPassphrase,
-                        onValueChange = { joinPassphrase = it },
-                        label = stringResource(Res.string.settings_sync_passphrase),
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !busy,
-                    )
+                    CompositionLocalProvider(LocalClipboardManager provides secretClipboard) {
+                        SettingsSecretTextField(
+                            value = joinPassphrase,
+                            onValueChange = { joinPassphrase = it },
+                            label = stringResource(Res.string.settings_sync_passphrase),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !busy,
+                        )
+                    }
                     Button(
                         onClick = { AnalyzedDetailsSyncService.join(serverUrl, joinCode, joinPassphrase) },
                         enabled = !busy,
@@ -147,9 +163,14 @@ internal fun AnalyzedDetailsSyncSettingsPage(isTablet: Boolean, preview: SyncSes
         } else {
             SettingsSection(title = stringResource(Res.string.settings_sync_status), isTablet = isTablet) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val status = if (busy) stringResource(Res.string.settings_sync_syncing) else session.statusText
                     Text(
-                        text = session.statusText,
-                        color = if (session.statusError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        text = status,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Polite
+                            if (!busy && session.statusError) error(status)
+                        },
+                        color = if (!busy && session.statusError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     )
                     Text(stringResource(Res.string.settings_sync_last) + ": " + lastSyncLabel(session.lastSuccessfulSyncMs))
                     Text(stringResource(Res.string.settings_sync_device) + ": " + session.deviceId)
@@ -192,6 +213,13 @@ private fun storeLabel(kind: String): String = when (kind) {
     "macos-keychain" -> stringResource(Res.string.settings_sync_store_macos)
     "windows-credential-manager" -> stringResource(Res.string.settings_sync_store_windows)
     else -> stringResource(Res.string.settings_sync_store_file)
+}
+
+/** Paste still works. Copy and cut do not, so a passphrase cannot reach the clipboard. */
+internal class ReadOnlyClipboard(private val delegate: ClipboardManager) : ClipboardManager {
+    override fun getText(): AnnotatedString? = delegate.getText()
+    override fun setText(annotatedString: AnnotatedString) = Unit
+    override fun hasText(): Boolean = delegate.getText()?.isNotEmpty() == true
 }
 
 private fun SyncSession.joinCode(): String {

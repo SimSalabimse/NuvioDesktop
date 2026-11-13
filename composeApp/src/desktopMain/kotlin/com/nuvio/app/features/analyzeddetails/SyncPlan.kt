@@ -8,6 +8,10 @@ internal const val MIN_ENROLL_SECRET_LENGTH: Int = 16
 internal const val SYNC_DEBOUNCE_MS: Long = 2_000L
 internal const val MAX_BLOBS_PER_BATCH: Int = 50
 internal const val MAX_PLAINTEXT_BYTES: Int = 8192
+internal const val MAX_SYNC_ATTEMPTS: Int = 4
+
+/** `retry-after` is whole seconds, at least 1, and capped at the 10 minute rate window. */
+internal fun retryDelayMs(retryAfterSeconds: Long?): Long = (retryAfterSeconds ?: 1L).coerceIn(1L, 600L) * 1000L
 
 internal val SEGMENT_TYPES: List<String> = listOf("intro", "recap", "credits", "preview")
 

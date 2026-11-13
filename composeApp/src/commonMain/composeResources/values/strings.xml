@@ -552,6 +552,7 @@
     <string name="settings_sync_what">What syncs</string>
     <string name="settings_sync_what_body">Your marks, including "none here", detections with their cut length and algorithm version, and your TheIntroDB submissions under a hash of the account. Fingerprints stay on this computer.</string>
     <string name="settings_sync_status">Status</string>
+    <string name="settings_sync_syncing">Syncing…</string>
     <string name="settings_sync_store_macos">Saved in the macOS keychain.</string>
     <string name="settings_sync_store_windows">Saved in Windows Credential Manager.</string>
     <string name="settings_sync_store_file">Saved in an encrypted file on this computer. macOS and Windows use the system credential store when it is available.</string>

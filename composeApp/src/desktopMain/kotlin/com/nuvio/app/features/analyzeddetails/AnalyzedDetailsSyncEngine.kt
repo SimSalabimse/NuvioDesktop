@@ -2,6 +2,8 @@ package com.nuvio.app.features.analyzeddetails
 
 import java.security.SecureRandom
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * One profile's sync with the analyzed-details Worker.
@@ -18,24 +20,35 @@ internal class AnalyzedDetailsSync(
     private val random: SecureRandom = SecureRandom(),
     private val newDeviceId: () -> String = { newSyncDeviceId(random) },
     private val newRecordId: () -> String = { UUID.randomUUID().toString() },
+    private val pause: (Long) -> Unit = { millis -> if (millis > 0) Thread.sleep(millis) },
 ) {
     private var cachedKeys: DerivedKeys? = null
     private var cachedFor: String? = null
+    private val epoch = AtomicInteger(0)
+    private val lock = ReentrantLock()
+    private val pinned = ThreadLocal<Int?>()
 
-    fun session(): SyncSession = sessions.load(profileId())
+    /** Bumps the generation so an in-flight sync discards its writes. */
+    fun abandon() {
+        epoch.incrementAndGet()
+    }
+
+    fun session(): SyncSession = sessions.load(profile())
 
     fun keysForTest(): DerivedKeys? = cachedKeys
 
-    fun create(baseUrl: String, enrollSecret: String, passphrase: String): SyncSession {
-        val url = normalizeSyncBaseUrl(baseUrl) ?: return fail("Enter the server URL, including https.")
-        if (enrollSecret.length < MIN_ENROLL_SECRET_LENGTH) return fail("The enroll secret was rejected.")
+    fun create(baseUrl: String, enrollSecret: String, passphrase: String): SyncSession = withProfile {
+        val ticket = epoch.get()
+        val url = normalizeSyncBaseUrl(baseUrl) ?: return@withProfile fail("Enter the server URL, including https.", ticket = ticket)
+        if (enrollSecret.length < MIN_ENROLL_SECRET_LENGTH) return@withProfile fail("The enroll secret was rejected.", ticket = ticket)
         if (SyncCrypto.normalizePassphrase(passphrase).length < MIN_PASSPHRASE_LENGTH) {
-            return fail("Use at least 8 characters.")
+            return@withProfile fail("Use at least 8 characters.", ticket = ticket)
         }
         val existing = session()
-        if (existing.joined) return fail(existing, "This profile already has a space. Leave it before creating another.")
+        if (!existing.readable) return@withProfile existing
+        if (existing.joined) return@withProfile fail(existing, "This profile already has a space. Leave it before creating another.", ticket = ticket)
         val salt = SyncCrypto.randomSalt(random)
-        val keys = SyncCrypto.deriveKeys(passphrase, salt)
+        val keys = derive(passphrase, salt)
         val spaceId = UUID.randomUUID().toString()
         val deviceId = existing.deviceId.ifBlank { newDeviceId() }
         val body = canonicalJson(
@@ -47,10 +60,24 @@ internal class AnalyzedDetailsSync(
                 "spaceId" to JsonVal.Str(spaceId),
             ),
         )
+        val stored = runCatching { secrets.put(secretAccount(), passphrase); true }.getOrDefault(false)
+        if (!stored) return@withProfile fail("The passphrase couldn't be saved on this computer.", ticket = ticket)
+        if (!current(ticket)) {
+            secrets.delete(secretAccount())
+            return@withProfile session()
+        }
         val result = call { transport.createSpace(enrollSecret, SyncCrypto.bearerToken(keys.authToken), body) }
-            ?: return fail("Couldn't reach the server.")
+            ?: run {
+                secrets.delete(secretAccount())
+                return@withProfile fail("Couldn't reach the server.", ticket = ticket)
+            }
+        if (!current(ticket)) {
+            secrets.delete(secretAccount())
+            return@withProfile session()
+        }
         if (result.status != 201 && result.status != 200) {
-            return fail(explain(result, enroll = true), listOf(passphrase, enrollSecret, SyncCrypto.bearerToken(keys.authToken)))
+            secrets.delete(secretAccount())
+            return@withProfile fail(explain(result, enroll = true), listOf(passphrase, enrollSecret, SyncCrypto.bearerToken(keys.authToken)), ticket)
         }
         remember(keys, SyncCrypto.encodeB64(salt))
         val saved = existing.copy(
@@ -65,32 +92,47 @@ internal class AnalyzedDetailsSync(
             statusText = "Joined. Not synced yet.",
             statusError = false,
             joined = true,
+            readable = true,
         )
-        secrets.put(secretAccount(), passphrase)
-        return save(saved)
+        save(saved)
     }
 
-    fun join(baseUrl: String, joinCode: String, passphrase: String): SyncSession {
-        val url = normalizeSyncBaseUrl(baseUrl) ?: return fail("Enter the server URL, including https.")
-        val parsed = parseJoinCode(joinCode.trim()) ?: return fail("That join code isn't valid.")
+    fun join(baseUrl: String, joinCode: String, passphrase: String): SyncSession = withProfile {
+        val ticket = epoch.get()
+        val url = normalizeSyncBaseUrl(baseUrl) ?: return@withProfile fail("Enter the server URL, including https.", ticket = ticket)
+        val parsed = parseJoinCode(joinCode.trim()) ?: return@withProfile fail("That join code isn't valid.", ticket = ticket)
         if (SyncCrypto.normalizePassphrase(passphrase).length < MIN_PASSPHRASE_LENGTH) {
-            return fail("Use at least 8 characters.")
+            return@withProfile fail("Use at least 8 characters.", ticket = ticket)
         }
         val existing = session()
-        if (existing.joined) return fail(existing, "This profile already has a space. Leave it before joining another.")
-        val keys = SyncCrypto.deriveKeys(passphrase, parsed.salt)
+        if (!existing.readable) return@withProfile existing
+        if (existing.joined) return@withProfile fail(existing, "This profile already has a space. Leave it before joining another.", ticket = ticket)
+        val keys = derive(passphrase, parsed.salt)
         if (!SyncCrypto.constantTimeEquals(keys.keyCheck, parsed.keyCheck)) {
-            return fail("Wrong passphrase.")
+            return@withProfile fail("Wrong passphrase.", ticket = ticket)
+        }
+        val stored = runCatching { secrets.put(secretAccount(), passphrase); true }.getOrDefault(false)
+        if (!stored) return@withProfile fail("The passphrase couldn't be saved on this computer.", ticket = ticket)
+        if (!current(ticket)) {
+            secrets.delete(secretAccount())
+            return@withProfile session()
         }
         val result = call { transport.join(parsed.spaceId, SyncCrypto.bearerToken(keys.authToken)) }
-            ?: return fail("Couldn't reach the server.")
+            ?: run {
+                secrets.delete(secretAccount())
+                return@withProfile fail("Couldn't reach the server.", ticket = ticket)
+            }
+        if (!current(ticket)) {
+            secrets.delete(secretAccount())
+            return@withProfile session()
+        }
         if (result.status != 200) {
-            return fail(explain(result, enroll = false), listOf(passphrase, SyncCrypto.bearerToken(keys.authToken)))
+            secrets.delete(secretAccount())
+            return@withProfile fail(explain(result, enroll = false), listOf(passphrase, SyncCrypto.bearerToken(keys.authToken)), ticket)
         }
         remember(keys, SyncCrypto.encodeB64(parsed.salt))
         val deviceId = existing.deviceId.ifBlank { newDeviceId() }
-        secrets.put(secretAccount(), passphrase)
-        return save(
+        save(
             existing.copy(
                 baseUrl = url,
                 spaceId = parsed.spaceId,
@@ -103,31 +145,39 @@ internal class AnalyzedDetailsSync(
                 statusText = "Joined. Not synced yet.",
                 statusError = false,
                 joined = true,
+                readable = true,
             ),
         )
     }
 
-    fun leave(): SyncSession {
-        val existing = session()
-        secrets.delete(secretAccount())
-        cachedKeys = null
-        cachedFor = null
-        return save(
-            SyncSession(
-                deviceId = existing.deviceId,
-                submissions = existing.submissions,
-                clockWallMs = existing.clockWallMs,
-                clockCounter = existing.clockCounter,
-                secretStoreKind = secrets.kind,
-                statusText = "Left this computer. Other devices keep the space.",
-                statusError = false,
-                joined = false,
-            ),
-        )
+    fun leave(): SyncSession = withProfile {
+        epoch.incrementAndGet()
+        locked {
+            val existing = session()
+            secrets.delete(secretAccount())
+            cachedKeys = null
+            cachedFor = null
+            save(
+                SyncSession(
+                    deviceId = existing.deviceId,
+                    submissions = existing.submissions,
+                    clockWallMs = existing.clockWallMs,
+                    clockCounter = existing.clockCounter,
+                    secretStoreKind = secrets.kind,
+                    statusText = "Left this computer. Other devices keep the space.",
+                    statusError = false,
+                    joined = false,
+                    readable = existing.readable,
+                ),
+            )
+        }
     }
 
-    fun noteSubmissions(accountScope: String, notes: List<SubmissionNote>): SyncSession {
+    fun noteSubmissions(accountScope: String, notes: List<SubmissionNote>): SyncSession = withProfile { noteSubmissionsPinned(accountScope, notes) }
+
+    private fun noteSubmissionsPinned(accountScope: String, notes: List<SubmissionNote>): SyncSession {
         var session = session()
+        if (!session.readable) return session
         var clock = DeviceClock(session.clockWallMs, session.clockCounter)
         val deviceId = session.deviceId.ifBlank { newDeviceId() }.also { session = session.copy(deviceId = it) }
         val kept = session.submissions.toMutableList()
@@ -150,31 +200,54 @@ internal class AnalyzedDetailsSync(
         return save(session.copy(submissions = kept, clockWallMs = clock.wallMs, clockCounter = clock.counter, deviceId = deviceId))
     }
 
-    fun sync(): SyncSession {
+    fun sync(): SyncSession = withProfile {
+        val ticket = epoch.get()
+        try {
+            syncPinned(ticket)
+        } catch (_: SyncClockException) {
+            fail(session(), "Sync paused. Try again in a moment.", ticket = ticket)
+        }
+    }
+
+    private fun syncPinned(ticket: Int): SyncSession {
         var session = session()
-        if (!session.joined) return fail(session, "Not joined.")
-        val keys = unlock(session) ?: return fail(session, "The passphrase isn't in the secret store.")
+        if (!session.readable) return session
+        if (!session.joined) return fail(session, "Not joined.", ticket = ticket)
+        val keys = unlock(session) ?: return fail(session, "The passphrase isn't in the secret store.", ticket = ticket)
+        if (!current(ticket)) return session()
         val nowMs = now()
         session = purgeExpired(session, nowMs)
         val mode = syncMode(session.lastSuccessfulSyncMs, nowMs)
         val cursor = if (mode == SyncMode.FullResync) 0L else session.pullCursor
-        val pulled = pullAll(session, keys, cursor, nowMs) ?: return session()
-        session = pulled.session
-        save(session)
-        session = capture(session, nowMs)
+        val pulled = pullAll(session, keys, cursor, nowMs, ticket) ?: return session()
+        if (!current(ticket)) return session()
+        val known = if (mode == SyncMode.FullResync) {
+            pulled.canonical.distinct()
+        } else {
+            (session.knownCanonical + pulled.canonical).distinct()
+        }
+        session = locked {
+            if (!current(ticket)) return@locked session()
+            save(pulled.session.copy(knownCanonical = known))
+        }
+        if (!current(ticket)) return session()
+        session = capture(session, nowMs, ticket)
+        if (!current(ticket)) return session()
         val local = localRecords(session)
         val toUpload = recordsToUpload(local, session.lastSuccessfulSyncMs, nowMs) { it.hlc.wallMs }
-        val known = if (mode == SyncMode.FullResync) pulled.canonical.toMutableSet() else (session.knownCanonical + pulled.canonical).toMutableSet()
-        val fresh = toUpload.filter { canonicalJson(it.wire) !in known }
-        if (!pushAll(session, keys, fresh)) return session()
-        fresh.forEach { known += canonicalJson(it.wire) }
+        val knownSet = known.toMutableSet()
+        val fresh = toUpload.filter { canonicalJson(it.wire) !in knownSet }
+        if (!pushAll(session, keys, fresh, ticket)) return session()
+        if (!current(ticket)) return session()
+        fresh.forEach { knownSet += canonicalJson(it.wire) }
         val inputs = if (mode == SyncMode.FullResync) {
             pulled.records + fresh.map { it.wire }
         } else {
-            known.mapNotNull { parseJsonOrNull(it) } + local.map { it.wire }
+            knownSet.mapNotNull { parseJsonOrNull(it) } + local.map { it.wire }
         }
         val merged = mergeRecords(inputs, nowMs)
-        session = writeBack(session.copy(knownCanonical = known.toList()), merged, mode, nowMs)
+        session = writeBack(session.copy(knownCanonical = knownSet.toList()), merged, mode, nowMs, ticket)
+        if (!current(ticket)) return session()
         session = session.copy(
             lastSuccessfulSyncMs = nowMs,
             statusText = "Synced.",
@@ -183,19 +256,27 @@ internal class AnalyzedDetailsSync(
         return save(session)
     }
 
-    private fun pullAll(session: SyncSession, keys: DerivedKeys, start: Long, nowMs: Long): PullOutcome? {
+    private fun pullAll(session: SyncSession, keys: DerivedKeys, start: Long, nowMs: Long, ticket: Int): PullOutcome? {
         var cursor = start
         var clock = DeviceClock(session.clockWallMs, session.clockCounter)
         val records = mutableListOf<JsonVal>()
         val canonical = mutableListOf<String>()
         var pages = 0
+        val bearer = SyncCrypto.bearerToken(keys.authToken)
         while (pages < 10_000) {
             pages += 1
-            val result = call { transport.pull(session.spaceId, SyncCrypto.bearerToken(keys.authToken), cursor, 100) }
-                ?: return failPull("Couldn't reach the server.")
-            if (result.status != 200) return failPull(explain(result, enroll = false))
-            val page = parsePullPage(result.body, cursor) ?: return failPull("The server returned a sync page this app couldn't accept.")
-            cursor = advancePullCursor(cursor, PullPage(page.cursor, page.seqs))
+            if (!current(ticket)) return failPull("Left this computer. Other devices keep the space.", ticket)
+            val result = exchange(ticket) { transport.pull(session.spaceId, bearer, cursor, 100) }
+                ?: return failPull("Couldn't reach the server.", ticket)
+            if (result.status != 200) return failPull(explain(result, enroll = false), ticket)
+            val page = try {
+                parsePullPage(result.body, cursor)?.also {
+                    advancePullCursor(cursor, PullPage(it.cursor, it.seqs))
+                }
+            } catch (_: IllegalArgumentException) {
+                null
+            } ?: return failPull("The server returned a sync page this app couldn't accept.", ticket)
+            cursor = page.cursor
             for (blob in page.blobs) {
                 val plain = openBlob(keys, session.spaceId, blob) ?: continue
                 val record = parseRecord(plain) ?: continue
@@ -215,7 +296,7 @@ internal class AnalyzedDetailsSync(
         )
     }
 
-    private fun pushAll(session: SyncSession, keys: DerivedKeys, records: List<SyncRecord>): Boolean {
+    private fun pushAll(session: SyncSession, keys: DerivedKeys, records: List<SyncRecord>, ticket: Int): Boolean {
         if (records.isEmpty()) return true
         val bearer = SyncCrypto.bearerToken(keys.authToken)
         records.chunked(MAX_BLOBS_PER_BATCH).forEach { chunk ->
@@ -227,7 +308,7 @@ internal class AnalyzedDetailsSync(
                 )
                 val plain = canonicalJson(record.wire).encodeToByteArray()
                 if (plain.size > MAX_PLAINTEXT_BYTES) {
-                    fail(session, "A record is too large to sync.")
+                    fail(session, "A record is too large to sync.", ticket = ticket)
                     return false
                 }
                 val cipher = SyncCrypto.encrypt(keys.encKey, nonce, aad, plain)
@@ -240,19 +321,43 @@ internal class AnalyzedDetailsSync(
                 )
             }
             val body = canonicalJson(jObj("blobs" to JsonVal.Arr(blobs), "deviceId" to JsonVal.Str(session.deviceId)))
-            val result = call { transport.push(session.spaceId, bearer, body) } ?: run {
-                fail(session, "Couldn't reach the server.")
+            val result = exchange(ticket, retryConflict = true) { transport.push(session.spaceId, bearer, body) } ?: run {
+                fail(session, "Couldn't reach the server.", ticket = ticket)
                 return false
             }
             if (result.status != 200) {
-                fail(session, explain(result, enroll = false))
+                fail(session, explain(result, enroll = false), ticket = ticket)
                 return false
             }
         }
         return true
     }
 
-    private fun capture(session: SyncSession, nowMs: Long): SyncSession {
+    /** Retries the same request. A 409 "Retry the batch" resends the same body and the same nonces. */
+    private fun exchange(ticket: Int, retryConflict: Boolean = false, block: () -> SyncHttpResult): SyncHttpResult? {
+        var attempt = 0
+        while (attempt < MAX_SYNC_ATTEMPTS) {
+            if (!current(ticket)) return null
+            val result = call(block)
+            if (result == null) {
+                attempt += 1
+                if (attempt >= MAX_SYNC_ATTEMPTS) return null
+                pause(1000L * attempt)
+                continue
+            }
+            val retryRate = result.status == 429 && attempt + 1 < MAX_SYNC_ATTEMPTS
+            val retryConflictNow = retryConflict && result.status == 409 && result.body.contains("Retry the batch") && attempt + 1 < MAX_SYNC_ATTEMPTS
+            if (retryRate || retryConflictNow) {
+                attempt += 1
+                pause(if (retryRate) retryDelayMs(result.retryAfterSeconds) else 1000L * attempt)
+                continue
+            }
+            return result
+        }
+        return null
+    }
+
+    private fun capture(session: SyncSession, nowMs: Long, ticket: Int): SyncSession {
         var clock = DeviceClock(session.clockWallMs, session.clockCounter)
         val slots = session.slots.toMutableList()
         val mirrors = session.mirrors.toMutableList()
@@ -318,35 +423,39 @@ internal class AnalyzedDetailsSync(
                     hlcWallMs = stamp.wallMs,
                     hlcCounter = stamp.counter,
                     hlcDeviceId = stamp.deviceId,
+                    reflected = false,
                 ),
             )
             mirrors.remove(mirror)
             seen += mirror.recordId
         }
         for (slot in slots.toList()) {
-            if (slot.deleted || slot.recordId in seen || slot.hlcDeviceId != session.deviceId) continue
+            if (slot.deleted || slot.recordId in seen || slot.hlcDeviceId != session.deviceId || !slot.reflected) continue
             val stamp = tick(clock, nowMs, session.deviceId)
             clock = DeviceClock(stamp.wallMs, stamp.counter)
-            replaceSlot(slots, slot.copy(deleted = true, hlcWallMs = stamp.wallMs, hlcCounter = stamp.counter, hlcDeviceId = stamp.deviceId))
+            replaceSlot(slots, slot.copy(deleted = true, reflected = false, hlcWallMs = stamp.wallMs, hlcCounter = stamp.counter, hlcDeviceId = stamp.deviceId))
         }
+        if (!current(ticket)) return session()
         val saved = session.copy(slots = slots.toList(), mirrors = mirrors.toList(), clockWallMs = clock.wallMs, clockCounter = clock.counter)
         return save(saved)
     }
 
-    private fun writeBack(session: SyncSession, merged: MergedState, mode: SyncMode, nowMs: Long): SyncSession {
+    private fun writeBack(session: SyncSession, merged: MergedState, mode: SyncMode, nowMs: Long, ticket: Int): SyncSession {
+        if (!current(ticket)) return session()
         val applied = mutableListOf<Applied>()
         for (show in merged.shows) {
             for (episode in show.episodes) {
                 val grouped = episode.marks.filter { it.applied }.groupBy { it.segmentType }
-                for ((segment, marks) in grouped) {
-                    val chosen = marks.minWith(compareBy<MarkView> { it.segmentIndex ?: 0L }.thenBy { it.id })
+                for ((_, marks) in grouped) {
+                    val chosen = chooseDirectoryMark(marks, session.deviceId) ?: continue
                     applied += Applied(show.showId, episode.season, episode.episode, chosen)
                 }
             }
         }
         val mirrors = mutableListOf<SyncMirror>()
-        val liveIds = mutableSetOf<String>()
+        val shownIds = mutableSetOf<String>()
         for (item in applied) {
+            if (!current(ticket)) return session()
             val local = localSegment(item.mark.segmentType) ?: continue
             val season = item.season?.toInt()
             val episode = item.episode?.toInt()
@@ -364,11 +473,14 @@ internal class AnalyzedDetailsSync(
                 durationMs = item.mark.durationMs,
                 fromDevice = fromDevice,
             )
-            directory.upsert(mark)
+            val existing = directory.list().firstOrNull {
+                it.parentMetaId == parent && it.season == season && it.episode == episode && it.segmentLocal == local
+            }
+            if (existing == null || !sameDirectoryMark(existing, mark)) directory.upsert(mark)
             if (fromDevice != null) {
                 mirrors += SyncMirror(desktopMarkKey(parent, season, episode), local, item.mark.id, directoryContent(mark))
             } else {
-                liveIds += item.mark.id
+                shownIds += item.mark.id
             }
         }
         for (existing in directory.list()) {
@@ -381,23 +493,24 @@ internal class AnalyzedDetailsSync(
             if (still) continue
             val tracked = session.slots.any { it.desktopKey == ref.desktopKey && it.segmentLocal == existing.segmentLocal } ||
                 session.mirrors.any { it.desktopKey == ref.desktopKey && it.segmentLocal == existing.segmentLocal }
-            if (tracked) directory.remove(existing.parentMetaId, existing.season, existing.episode, existing.segmentLocal)
+            if (tracked && current(ticket)) directory.remove(existing.parentMetaId, existing.season, existing.episode, existing.segmentLocal)
         }
         val cutoff = nowMs - TOMBSTONE_KEEP_MS
         val slots = session.slots.mapNotNull { slot ->
             if (slot.deleted) {
                 if (nowMs >= slot.hlcWallMs + TOMBSTONE_KEEP_MS) null else slot
-            } else if (slot.recordId in liveIds) {
-                slot
+            } else if (slot.recordId in shownIds) {
+                slot.copy(reflected = true)
             } else if (mode == SyncMode.FullResync && slot.hlcWallMs <= cutoff) {
                 null
             } else if (merged.tombstones.any { it.id == slot.recordId }) {
                 val tomb = merged.tombstones.first { it.id == slot.recordId }
-                slot.copy(deleted = true, hlcWallMs = tomb.hlc.wallMs, hlcCounter = tomb.hlc.counter, hlcDeviceId = tomb.hlc.deviceId)
+                slot.copy(deleted = true, reflected = false, hlcWallMs = tomb.hlc.wallMs, hlcCounter = tomb.hlc.counter, hlcDeviceId = tomb.hlc.deviceId)
             } else {
-                slot
+                slot.copy(reflected = false)
             }
         }
+        if (!current(ticket)) return session()
         return save(session.copy(slots = slots, mirrors = mirrors))
     }
 
@@ -434,7 +547,7 @@ internal class AnalyzedDetailsSync(
         val saltKey = session.saltBase64
         cachedKeys?.let { if (cachedFor == saltKey) return it }
         val passphrase = secrets.get(secretAccount()) ?: return null
-        val keys = SyncCrypto.deriveKeys(passphrase, salt)
+        val keys = derive(passphrase, salt)
         val expected = SyncCrypto.decodeB64(session.keyCheckBase64) ?: return null
         if (!SyncCrypto.constantTimeEquals(keys.keyCheck, expected)) return null
         remember(keys, saltKey)
@@ -446,23 +559,58 @@ internal class AnalyzedDetailsSync(
         cachedFor = saltBase64
     }
 
-    private fun secretAccount(): String = "profile/${profileId()}"
+    private fun secretAccount(): String = "profile/${profile()}"
 
     private fun save(session: SyncSession): SyncSession {
-        sessions.save(profileId(), session)
+        sessions.save(profile(), session)
         return session
     }
 
-    private fun fail(message: String, secrets: List<String> = emptyList()): SyncSession =
-        fail(session(), message, secrets)
+    private fun fail(message: String, secrets: List<String> = emptyList(), ticket: Int): SyncSession =
+        fail(session(), message, secrets, ticket)
 
-    private fun fail(session: SyncSession, message: String, secrets: List<String> = emptyList()): SyncSession =
-        save(session.copy(statusText = sanitize(message, secrets), statusError = true))
+    private fun fail(session: SyncSession, message: String, secrets: List<String> = emptyList(), ticket: Int): SyncSession {
+        if (!current(ticket)) return this.session()
+        return locked {
+            if (!current(ticket)) return@locked this.session()
+            save(session.copy(statusText = sanitize(message, secrets), statusError = true))
+        }
+    }
 
-    private fun failPull(message: String): PullOutcome? {
-        fail(session(), message)
+    private fun failPull(message: String, ticket: Int): PullOutcome? {
+        fail(session(), message, ticket = ticket)
         return null
     }
+
+    private fun profile(): Int = pinned.get() ?: profileId()
+
+    private fun current(ticket: Int): Boolean = epoch.get() == ticket
+
+    private fun <T> locked(block: () -> T): T {
+        lock.lock()
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    private inline fun <T> withProfile(block: () -> T): T {
+        if (pinned.get() != null) return block()
+        pinned.set(profileId())
+        try {
+            return block()
+        } finally {
+            pinned.remove()
+        }
+    }
+
+    private fun derive(passphrase: String, salt: ByteArray): DerivedKeys {
+        check(!onUiThread()) { "PBKDF2 must run off the UI thread." }
+        return SyncCrypto.deriveKeys(passphrase, salt)
+    }
+
+    private fun onUiThread(): Boolean = runCatching { java.awt.EventQueue.isDispatchThread() }.getOrDefault(false)
 
     private fun call(block: () -> SyncHttpResult): SyncHttpResult? = try {
         block()
@@ -572,7 +720,22 @@ private fun newSyncDeviceId(random: SecureRandom): String {
     return "desktop-" + SyncCrypto.encodeHex(bytes)
 }
 
-private fun noneId(ref: DesktopEpisodeRef, wire: String): String = "none/${ref.showId}/${ref.episodeKey}/$wire"
+private fun noneId(ref: DesktopEpisodeRef, wire: String): String = noneRecordId(ref, wire)
+
+private fun chooseDirectoryMark(marks: List<MarkView>, deviceId: String): MarkView? {
+    val ranges = marks.filter { it.applied && it.presence == "range" }
+    val own = ranges.filter { it.hlc.deviceId == deviceId }
+    val pool = if (own.isNotEmpty()) own else ranges
+    if (pool.isNotEmpty()) {
+        return pool.maxWith(compareBy<MarkView> { it.hlc.wallMs }.thenBy { it.hlc.counter }.thenBy { it.hlc.deviceId })
+    }
+    return marks.firstOrNull { it.applied && it.presence == "none" }
+}
+
+private fun sameDirectoryMark(left: DirectoryMark, right: DirectoryMark): Boolean =
+    left.presence == right.presence && left.segmentIndex == right.segmentIndex &&
+        left.startMs == right.startMs && left.endMs == right.endMs &&
+        left.durationMs == right.durationMs && left.fromDevice == right.fromDevice
 
 private fun slotFrom(mark: DirectoryMark, ref: DesktopEpisodeRef, wire: String, recordId: String, stamp: ClockStamp, deleted: Boolean): SyncSlot =
     SyncSlot(

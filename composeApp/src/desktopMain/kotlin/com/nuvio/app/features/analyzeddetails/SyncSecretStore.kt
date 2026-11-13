@@ -1,9 +1,18 @@
 package com.nuvio.app.features.analyzeddetails
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.AclEntry
+import java.nio.file.attribute.AclEntryPermission
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.AclFileAttributeView
+import java.nio.file.attribute.PosixFileAttributeView
 import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.UserPrincipal
 import java.security.SecureRandom
+import java.util.concurrent.TimeUnit
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -71,12 +80,12 @@ internal class EncryptedFileSecretStore(
 
     private fun writeValues(values: Map<String, String>) {
         Files.createDirectories(directory)
+        restrictToOwner(directory)
         val json = canonicalJson(jObj(*values.map { it.key to JsonVal.Str(it.value) }.toTypedArray()))
         val file = directory.resolve("values.json")
-        Files.writeString(file, json)
-        restrict(directory)
-        restrict(file)
-        restrict(keyFile())
+        writeTextAtomic(file, json)
+        restrictToOwner(file)
+        if (Files.exists(keyFile())) restrictToOwner(keyFile())
     }
 
     private fun keyFile(): Path = directory.resolve("key")
@@ -85,10 +94,22 @@ internal class EncryptedFileSecretStore(
         val file = keyFile()
         if (Files.exists(file)) return Files.readAllBytes(file)
         Files.createDirectories(directory)
+        restrictToOwner(directory)
         val key = ByteArray(32).also(random::nextBytes)
-        Files.write(file, key)
-        restrict(directory)
-        restrict(file)
+        val temp = Files.createTempFile(directory, "key", ".tmp")
+        try {
+            restrictToOwner(temp)
+            Files.write(temp, key)
+            try {
+                Files.move(temp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: AtomicMoveNotSupportedException) {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } catch (error: Exception) {
+            runCatching { Files.deleteIfExists(temp) }
+            throw error
+        }
+        restrictToOwner(file)
         return key
     }
 
@@ -108,16 +129,33 @@ internal class EncryptedFileSecretStore(
         null
     }
 
-    private fun restrict(path: Path) {
-        runCatching {
-            Files.setPosixFilePermissions(
-                path,
-                setOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE, PosixFilePermission.OWNER_EXECUTE)
-                    .let { if (Files.isDirectory(path)) it else it - PosixFilePermission.OWNER_EXECUTE },
-            )
-        }
-    }
 }
+
+/**
+ * Owner-only permissions. POSIX chmod is a no-op on Windows, so a Windows file
+ * gets an explicit owner-only ACL with inheritance removed.
+ */
+internal fun restrictToOwner(path: Path) {
+    val posix = Files.getFileAttributeView(path, PosixFileAttributeView::class.java)
+    if (posix != null) {
+        val perms = mutableSetOf(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+        if (Files.isDirectory(path)) perms += PosixFilePermission.OWNER_EXECUTE
+        posix.setPermissions(perms)
+        return
+    }
+    val acl = Files.getFileAttributeView(path, AclFileAttributeView::class.java)
+        ?: error("Couldn't restrict the sync key file to this user.")
+    acl.acl = listOf(ownerOnlyAclEntry(acl.owner))
+}
+
+/** One allow entry for [owner]. No inherit flags, so the file does not stay world-readable. */
+internal fun ownerOnlyAclEntry(owner: UserPrincipal): AclEntry = AclEntry.newBuilder()
+    .setType(AclEntryType.ALLOW)
+    .setPrincipal(owner)
+    .setPermissions(*AclEntryPermission.values())
+    .build()
+
+private typealias AtomicMoveNotSupportedException = java.nio.file.AtomicMoveNotSupportedException
 
 internal fun redactSecretArguments(args: List<String>): List<String> {
     val redacted = args.toMutableList()
@@ -127,9 +165,9 @@ internal fun redactSecretArguments(args: List<String>): List<String> {
 }
 
 /**
- * macOS login keychain. `security` takes the password as `-w`, which is the
- * tool's only write path. The argument list is never written to the log;
- * [redactSecretArguments] is what a log line would show.
+ * macOS login keychain. The passphrase is a `security -i` command on stdin.
+ * `ps` shows `security -i` and not the secret. A passphrase that cannot be
+ * passed as one quoted command fails so the file store can take it instead.
  */
 internal class MacKeychainSecretStore(
     private val run: (List<String>, String?) -> ProcessResult = ::runCommand,
@@ -143,10 +181,9 @@ internal class MacKeychainSecretStore(
     }
 
     override fun put(account: String, secret: String) {
-        val result = run(
-            listOf("/usr/bin/security", "add-generic-password", "-U", "-s", SERVICE, "-a", account, "-w", secret),
-            null,
-        )
+        if (secret.any { it == '\n' || it == '\r' || it == '\u0000' }) error("Keychain update failed.")
+        val command = "add-generic-password -U -s ${securityQuote(SERVICE)} -a ${securityQuote(account)} -w ${securityQuote(secret)}\n"
+        val result = run(listOf("/usr/bin/security", "-i"), command)
         if (result.exitCode != 0) error("Keychain update failed.")
     }
 
@@ -192,19 +229,33 @@ internal class WindowsCredentialSecretStore(
         "powershell.exe",
         "-NoProfile",
         "-NonInteractive",
+        "-WindowStyle",
+        "Hidden",
+        "-ExecutionPolicy",
+        "Bypass",
         "-Command",
         "-",
     )
 
-    private fun target(account: String): String = "Nuvio Analyzed Details Sync/$account"
+    internal fun previewScript(action: String, account: String, secret: String): String = script(action, target(account), secret)
 
-    private fun script(action: String, target: String, secret: String): String =
-        SCRIPT
+    private fun target(account: String): String {
+        require(ACCOUNT.matches(account)) { "Credential account was rejected." }
+        return "Nuvio Analyzed Details Sync/$account"
+    }
+
+    private fun script(action: String, target: String, secret: String): String {
+        require(action == "read" || action == "write" || action == "delete")
+        val encoded = SyncCrypto.encodeB64(secret.encodeToByteArray())
+        require(Regex("^[A-Za-z0-9+/]*={0,2}$").matches(encoded))
+        return SCRIPT
             .replace("__ACTION__", action)
             .replace("__TARGET__", target.replace("'", "''"))
-            .replace("__SECRET_B64__", SyncCrypto.encodeB64(secret.encodeToByteArray()))
+            .replace("__SECRET_B64__", encoded)
+    }
 
     companion object {
+        private val ACCOUNT = Regex("^[A-Za-z0-9][A-Za-z0-9._/-]{0,80}$")
         const val SCRIPT: String =
             "\$ErrorActionPreference = 'Stop'\n" +
                 "\$action = '__ACTION__'\n" +
@@ -254,19 +305,72 @@ private fun windowsCredentialManagerAvailable(): Boolean =
 
 internal fun runCommand(args: List<String>, stdin: String?): ProcessResult {
     val process = ProcessBuilder(args).redirectError(ProcessBuilder.Redirect.DISCARD).start()
-    if (stdin != null) {
-        process.outputStream.bufferedWriter().use { it.write(stdin) }
-    } else {
-        process.outputStream.close()
+    try {
+        if (stdin != null) {
+            process.outputStream.bufferedWriter(StandardCharsets.UTF_8).use { it.write(stdin) }
+        } else {
+            process.outputStream.close()
+        }
+        val stdout = process.inputStream.bufferedReader(StandardCharsets.UTF_8).readText()
+        if (!process.waitFor(30, TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return ProcessResult(exitCode = -1, stdout = "")
+        }
+        return ProcessResult(process.exitValue(), stdout)
+    } finally {
+        if (process.isAlive) process.destroyForcibly()
     }
-    val stdout = process.inputStream.bufferedReader().readText()
-    val exit = process.waitFor()
-    return ProcessResult(exit, stdout)
+}
+
+/** Quotes one token for `security -i`. The secret stays off argv. */
+internal fun securityQuote(value: String): String = "'" + value.replace("'", "'\\''") + "'"
+
+/**
+ * Uses the OS store when it accepts the secret, and the encrypted file when
+ * the OS store is missing or rejects the write.
+ */
+internal class FallbackSecretStore(
+    private val primary: SyncSecretStore,
+    private val fallback: SyncSecretStore,
+) : SyncSecretStore {
+    private var primaryFailed = false
+    override val kind: String
+        get() = if (primaryFailed) fallback.kind else primary.kind
+
+    override fun get(account: String): String? {
+        if (!primaryFailed) {
+            val stored = runCatching { primary.get(account) }.getOrNull()
+            if (stored != null) return stored
+        }
+        return fallback.get(account)
+    }
+
+    override fun put(account: String, secret: String) {
+        if (!primaryFailed) {
+            val saved = runCatching { primary.put(account, secret); true }.getOrDefault(false)
+            if (saved) {
+                runCatching { fallback.delete(account) }
+                return
+            }
+            primaryFailed = true
+        }
+        fallback.put(account, secret)
+    }
+
+    override fun delete(account: String) {
+        runCatching { primary.delete(account) }
+        fallback.delete(account)
+    }
 }
 
 internal fun openSyncSecretStore(fallbackDirectory: Path): SyncSecretStore {
+    val file = EncryptedFileSecretStore(fallbackDirectory)
     val os = System.getProperty("os.name").orEmpty().lowercase()
-    if (os.contains("mac") && Files.isExecutable(Path.of("/usr/bin/security"))) return MacKeychainSecretStore()
-    if (os.contains("win") && windowsCredentialManagerAvailable()) return WindowsCredentialSecretStore()
-    return EncryptedFileSecretStore(fallbackDirectory)
+    if (os.contains("mac") && Files.isExecutable(Path.of("/usr/bin/security"))) {
+        return FallbackSecretStore(MacKeychainSecretStore(), file)
+    }
+    if (os.contains("win") && windowsCredentialManagerAvailable()) {
+        return FallbackSecretStore(WindowsCredentialSecretStore(), file)
+    }
+    return file
 }
