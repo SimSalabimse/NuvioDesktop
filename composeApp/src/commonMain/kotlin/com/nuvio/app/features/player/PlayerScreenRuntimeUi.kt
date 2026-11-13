@@ -1085,6 +1085,7 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
         }
         "subtitleDelayDelta" -> setSubtitleDelay((subtitleDelayMs + value.toInt()).coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS))
         "subtitleDelayReset" -> setSubtitleDelay(0)
+        "subtitleAutoSyncAutomatic" -> performAutomaticSubtitleSync()
         "subtitleAutoSyncCapture" -> captureSubtitleAutoSyncTime()
         "subtitleAutoSyncReload" -> loadSubtitleAutoSyncCues(force = true)
         "subtitleAutoSyncCue" -> {
