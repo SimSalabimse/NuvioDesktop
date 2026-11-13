@@ -4,12 +4,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.SwingWindow
 import androidx.compose.ui.configureSwingGlobalsForCompose
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -171,17 +174,7 @@ fun main(args: Array<String>) {
                 (window.contentPane as? JComponent)?.isOpaque = true
             }
 
-            // Windows: Request frames continuously to prevent idle FPS drops / flickering.
-            // On Windows, Compose Desktop only redraws when input events occur unless
-            // an active animation explicitly requests frames. This ensures the UI stays
-            // smooth at vsync rate (~60 Hz) even when idle, without burning CPU.
-            if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
-                LaunchedEffect(Unit) {
-                    while (true) {
-                        withFrameNanos { }
-                    }
-                }
-            }
+            WindowsIdleFrameDriver(window.contentPane)
 
             LaunchedEffect(window, appIconState.selected) {
                 val backgroundSuffix = "-transparent"
@@ -332,6 +325,25 @@ private fun configureLinuxSwingGlobalsBeforeAwt() {
         useAutoDpiOnLinux = System.getProperty("sun.java2d.uiScale") == null &&
             System.getProperty("skiko.linux.autodpi", "true") == "true",
     )
+}
+
+/**
+ * Windows Compose Desktop redraws only on input unless something requests frames.
+ * This asks for a vsync frame, writes that time into state so the snapshot applies,
+ * and repaints the Swing pane so idle lists do not stall.
+ */
+@Composable
+private fun WindowsIdleFrameDriver(contentPane: java.awt.Component) {
+    if (DesktopHostOs.current != DesktopHostOs.WINDOWS) return
+    var frameCount by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            withFrameNanos { nanos -> frameCount = nanos }
+        }
+    }
+    SideEffect {
+        if (frameCount >= 0L) contentPane.repaint()
+    }
 }
 
 private fun installDesktopOpenUriHandler() {
