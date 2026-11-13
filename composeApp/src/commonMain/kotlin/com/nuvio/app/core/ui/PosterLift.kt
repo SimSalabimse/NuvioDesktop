@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.GraphicsContext
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalGraphicsContext
@@ -77,10 +79,13 @@ internal fun Modifier.posterCardClickable(
     zoomImageUrl: String? = null,
     zoomCornerRadius: Dp = NuvioTokens.Radius.poster,
     hoverScaleEnabled: Boolean = true,
+    desktopPointerMenu: Boolean = false,
 ): Modifier {
     val graphicsContext = LocalGraphicsContext.current
     val source = remember(graphicsContext, zoomImageUrl) { PosterLiftSource(graphicsContext) }
     val onPosterClickAnchor = LocalPosterClickAnchor.current
+    val openDesktopPointerMenu = isDesktop && desktopPointerMenu && onLongClick != null
+    var lastLocalPosition by remember { mutableStateOf(Offset.Zero) }
     val posterModifier = Modifier
         .drawWithContent {
             source.layer.record { this@drawWithContent.drawContent() }
@@ -98,14 +103,22 @@ internal fun Modifier.posterCardClickable(
         .then(this)
     if (onClick == null && onLongClick == null) return posterModifier
     val interactionSource = remember { MutableInteractionSource() }
+    fun pointerInRoot(local: Offset): Offset {
+        val origin = source.bounds?.topLeft ?: Offset.Zero
+        return origin + local
+    }
     val handleLongClick = onLongClick?.let { longClick ->
         {
-            source.bounds?.let { cardBounds ->
-                PosterZoomAnchorHolder.stash(
-                    PosterZoomAnchor(cardBounds, zoomImageUrl, zoomCornerRadius).also {
-                        it.source = source
-                    },
-                )
+            if (openDesktopPointerMenu) {
+                DesktopPointerMenuAnchor.stash(pointerInRoot(lastLocalPosition))
+            } else {
+                source.bounds?.let { cardBounds ->
+                    PosterZoomAnchorHolder.stash(
+                        PosterZoomAnchor(cardBounds, zoomImageUrl, zoomCornerRadius).also {
+                            it.source = source
+                        },
+                    )
+                }
             }
             longClick()
         }
@@ -117,6 +130,22 @@ internal fun Modifier.posterCardClickable(
             interactionSource = interactionSource,
         )
         .then(posterModifier)
+        .then(
+            if (openDesktopPointerMenu) {
+                Modifier.pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            event.changes.firstOrNull()?.let { change ->
+                                lastLocalPosition = change.position
+                            }
+                        }
+                    }
+                }
+            } else {
+                Modifier
+            },
+        )
         .combinedClickable(
             interactionSource = interactionSource,
             indication = if (!isDesktop && onPosterClickAnchor == null) LocalIndication.current else null,
@@ -133,7 +162,16 @@ internal fun Modifier.posterCardClickable(
             },
             onLongClick = handleLongClick,
         )
-        .secondaryClick(handleLongClick)
+        .secondaryClickAt(
+            when {
+                handleLongClick == null -> null
+                openDesktopPointerMenu -> { local ->
+                    lastLocalPosition = local
+                    handleLongClick()
+                }
+                else -> { _ -> handleLongClick() }
+            },
+        )
 }
 
 internal fun DrawScope.drawLiftedPoster(source: PosterLiftSource) {
