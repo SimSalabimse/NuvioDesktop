@@ -671,6 +671,8 @@ val macosPlayerBridgeCommand = if (missingMacosPlayerBridgeInputs.isNotEmpty()) 
           -L"${'$'}{SWIFT_LIB}" \
           -L/usr/lib/swift \
           -framework AppKit \
+          -framework AudioToolbox \
+          -framework CoreAudio \
           -framework IOKit \
           -framework OpenGL \
           -framework QuartzCore \
@@ -899,6 +901,8 @@ val buildWindowsPlayerBridge = tasks.register<Exec>("buildWindowsPlayerBridge") 
     outputs.file(windowsPlayerBridgeOutput)
     outputs.file(windowsPlayerBridgeImportLib)
     outputs.file(windowsPlayerBridgePdb)
+    // Rebuild whenever player_bridge.cpp (or WebView2 inputs) change. A stale DLL
+    // left in the MSI/JAR after a JNI addition fails to link on Windows.
     commandLine(windowsPlayerBridgeCommand)
 }
 
@@ -1318,6 +1322,8 @@ compose.desktop {
                                 </array>
                             </dict>
                         </array>
+                        <key>NSAudioCaptureUsageDescription</key>
+                        <string>Nuvio needs system audio capture for Auto Sync</string>
                     """.trimIndent()
                 }
                 if (macosSigningIdentity != null) {

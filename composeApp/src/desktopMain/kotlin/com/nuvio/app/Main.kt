@@ -30,6 +30,7 @@ import com.nuvio.app.features.discordrpc.DiscordPresenceManager
 import com.nuvio.app.features.p2p.P2pStreamingEngine
 import com.nuvio.app.core.tracking.preloadTrackingProvidersAsync
 import com.nuvio.app.features.player.PlatformPlayerSurface
+import com.nuvio.app.features.player.desktop.AutoSyncProveHarness
 import com.nuvio.app.features.player.desktop.DesktopAppFullscreenController
 import com.nuvio.app.features.player.desktop.DesktopHostOs
 import com.nuvio.app.features.player.desktop.DesktopWindowGeometry
@@ -62,6 +63,10 @@ fun main(args: Array<String>) {
         return
     }
     DesktopStartupProbe.arm()
+    // Headless Auto Sync prove harness. Set NUVIO_AUTOSYNC_PROVE=1 or a media path.
+    if (AutoSyncProveHarness.checkAndRun()) {
+        return
+    }
     // On Linux, initialize GTK BEFORE AWT/Compose/Skia to prevent GdkDisplayManager
     // type registration conflict (Skiko partially loads GDK without full GTK init).
     DesktopStartupProbe.phase("gtk") {
