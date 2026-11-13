@@ -81,6 +81,7 @@ fun main(args: Array<String>) {
     // Load cached profile data synchronously so the profile color is available
     // on the very first Compose frame (matching Android's SharedPreferences behavior).
     DesktopStartupProbe.phase("profiles") { ProfileRepository.loadCachedProfiles() }
+    DesktopStartupProbe.phase("sync") { com.nuvio.app.features.analyzeddetails.AnalyzedDetailsSyncService.start() }
     DesktopStartupProbe.phase("icons") { AppIconRepository.ensureLoaded() }
     DesktopStartupProbe.phase("discord") { DiscordPresenceManager.start() }
 
