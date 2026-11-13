@@ -34,4 +34,4 @@ Risks: the decoder is a new native dependency, the store is a new on-disk format
 
 ## Manual TheIntroDB submit
 
-The desktop player submits intro, recap, credits (shown as Outro), and preview for movies and TV, including a segment that starts at the beginning or runs to the end. Video duration is sent only inside the 5 minute to 6 hour guard. Submit and this account's stats use API v4. Catalogue reads stay on v3.
+The desktop player submits intro, recap, credits (shown as Outro), and preview for movies and TV, including a segment that starts at the beginning or runs to the end. Video duration is sent only inside the 5 minute to 6 hour guard. Catalogue reads and submits use API v4. A key is checked with POST /map. The v4 docs do not describe a user-stats route.

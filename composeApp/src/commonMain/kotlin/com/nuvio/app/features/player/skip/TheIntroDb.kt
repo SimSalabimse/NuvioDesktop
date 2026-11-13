@@ -221,19 +221,16 @@ internal fun submittedSegmentButtonLabel(base: String, type: String, ownSubmitte
 
 internal object TheIntroDb {
 
-    /** Catalogue reads. Frozen v3 still returns the media shape this client parses. */
-    const val API_BASE = "https://api.theintrodb.org/v3"
-    const val MEDIA_URL = "$API_BASE/media"
-
     /**
-     * Account routes. Current package docs set the base to
-     * https://api.theintrodb.org/v4 and say frozen v3 only serves GET /media.
-     * Submit and user stats share this base.
+     * Current API. Package docs: https://theintrodb.github.io/theintrodb-npm/
+     * base `https://api.theintrodb.org/v4`, with GET /media, POST /submit, and POST /map.
+     * Those docs do not describe a user-stats route, so this client does not call one.
+     * Key checks stay on POST /map in TheIntroDbKeyCheck.
      */
-    const val ACCOUNT_API_BASE = "https://api.theintrodb.org/v4"
-    const val SUBMIT_URL = "$ACCOUNT_API_BASE/submit"
-    const val USER_STATS_URL = "$ACCOUNT_API_BASE/user/stats"
-    const val SUBMISSIONS_URL = "$ACCOUNT_API_BASE/submissions"
+    const val API_BASE = "https://api.theintrodb.org/v4"
+    const val MEDIA_URL = "$API_BASE/media"
+    const val SUBMIT_URL = "$API_BASE/submit"
+    const val SUBMISSIONS_URL = "$API_BASE/submissions"
     const val PROVIDER = "theintrodb"
 
     suspend fun fetchTvIntervals(
