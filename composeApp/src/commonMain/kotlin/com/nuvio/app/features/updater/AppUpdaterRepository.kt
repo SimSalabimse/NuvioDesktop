@@ -63,8 +63,12 @@ internal object AppUpdaterRepository {
         isLenient = true
     }
 
-    suspend fun getLatestChannelUpdate(channel: UpdateChannel): Result<AppUpdate> = runCatching {
+    suspend fun getLatestChannelUpdate(channel: UpdateChannel): Result<AppUpdate> {
         val source = AppUpdaterPlatform.releaseSource
+        if (source.forkReleaseFeed) {
+            return getForkReleaseUpdate(source)
+        }
+        return runCatching {
         val response = httpRequestRaw(
             method = "GET",
             url = "https://api.github.com/repos/${source.owner}/${source.repo}/${releasePath(channel)}",
@@ -86,6 +90,33 @@ internal object AppUpdaterRepository {
             selector = AppUpdaterPlatform.assetSelector,
         )
             ?: throw NoChannelReleaseException()
+        }
+    }
+
+    private suspend fun getForkReleaseUpdate(source: AppUpdateReleaseSource): Result<AppUpdate> = runCatching {
+        val url = ForkUpdateFeed.requestUrl(
+            if (AppUpdaterPlatform.updateChecksEnabled) {
+                DesktopUpdateChannel.RELEASE
+            } else {
+                DesktopUpdateChannel.INTEGRATION
+            },
+        ) ?: throw NoChannelReleaseException()
+        val response = httpRequestRaw(
+            method = "GET",
+            url = url,
+            headers = ForkUpdateFeed.requestHeaders(source.userAgent),
+            body = "",
+        )
+        currentCoroutineContext().ensureActive()
+        if (response.status == 404) throw NoChannelReleaseException()
+        if (response.status !in 200..299) {
+            error(getString(Res.string.updates_github_api_error, response.status))
+        }
+        selectForkUpdate(
+            responseBody = response.body,
+            currentVersion = AppUpdaterPlatform.currentVersionName,
+            selector = AppUpdaterPlatform.assetSelector,
+        ) ?: throw NoChannelReleaseException()
     }
 
     internal fun releasePath(channel: UpdateChannel): String = when (channel) {
@@ -147,4 +178,62 @@ internal object AppUpdaterRepository {
             )
         }
     }
+
+    /**
+     * Picks the newest release on this fork that is strictly newer than [currentVersion]
+     * and has an installer for this computer. No assets, no parsable tags, or only
+     * older / other-line tags return null so the check can report up to date.
+     */
+    internal fun selectForkUpdate(
+        responseBody: String,
+        currentVersion: String,
+        selector: AppUpdateAssetSelector,
+    ): AppUpdate? {
+        val trimmed = responseBody.trim()
+        if (trimmed.isEmpty() || trimmed == "[]") return null
+        val releases = json.decodeFromString<List<GitHubReleaseDto>>(trimmed)
+        return releases
+            .asSequence()
+            .filterNot(GitHubReleaseDto::draft)
+            .mapNotNull { release ->
+                val tag = release.tagName?.takeIf { VersionUtils.parse(it) != null }
+                    ?: release.name?.takeIf { VersionUtils.parse(it) != null }
+                    ?: return@mapNotNull null
+                if (!VersionUtils.isRemoteNewer(tag, currentVersion)) return@mapNotNull null
+                val asset = selectBestUpdateAsset(
+                    assets = release.assets.mapNotNull { candidate ->
+                        if (!ForkUpdateFeed.isForkAssetUrl(candidate.browserDownloadUrl)) return@mapNotNull null
+                        AppUpdateAssetCandidate(
+                            name = candidate.name,
+                            downloadUrl = candidate.browserDownloadUrl,
+                            size = candidate.size,
+                            contentType = candidate.contentType,
+                        )
+                    },
+                    selector = selector,
+                ) ?: return@mapNotNull null
+                val version = VersionUtils.parse(tag) ?: return@mapNotNull null
+                ForkReleaseCandidate(version, release, tag, asset)
+            }
+            .sortedByDescending { it.version }
+            .firstOrNull()
+            ?.let { candidate ->
+                AppUpdate(
+                    tag = candidate.tag,
+                    title = candidate.release.name?.takeIf { it.isNotBlank() } ?: candidate.tag,
+                    notes = candidate.release.body.orEmpty(),
+                    releaseUrl = candidate.release.htmlUrl,
+                    assetName = candidate.asset.name,
+                    assetUrl = candidate.asset.downloadUrl,
+                    assetSizeBytes = candidate.asset.size,
+                )
+            }
+    }
+
+    private data class ForkReleaseCandidate(
+        val version: SemanticVersion,
+        val release: GitHubReleaseDto,
+        val tag: String,
+        val asset: AppUpdateAssetCandidate,
+    )
 }

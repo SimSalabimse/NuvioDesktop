@@ -160,6 +160,8 @@ const startTimeLabel = document.getElementById("startTimeLabel");
 const endTimeLabel = document.getElementById("endTimeLabel");
 const submitIntroStartInput = document.getElementById("submitIntroStartInput");
 const submitIntroEndInput = document.getElementById("submitIntroEndInput");
+const submitIntroFromStartButton = document.getElementById("submitIntroFromStartButton");
+const submitIntroToEndButton = document.getElementById("submitIntroToEndButton");
 const captureStartButton = document.getElementById("captureStartButton");
 const captureEndButton = document.getElementById("captureEndButton");
 const submitIntroStatus = document.getElementById("submitIntroStatus");
@@ -403,6 +405,8 @@ let submitIntroDraft = {
   segmentType: "intro",
   startTime: "00:00",
   endTime: "00:00",
+  fromStart: false,
+  toEnd: false,
   status: "",
 };
 let hasReceivedPlayerControls = false;
@@ -1033,6 +1037,8 @@ const openPlayerModal = modal => {
         segmentType: state.submitIntroSegmentType || "intro",
         startTime: state.submitIntroStartTime || "00:00",
         endTime: state.submitIntroEndTime || "00:00",
+        fromStart: false,
+        toEnd: false,
         status: "",
       };
     }
@@ -2076,24 +2082,30 @@ const renderSubmitIntroModal = () => {
   
   buttons.forEach(button => {
     const segmentType = button.dataset.segment;
-    const isExisting = existingTypes.includes(segmentType);
-    button.disabled = isExisting;
-    button.classList.toggle("disabled", isExisting);
+    const isOwn = existingTypes.includes(segmentType);
+    const baseLabel = button.textContent.replace(/ · Submitted$/, "");
+    button.textContent = isOwn ? `${baseLabel} · Submitted` : baseLabel;
+    button.disabled = false;
+    button.classList.toggle("disabled", false);
     button.classList.toggle("selected", segmentType === submitIntroDraft.segmentType);
   });
   
-  // If the currently selected type is now disabled, switch to the first available type
-  if (existingTypes.includes(submitIntroDraft.segmentType)) {
-    const firstAvailable = buttons.find(btn => !btn.disabled);
-    if (firstAvailable) {
-      submitIntroDraft.segmentType = firstAvailable.dataset.segment;
-      submitIntroDraft.status = "";
-    }
-  }
-  
+  const allowsFromStart = submitIntroDraft.segmentType === "intro" || submitIntroDraft.segmentType === "recap";
+  const allowsToEnd = submitIntroDraft.segmentType === "credits" || submitIntroDraft.segmentType === "preview";
+  if (!allowsFromStart) submitIntroDraft.fromStart = false;
+  if (!allowsToEnd) submitIntroDraft.toEnd = false;
+  submitIntroFromStartButton.hidden = !allowsFromStart;
+  submitIntroToEndButton.hidden = !allowsToEnd;
+  submitIntroFromStartButton.classList.toggle("selected", Boolean(submitIntroDraft.fromStart));
+  submitIntroToEndButton.classList.toggle("selected", Boolean(submitIntroDraft.toEnd));
+  submitIntroFromStartButton.setAttribute("aria-pressed", submitIntroDraft.fromStart ? "true" : "false");
+  submitIntroToEndButton.setAttribute("aria-pressed", submitIntroDraft.toEnd ? "true" : "false");
+
   setInputValue(submitIntroStartInput, submitIntroDraft.startTime);
   setInputValue(submitIntroEndInput, submitIntroDraft.endTime);
-  submitIntroStatus.textContent = submitIntroDraft.status || state.submitIntroStatusMessage || "";
+  const timeCheck = checkSubmitIntroTimes();
+  const liveMessage = timeCheck.block ? "" : timeCheck.message;
+  submitIntroStatus.textContent = submitIntroDraft.status || liveMessage || state.submitIntroStatusMessage || "";
 };
 
 const renderP2pConsentModal = () => {
@@ -2513,7 +2525,9 @@ const renderChrome = () => {
   }
   syncFullscreenButtons();
   backButton.setAttribute("aria-label", state.closeLabel || "Close player");
-  submitIntroButton.setAttribute("aria-label", state.submitIntroLabel || "Submit Intro");
+  const submitIntroLabel = state.submitIntroLabel || "Submit timestamps";
+  submitIntroButton.setAttribute("aria-label", submitIntroLabel);
+  submitIntroButton.setAttribute("title", submitIntroLabel);
   videoSettingsButton.setAttribute("aria-label", state.videoSettingsLabel || "Video settings");
   setProgress(positionMs, durationMs, bufferedPositionMs);
   if (showError) {
@@ -3031,6 +3045,8 @@ episodeReloadButton.addEventListener("click", event => {
 
 const updateSubmitSegment = segment => {
   submitIntroDraft.segmentType = segment;
+  submitIntroDraft.fromStart = false;
+  submitIntroDraft.toEnd = false;
   submitIntroDraft.status = "";
   renderSubmitIntroModal();
 };
@@ -3047,23 +3063,43 @@ const currentTimeText = () => formatTime(isScrubbing ? scrubPositionMs : state.p
 
 captureStartButton.addEventListener("click", event => {
   event.stopPropagation();
+  submitIntroDraft.fromStart = false;
   submitIntroDraft.startTime = currentTimeText();
   submitIntroDraft.status = "";
   renderSubmitIntroModal();
 });
 captureEndButton.addEventListener("click", event => {
   event.stopPropagation();
+  submitIntroDraft.toEnd = false;
   submitIntroDraft.endTime = currentTimeText();
+  submitIntroDraft.status = "";
+  renderSubmitIntroModal();
+});
+submitIntroFromStartButton.addEventListener("click", event => {
+  event.stopPropagation();
+  submitIntroDraft.fromStart = !submitIntroDraft.fromStart;
+  submitIntroDraft.status = "";
+  renderSubmitIntroModal();
+});
+submitIntroToEndButton.addEventListener("click", event => {
+  event.stopPropagation();
+  submitIntroDraft.toEnd = !submitIntroDraft.toEnd;
   submitIntroDraft.status = "";
   renderSubmitIntroModal();
 });
 
 submitIntroStartInput.addEventListener("input", () => {
+  submitIntroDraft.fromStart = false;
   submitIntroDraft.startTime = submitIntroStartInput.value;
+  submitIntroDraft.status = "";
+  renderSubmitIntroModal();
 });
 
 submitIntroEndInput.addEventListener("input", () => {
+  submitIntroDraft.toEnd = false;
   submitIntroDraft.endTime = submitIntroEndInput.value;
+  submitIntroDraft.status = "";
+  renderSubmitIntroModal();
 });
 
 submitIntroCloseButton.addEventListener("click", event => {
@@ -3101,17 +3137,52 @@ const parseIntroTime = raw => {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 };
 
+const submitIntroAllowsFromStart = () =>
+  submitIntroDraft.segmentType === "intro" || submitIntroDraft.segmentType === "recap";
+
+const submitIntroAllowsToEnd = () =>
+  submitIntroDraft.segmentType === "credits" || submitIntroDraft.segmentType === "preview";
+
+const checkSubmitIntroTimes = () => {
+  const fromStart = submitIntroAllowsFromStart() && Boolean(submitIntroDraft.fromStart);
+  const toEnd = submitIntroAllowsToEnd() && Boolean(submitIntroDraft.toEnd);
+  const start = fromStart ? 0 : parseIntroTime(submitIntroDraft.startTime);
+  const end = toEnd ? null : parseIntroTime(submitIntroDraft.endTime);
+  if ((!fromStart && start == null) || (!toEnd && end == null) || (start != null && end != null && end <= start)) {
+    return { block: true, message: "Check the start and end times." };
+  }
+  const durationSec = Number(state.durationMs) > 0 ? Number(state.durationMs) / 1000 : null;
+  const resolvedStart = start == null ? 0 : start;
+  const resolvedEnd = end == null ? durationSec : end;
+  if (resolvedEnd == null) return { block: false, message: "" };
+  const length = resolvedEnd - resolvedStart;
+  if (!(length > 0)) return { block: true, message: "Check the start and end times." };
+  const segment = submitIntroDraft.segmentType;
+  const maxSec = segment === "intro" ? 300 : (segment === "recap" ? 1200 : 1800);
+  const label = segment === "intro" ? "Intro" : (segment === "recap" ? "Recap" : (segment === "credits" ? "Outro" : "Preview"));
+  if (length < 5 || length > maxSec) {
+    return { block: true, message: `${label} must be between 5 and ${maxSec} seconds.` };
+  }
+  if (segment === "intro" && length > 200) {
+    return { block: false, message: "Intro is longer than 200 seconds." };
+  }
+  return { block: false, message: "" };
+};
+
 submitIntroSubmitButton.addEventListener("click", event => {
   event.stopPropagation();
   submitIntroDraft.startTime = submitIntroStartInput.value;
   submitIntroDraft.endTime = submitIntroEndInput.value;
-  const start = parseIntroTime(submitIntroDraft.startTime);
-  const end = parseIntroTime(submitIntroDraft.endTime);
-  if (start == null || end == null || end <= start) {
-    submitIntroDraft.status = "Check the start and end times.";
+  const timeCheck = checkSubmitIntroTimes();
+  if (timeCheck.block) {
+    submitIntroDraft.status = timeCheck.message;
     renderSubmitIntroModal();
     return;
   }
+  const fromStart = submitIntroAllowsFromStart() && Boolean(submitIntroDraft.fromStart);
+  const toEnd = submitIntroAllowsToEnd() && Boolean(submitIntroDraft.toEnd);
+  const start = fromStart ? -1 : parseIntroTime(submitIntroDraft.startTime);
+  const end = toEnd ? -1 : parseIntroTime(submitIntroDraft.endTime);
   const segmentIndex = submitIntroDraft.segmentType === "recap" ? 1 : (submitIntroDraft.segmentType === "credits" ? 2 : (submitIntroDraft.segmentType === "preview" ? 3 : 0));
   submitIntroDraft.status = "";
   send("submitIntroSegment", segmentIndex);
@@ -3301,6 +3372,8 @@ window.playerControls = nextState => {
     submitIntroDraft.segmentType = "intro";
     submitIntroDraft.startTime = "00:00";
     submitIntroDraft.endTime = "00:00";
+    submitIntroDraft.fromStart = false;
+    submitIntroDraft.toEnd = false;
     submitIntroDraft.status = "";
   }
   const notificationToken = Number(state.notificationToken) || 0;

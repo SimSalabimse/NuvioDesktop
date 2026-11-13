@@ -1,6 +1,7 @@
 package com.nuvio.app.features.updater
 
 import com.nuvio.app.core.build.AppVersionConfig
+import com.nuvio.app.core.build.DesktopUpdateConfig
 import com.nuvio.app.core.storage.DesktopStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -53,12 +54,17 @@ actual object AppUpdaterPlatform {
         get() = currentOs != DesktopUpdaterOs.UNKNOWN && linuxInstallMethod != LinuxInstallMethod.FLATPAK
 
     actual val releaseSource: AppUpdateReleaseSource = AppUpdateReleaseSource(
-        owner = "NuvioMedia",
-        repo = "NuvioDesktop",
+        owner = ForkUpdateFeed.OWNER,
+        repo = ForkUpdateFeed.REPO,
         channelBranch = null,
         includePrereleases = true,
         userAgent = "NuvioDesktop",
+        forkReleaseFeed = true,
     )
+
+    actual val updateChecksEnabled: Boolean = DesktopUpdateConfig.UPDATE_CHECKS_ENABLED
+
+    actual val installAfterDownload: Boolean = false
 
     actual val assetSelector: AppUpdateAssetSelector
         get() = currentOs.assetSelector(linuxInstallMethod)
