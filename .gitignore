@@ -34,6 +34,11 @@ AGENTS.md
 PERFORMANCE_FINDINGS.md
 scripts/*
 !scripts/sign-ios-device-app.py
+!scripts/ci-local.sh
+!scripts/ci/
+!scripts/ci/**
+scripts/ci/**/__pycache__/
+scripts/ci/**/*.pyc
 iosApp/Configuration/DeviceSigning.local.json
 
 # Local MPVKit iOS build environment (sparse APFS image, see MPVKit docs)
