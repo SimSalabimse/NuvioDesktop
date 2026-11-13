@@ -13,7 +13,6 @@ internal object TheIntroDb {
     const val API_BASE = "https://api.theintrodb.org/v3"
     const val MEDIA_URL = "$API_BASE/media"
     const val SUBMIT_URL = "$API_BASE/submit"
-    const val USER_STATS_URL = "$API_BASE/user/stats"
     const val SUBMISSIONS_URL = "$API_BASE/submissions"
     const val PROVIDER = "theintrodb"
 
@@ -82,26 +81,6 @@ internal object TheIntroDb {
             throw cancelled
         } catch (_: Exception) {
             null
-        }
-    }
-
-    suspend fun verifyApiKey(apiKey: String): Boolean {
-        if (apiKey.isBlank()) return false
-        return try {
-            val response = httpRequestRaw(
-                method = "GET",
-                url = USER_STATS_URL,
-                headers = mapOf(
-                    "Authorization" to "Bearer $apiKey",
-                    "Accept" to "application/json",
-                ),
-                body = "",
-            )
-            response.status in 200..299
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            false
         }
     }
 
