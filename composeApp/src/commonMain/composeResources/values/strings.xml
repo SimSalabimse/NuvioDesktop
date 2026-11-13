@@ -550,7 +550,7 @@
     <string name="settings_sync_not_yet">Not synced yet</string>
     <string name="settings_sync_device">This device</string>
     <string name="settings_sync_what">What syncs</string>
-    <string name="settings_sync_what_body">Your marks, including "none here", detections with their cut length and algorithm version, and your TheIntroDB submissions under a hash of the account. Fingerprints stay on this computer.</string>
+    <string name="settings_sync_what_body">Your marks, including "none here", title links when this computer knows both a TMDB id and an IMDb id, and your TheIntroDB submissions under a hash of the account. Detections from your other devices are shown here. This computer does not store analyzer output, so it does not upload detections. Fingerprints stay on this computer.</string>
     <string name="settings_sync_status">Status</string>
     <string name="settings_sync_syncing">Syncing…</string>
     <string name="settings_sync_store_macos">Saved in the macOS keychain.</string>

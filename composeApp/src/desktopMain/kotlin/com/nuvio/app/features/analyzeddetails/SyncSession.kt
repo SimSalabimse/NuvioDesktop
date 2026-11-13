@@ -57,6 +57,7 @@ internal data class SyncSession(
     val mirrors: List<SyncMirror> = emptyList(),
     val knownCanonical: List<String> = emptyList(),
     val submissions: List<String> = emptyList(),
+    val aliases: List<String> = emptyList(),
     val secretStoreKind: String = "",
     val statusText: String = "Not joined.",
     val statusError: Boolean = false,

@@ -161,6 +161,7 @@ internal class AnalyzedDetailsSync(
                 SyncSession(
                     deviceId = existing.deviceId,
                     submissions = existing.submissions,
+                    aliases = existing.aliases,
                     clockWallMs = existing.clockWallMs,
                     clockCounter = existing.clockCounter,
                     secretStoreKind = secrets.kind,
@@ -197,7 +198,44 @@ internal class AnalyzedDetailsSync(
                 kept += canonical
             }
         }
-        return save(session.copy(submissions = kept, clockWallMs = clock.wallMs, clockCounter = clock.counter, deviceId = deviceId))
+        var saved = save(session.copy(submissions = kept, clockWallMs = clock.wallMs, clockCounter = clock.counter, deviceId = deviceId))
+        val seen = linkedSetOf<Pair<String, String>>()
+        for (note in notes) {
+            val tmdb = note.tmdbId?.takeIf { it > 0 }?.toString() ?: continue
+            val imdb = note.imdbId ?: continue
+            if (seen.add(tmdb to imdb)) saved = noteShowLinkPinned(tmdb, imdb)
+        }
+        return saved
+    }
+
+    fun noteShowLink(tmdbId: String, imdbId: String): SyncSession = withProfile { noteShowLinkPinned(tmdbId, imdbId) }
+
+    private fun noteShowLinkPinned(tmdbId: String, imdbId: String): SyncSession {
+        val session = session()
+        if (!session.readable) return session
+        val to = showIdForParent(tmdbId)?.takeIf { it.startsWith("tmdb:") } ?: return session
+        val from = showIdForParent(imdbId)?.takeIf { it.startsWith("imdb:") } ?: return session
+        val kept = session.aliases.toMutableList()
+        val index = kept.indexOfFirst { existing ->
+            val parsed = parseRecord(parseJsonOrNull(existing) ?: return@indexOfFirst false)
+            parsed is AliasRecord && parsed.from == from
+        }
+        if (index >= 0) {
+            val previous = parseRecord(parseJson(kept[index])) as? AliasRecord
+            if (previous != null && previous.to == to) return session
+        }
+        val deviceId = session.deviceId.ifBlank { newDeviceId() }
+        val record = aliasRecord(tick(DeviceClock(session.clockWallMs, session.clockCounter), now(), deviceId), from, to) ?: return session
+        val canonical = canonicalJson(record.wire)
+        if (index >= 0) kept[index] = canonical else kept += canonical
+        return save(
+            session.copy(
+                aliases = kept,
+                clockWallMs = record.hlc.wallMs,
+                clockCounter = record.hlc.counter,
+                deviceId = deviceId,
+            ),
+        )
     }
 
     fun sync(): SyncSession = withProfile {
@@ -524,6 +562,12 @@ internal class AnalyzedDetailsSync(
         return parentMetaIdForShow(showId)
     }
 
+    /**
+     * Marks, submissions, and title aliases stored on this computer.
+     * Desktop does not persist analyzer output, so it does not emit detection
+     * records. Remote detections stay in the merged view and are shown when
+     * the cut matches. An own mark still wins over a detection.
+     */
     private fun localRecords(session: SyncSession): List<SyncRecord> {
         val fromSlots = session.slots.mapNotNull { slot ->
             val stamp = ClockStamp(slot.hlcWallMs, slot.hlcCounter, slot.hlcDeviceId.ifBlank { session.deviceId })
@@ -539,7 +583,8 @@ internal class AnalyzedDetailsSync(
             }
         }
         val fromSubmissions = session.submissions.mapNotNull { parseRecord(parseJsonOrNull(it) ?: return@mapNotNull null) }
-        return fromSlots + fromSubmissions
+        val fromAliases = session.aliases.mapNotNull { parseRecord(parseJsonOrNull(it) ?: return@mapNotNull null) }
+        return fromSlots + fromSubmissions + fromAliases
     }
 
     private fun unlock(session: SyncSession): DerivedKeys? {
@@ -626,7 +671,7 @@ internal class AnalyzedDetailsSync(
 
 internal data class SubmissionNote(
     val remoteId: String,
-    val tmdbId: Int,
+    val tmdbId: Int?,
     val mediaType: String,
     val season: Int?,
     val episode: Int?,
@@ -635,7 +680,17 @@ internal data class SubmissionNote(
     val startMs: Long,
     val endMs: Long,
     val durationMs: Long,
+    val imdbId: String? = null,
 )
+
+/** SHA-256 hex of the trimmed TheIntroDB key. */
+internal fun accountScopeFor(apiKey: String): String = SyncCrypto.sha256Hex(apiKey.trim())
+
+internal fun submissionShowId(tmdbId: Int?, otherId: String?): String? {
+    val tmdb = tmdbId?.takeIf { it > 0 }?.let { "tmdb:$it" }?.takeIf(::isShowId)
+    if (tmdb != null) return tmdb
+    return otherId?.let(::showIdForParent)?.takeIf(::isShowId)
+}
 
 private data class ParsedJoin(val spaceId: String, val salt: ByteArray, val keyCheck: ByteArray)
 
@@ -769,8 +824,7 @@ private fun sameSubmission(left: SubmissionRecord, right: SubmissionRecord): Boo
 
 private fun SubmissionNote.toRecord(accountScope: String, clock: DeviceClock, deviceId: String, nowMs: Long): SubmissionRecord? {
     if (!Regex("^[0-9a-f]{64}$").matches(accountScope)) return null
-    val showId = "tmdb:$tmdbId"
-    if (!isShowId(showId)) return null
+    val showId = submissionShowId(tmdbId, imdbId) ?: return null
     val wire = wireSegment(segment) ?: return null
     val movie = mediaType == "movie"
     if (!movie && mediaType != "tv") return null

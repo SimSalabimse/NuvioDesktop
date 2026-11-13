@@ -18,3 +18,5 @@ internal actual fun overlayAnalyzedDetails(
 ): List<SkipInterval> = intervals
 
 internal actual fun noteTheIntroDbSubmissions(accountKey: String, notes: List<AnalyzedSubmissionNote>) = Unit
+
+internal actual fun noteLinkedShowIds(tmdbId: String, imdbId: String) = Unit

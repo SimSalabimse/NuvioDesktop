@@ -120,6 +120,29 @@ class AnalyzedDetailsSyncTest {
         assertEquals("tmdb:100", mobileBare?.showId)
         assertEquals("s1e8", mobileBare?.episodeKey)
         assertEquals("tmdb:100", parseDesktopMarkKey("tmdb_100:1:8")?.showId)
+        assertEquals("imdb:tt0000100", showIdForParent("tt100"))
+        assertEquals("imdb:tt0000100", showIdForParent("imdb:tt100"))
+        assertEquals("imdb:tt0000100", showIdForParent(" tt100 "))
+        assertEquals("imdb:tt0000100", showIdForParent("imdb_tt100"))
+        assertEquals("imdb:tt12345678", showIdForParent("tt12345678"))
+        assertEquals("tmdb:100", showIdForParent(" 100 "))
+        assertNull(showIdForParent("tmdb:0100"))
+        val paddedEpisode = parseDesktopMarkKey("tt100:01:8")
+        assertEquals("imdb:tt0000100", paddedEpisode?.showId)
+        assertEquals("s1e8", paddedEpisode?.episodeKey)
+        assertEquals("tt100:1:8", paddedEpisode?.desktopKey)
+        val zeroPadded = parseDesktopMarkKey("tmdb:100:01:08")
+        assertEquals("s1e8", zeroPadded?.episodeKey)
+        assertEquals("tmdb:100:1:8", zeroPadded?.desktopKey)
+        assertEquals(noneRecordId(episode, "intro"), noneRecordId(zeroPadded!!, "intro"))
+        assertEquals("s0e1", parseDesktopMarkKey("tmdb:100:00:01")?.episodeKey)
+        assertEquals("s1e8", parseMobileAnalysisKey("tmdb_100__s01e8")?.episodeKey)
+        assertEquals("s1e8", parseMobileAnalysisKey("tt100__s01e08")?.episodeKey)
+        assertEquals("imdb:tt0000100", parseMobileAnalysisKey("tt100__s01e08")?.showId)
+        assertEquals("s0e1", parseMobileAnalysisKey("tmdb_100__s00e01")?.episodeKey)
+        assertEquals("none/imdb:tt0000100/s1e8/intro", noneRecordId(paddedEpisode!!, "intro"))
+        assertNull(parseDesktopMarkKey("tmdb:100:01:0"))
+        assertNull(parseMobileAnalysisKey("tmdb_100__s01e0"))
         assertNull(normalizeSyncBaseUrl("http://example.com"))
         assertEquals("https://example.com", normalizeSyncBaseUrl("https://example.com"))
         assertEquals("http://127.0.0.1:9", normalizeSyncBaseUrl("http://127.0.0.1:9"))
@@ -310,6 +333,57 @@ class AnalyzedDetailsSyncTest {
             )
             assertEquals(listOf("recap"), overlay.map { it.type })
             assertTrue(overlay.none { it.type == "intro" })
+            assertTrue(plaintexts(server.calls, keys).none { it.contains("\"kind\":\"detection\"") })
+        }
+    }
+
+    @Test
+    fun paddedIdsAliasesAndImdbSubmissionsSync() {
+        val scope = accountScopeFor("  idb_test_key  ")
+        assertEquals(SyncCrypto.sha256Hex("idb_test_key"), scope)
+        FakeSyncServer("test-enroll-secret").use { server ->
+            val device = device(server, "device-a") { 1_700_000_000_000 }
+            val noted = device.engine.noteSubmissions(
+                scope,
+                listOf(
+                    submission("remote-imdb", tmdbId = null, imdbId = "tt100"),
+                    submission("remote-tmdb", tmdbId = 100, imdbId = "tt100"),
+                    submission("remote-drop", tmdbId = null, imdbId = "not-a-show"),
+                ),
+            )
+            assertEquals(2, noted.submissions.size)
+            assertTrue(noted.submissions.any { it.contains("\"showId\":\"imdb:tt0000100\"") && it.contains("remote-imdb") })
+            assertTrue(noted.submissions.any { it.contains("\"showId\":\"tmdb:100\"") && it.contains("remote-tmdb") })
+            assertTrue(noted.submissions.none { it.contains("remote-drop") })
+            assertEquals(listOf("alias/imdb:tt0000100"), noted.aliases.map { (parseRecord(parseJson(it)) as AliasRecord).id })
+            val linked = device.engine.noteShowLink("100", " tt100 ")
+            val alias = parseRecord(parseJson(linked.aliases.single())) as AliasRecord
+            assertEquals("alias/imdb:tt0000100", alias.id)
+            assertEquals("imdb:tt0000100", alias.from)
+            assertEquals("tmdb:100", alias.to)
+            val merged = mergeRecords(
+                listOf(alias.wire, foundDetection("imdb:tt0000100", "device-b")),
+                1_700_000_000_000,
+            )
+            val overlay = overlaySyncedSkips(
+                intervals = emptyList(),
+                merged = merged,
+                parentMetaId = "100",
+                season = 1,
+                episode = 8,
+                fileDurationMs = 3_600_000,
+                isMovie = false,
+            )
+            assertEquals(listOf("recap"), overlay.map { it.type })
+            val created = device.create(server.baseUrl, "test-enroll-secret", "test-passphrase-not-a-secret")
+            assertTrue(created.joined, created.statusText)
+            assertEquals(2, created.submissions.size)
+            assertEquals(1, created.aliases.size)
+            assertEquals("Synced.", device.sync().statusText)
+            val plain = plaintexts(server.calls, device.keysForTest()!!)
+            assertTrue(plain.any { it.contains("\"id\":\"alias/imdb:tt0000100\"") && it.contains("\"to\":\"tmdb:100\"") })
+            assertTrue(plain.any { it.contains("\"showId\":\"imdb:tt0000100\"") && it.contains("remote-imdb") })
+            assertTrue(plain.none { it.contains("\"kind\":\"detection\"") })
         }
     }
 
@@ -618,6 +692,41 @@ class AnalyzedDetailsSyncTest {
             pause = pause,
         )
         return TestDevice(engine, directory)
+    }
+
+    private fun submission(remoteId: String, tmdbId: Int?, imdbId: String?) = SubmissionNote(
+        remoteId = remoteId,
+        tmdbId = tmdbId,
+        mediaType = "tv",
+        season = 1,
+        episode = 8,
+        segment = "intro",
+        status = "approved",
+        startMs = 1_000,
+        endMs = 2_000,
+        durationMs = 3_600_000,
+        imdbId = imdbId,
+    )
+
+    private fun foundDetection(showId: String, deviceId: String): JsonVal {
+        val duration = 3_600_000L
+        val fields = linkedMapOf<String, JsonVal>(
+            "algorithm" to JsonVal.Str("nuvio-analysis-1"),
+            "deleted" to JsonVal.Bool(false),
+            "durationMs" to JsonVal.Num(duration),
+            "endMs" to JsonVal.Num(2_000),
+            "episode" to JsonVal.Num(8),
+            "hlc" to hlcJson(ClockStamp(1_700_000_000_000, 0, deviceId)),
+            "id" to JsonVal.Str("det/$showId/s1e8/recap/0/$duration/a1"),
+            "kind" to JsonVal.Str("detection"),
+            "outcome" to JsonVal.Str("found"),
+            "season" to JsonVal.Num(1),
+            "segmentIndex" to JsonVal.Num(0),
+            "segmentType" to JsonVal.Str("recap"),
+            "showId" to JsonVal.Str(showId),
+            "startMs" to JsonVal.Num(1_000),
+        )
+        return (parseRecord(JsonVal.Obj(fields)) ?: error("detection did not parse")).wire
     }
 
     private fun mark(parent: String, season: Int, episode: Int, segment: String, start: Long, end: Long) = DirectoryMark(

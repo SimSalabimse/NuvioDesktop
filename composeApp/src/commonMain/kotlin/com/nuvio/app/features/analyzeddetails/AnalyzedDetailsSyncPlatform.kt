@@ -19,7 +19,7 @@ internal expect fun overlayAnalyzedDetails(
 
 internal data class AnalyzedSubmissionNote(
     val remoteId: String,
-    val tmdbId: Int,
+    val tmdbId: Int?,
     val mediaType: String,
     val season: Int?,
     val episode: Int?,
@@ -28,6 +28,10 @@ internal data class AnalyzedSubmissionNote(
     val startMs: Long,
     val endMs: Long,
     val durationMs: Long,
+    val imdbId: String? = null,
 )
 
 internal expect fun noteTheIntroDbSubmissions(accountKey: String, notes: List<AnalyzedSubmissionNote>)
+
+/** Remember that [tmdbId] and [imdbId] name the same title. */
+internal expect fun noteLinkedShowIds(tmdbId: String, imdbId: String)

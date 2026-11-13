@@ -58,7 +58,9 @@ internal fun overlaySyncedSkips(
 
 internal fun mergedFromSession(session: SyncSession, nowMs: Long): MergedState {
     val known = session.knownCanonical.mapNotNull { parseJsonOrNull(it) }
-    val local = session.slots.mapNotNull { slotWire(it) } + session.submissions.mapNotNull { parseJsonOrNull(it) }
+    val local = session.slots.mapNotNull { slotWire(it) } +
+        session.submissions.mapNotNull { parseJsonOrNull(it) } +
+        session.aliases.mapNotNull { parseJsonOrNull(it) }
     return mergeRecords(known + local, nowMs)
 }
 

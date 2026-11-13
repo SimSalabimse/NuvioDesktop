@@ -210,6 +210,18 @@ internal fun tombstoneRecord(kind: String, id: String, hlc: ClockStamp): Tombsto
     return parseRecord(draft) as? TombstoneRecord
 }
 
+internal fun aliasRecord(hlc: ClockStamp, from: String, to: String): AliasRecord? {
+    val draft = jObj(
+        "deleted" to JsonVal.Bool(false),
+        "from" to JsonVal.Str(from),
+        "hlc" to hlcJson(hlc),
+        "id" to JsonVal.Str("alias/$from"),
+        "kind" to JsonVal.Str("alias"),
+        "to" to JsonVal.Str(to),
+    )
+    return parseRecord(draft) as? AliasRecord
+}
+
 internal fun submissionRecord(
     hlc: ClockStamp,
     accountScope: String,

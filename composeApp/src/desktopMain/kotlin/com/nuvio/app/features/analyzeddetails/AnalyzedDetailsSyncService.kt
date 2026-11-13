@@ -34,9 +34,8 @@ internal actual fun overlayAnalyzedDetails(
 ): List<SkipInterval> = AnalyzedDetailsSyncService.overlay(intervals, parentMetaId, season, episode, fileDurationMs, isMovie)
 
 internal actual fun noteTheIntroDbSubmissions(accountKey: String, notes: List<AnalyzedSubmissionNote>) {
-    val scope = SyncCrypto.sha256Hex(accountKey.trim())
     AnalyzedDetailsSyncService.note(
-        scope,
+        accountScopeFor(accountKey),
         notes.map { note ->
             SubmissionNote(
                 remoteId = note.remoteId,
@@ -49,9 +48,14 @@ internal actual fun noteTheIntroDbSubmissions(accountKey: String, notes: List<An
                 startMs = note.startMs,
                 endMs = note.endMs,
                 durationMs = note.durationMs,
+                imdbId = note.imdbId,
             )
         },
     )
+}
+
+internal actual fun noteLinkedShowIds(tmdbId: String, imdbId: String) {
+    AnalyzedDetailsSyncService.noteShowLink(tmdbId, imdbId)
 }
 
 internal object AnalyzedDetailsSyncService {
@@ -128,6 +132,16 @@ internal object AnalyzedDetailsSyncService {
         scope.launch {
             gate.withLock {
                 val saved = withContext(Dispatchers.IO) { engine.noteSubmissions(accountScope, notes) }
+                publish(saved)
+                if (saved.joined) schedule()
+            }
+        }
+    }
+
+    fun noteShowLink(tmdbId: String, imdbId: String) {
+        scope.launch {
+            gate.withLock {
+                val saved = withContext(Dispatchers.IO) { engine.noteShowLink(tmdbId, imdbId) }
                 publish(saved)
                 if (saved.joined) schedule()
             }

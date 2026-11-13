@@ -17,21 +17,30 @@ internal data class DesktopEpisodeRef(
 internal fun desktopMarkKey(parentMetaId: String, season: Int?, episode: Int?): String =
     if (season == null || episode == null) parentMetaId else "$parentMetaId:$season:$episode"
 
+/**
+ * Record ids this computer writes use the canonical spelling.
+ * IMDb ids are `imdb:tt` plus the significant digits, left-padded to at least 7
+ * (`tt100` and `imdb:tt100` both become `imdb:tt0000100`). Longer ids stay as
+ * they are. Incoming unpadded spellings still parse.
+ */
 internal fun showIdForParent(parentMetaId: String): String? {
     val id = parentMetaId.trim()
-    if (isShowId(id)) return id
-    if (Regex("^[1-9][0-9]{0,9}$").matches(id)) return "tmdb:$id"
-    if (id.startsWith("tt") && isShowId("imdb:$id")) return "imdb:$id"
-    // Mobile's analysis files replace ":" with "_" (`tmdb:100` is stored as `tmdb_100`).
-    if (id.startsWith("tmdb_")) {
-        val converted = "tmdb:" + id.removePrefix("tmdb_")
-        if (isShowId(converted)) return converted
+    val resolved = when {
+        isShowId(id) -> id
+        Regex("^[1-9][0-9]{0,9}$").matches(id) -> "tmdb:$id"
+        id.startsWith("tt", ignoreCase = true) && isShowId("imdb:tt" + id.drop(2)) -> "imdb:tt" + id.drop(2)
+        id.startsWith("tmdb_") && isShowId("tmdb:" + id.removePrefix("tmdb_")) -> "tmdb:" + id.removePrefix("tmdb_")
+        id.startsWith("imdb_tt") && isShowId("imdb:" + id.removePrefix("imdb_")) -> "imdb:" + id.removePrefix("imdb_")
+        else -> null
     }
-    if (id.startsWith("imdb_tt")) {
-        val converted = "imdb:" + id.removePrefix("imdb_")
-        if (isShowId(converted)) return converted
-    }
-    return null
+    return resolved?.let(::canonicalShowId)
+}
+
+internal fun canonicalShowId(showId: String): String {
+    if (!showId.startsWith("imdb:tt")) return showId
+    val digits = showId.removePrefix("imdb:tt")
+    if (digits.isEmpty() || !digits.all(Char::isDigit) || digits.all { it == '0' }) return showId
+    return "imdb:tt" + digits.trimStart('0').padStart(7, '0')
 }
 
 /** Prefer the spelling Desktop already uses: `tmdb:100` and `tt0000100`. */
@@ -69,7 +78,7 @@ internal fun parseMobileAnalysisKey(key: String): DesktopEpisodeRef? {
     if (rest == "movie") {
         return DesktopEpisodeRef(show, null, null, showId, "movie", key)
     }
-    val match = Regex("^s(0|[1-9][0-9]*)e([1-9][0-9]*)$").matchEntire(rest) ?: return null
+    val match = Regex("^s([0-9]+)e([0-9]+)$").matchEntire(rest) ?: return null
     val season = match.groupValues[1].toIntOrNull() ?: return null
     val episode = match.groupValues[2].toIntOrNull() ?: return null
     val episodeKey = episodeKey(season.toLong(), episode.toLong()) ?: return null
@@ -114,7 +123,6 @@ private fun splitEpisodeSuffix(key: String): Triple<String, Int, Int>? {
     val seasonSep = rest.lastIndexOf(':')
     if (seasonSep <= 0) return null
     val seasonText = rest.substring(seasonSep + 1)
-    if (seasonText.length > 1 && seasonText.startsWith('0')) return null
     val season = seasonText.toIntOrNull() ?: return null
     if (season < 0) return null
     val parent = rest.substring(0, seasonSep)
