@@ -196,6 +196,13 @@ desktop_job() {
   # uses the java on PATH.
   (
     cd "$WT" || exit 1
+    # Gradle 9 rejects the optional local.properties input when the path is
+    # configured and the file is absent. An empty file has no secrets. Refs
+    # that already skip the input when the file is missing are unchanged.
+    if [[ ! -e local.properties ]]; then
+      : > local.properties
+      echo "created an empty local.properties in the worktree"
+    fi
     CXX_SHIM=""
     if [[ "$HOST_OS" == "Linux" ]]; then
       prefer_libstdcxx || exit 1
