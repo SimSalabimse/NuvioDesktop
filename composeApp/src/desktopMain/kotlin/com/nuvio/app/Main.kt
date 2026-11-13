@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.awt.SwingWindow
 import androidx.compose.ui.configureSwingGlobalsForCompose
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -173,31 +174,7 @@ fun main(args: Array<String>) {
                 (window.contentPane as? JComponent)?.isOpaque = true
             }
 
-            // Windows: Drive continuous rendering to prevent idle FPS drops and scroll stutter.
-            // On Windows, Compose Desktop only redraws when input events occur unless
-            // an active animation explicitly requests frames. This frame driver:
-            // 1. Requests frames at vsync rate to prevent idle flicker
-            // 2. Triggers recomposition by updating state to prevent periodic hitches
-            // 3. Invalidates the window to ensure smooth LazyColumn scrolling
-            if (DesktopHostOs.current == DesktopHostOs.WINDOWS) {
-                var frameCount by remember { mutableLongStateOf(0L) }
-                LaunchedEffect(Unit) {
-                    while (true) {
-                        withFrameNanos { nanos ->
-                            // Update state to drive recomposition and snapshot application.
-                            // This ensures Compose's snapshot system applies changes on every
-                            // frame rather than batching them, which prevents periodic hitches.
-                            frameCount = nanos
-                        }
-                    }
-                }
-                // Consume the frame count and invalidate the window content pane to ensure
-                // all UI updates (especially LazyColumn scroll) render immediately on Windows.
-                SideEffect {
-                    frameCount  // Force state observation to drive recomposition
-                    window.contentPane.repaint()  // Ensure AWT/Swing layer repaints
-                }
-            }
+            WindowsIdleFrameDriver(window.contentPane)
 
             LaunchedEffect(window, appIconState.selected) {
                 val backgroundSuffix = "-transparent"
@@ -348,6 +325,25 @@ private fun configureLinuxSwingGlobalsBeforeAwt() {
         useAutoDpiOnLinux = System.getProperty("sun.java2d.uiScale") == null &&
             System.getProperty("skiko.linux.autodpi", "true") == "true",
     )
+}
+
+/**
+ * Windows Compose Desktop redraws only on input unless something requests frames.
+ * This asks for a vsync frame, writes that time into state so the snapshot applies,
+ * and repaints the Swing pane so idle lists do not stall.
+ */
+@Composable
+private fun WindowsIdleFrameDriver(contentPane: java.awt.Component) {
+    if (DesktopHostOs.current != DesktopHostOs.WINDOWS) return
+    var frameCount by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            withFrameNanos { nanos -> frameCount = nanos }
+        }
+    }
+    SideEffect {
+        if (frameCount >= 0L) contentPane.repaint()
+    }
 }
 
 private fun installDesktopOpenUriHandler() {
