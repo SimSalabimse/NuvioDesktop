@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.Alignment
@@ -652,19 +653,35 @@ private fun MobileSettingsScreen(
         }
 
         val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
+        val searchFocusRequester = remember { FocusRequester() }
+        val searchInHeader = settingsSearchFieldInHeader(isDesktop, page == SettingsPage.Root)
         NuvioScreen(
-            modifier = Modifier.nestedScroll(rootSearchRevealConnection),
+            modifier = Modifier
+                .nestedScroll(rootSearchRevealConnection)
+                .desktopSettingsSearchKeyFocus(searchInHeader) {
+                    runCatching { searchFocusRequester.requestFocus() }
+                },
             topPadding = if (topChromePadding != null) 0.dp else null,
             listState = listState,
         ) {
             if (showInternalHeader) {
                 stickyHeader {
                     val previousPage = page.previousPage()
-                    NuvioScreenHeader(
-                        title = stringResource(page.titleRes),
-                        topPadding = topChromePadding,
-                        onBack = previousPage?.let { { onNavigateBack() } },
-                    )
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        NuvioScreenHeader(
+                            title = stringResource(page.titleRes),
+                            topPadding = topChromePadding,
+                            onBack = previousPage?.let { { onNavigateBack() } },
+                        )
+                        if (searchInHeader) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            SettingsSearchHeaderField(
+                                query = settingsSearchQuery,
+                                onQueryChange = { settingsSearchQuery = it },
+                                focusRequester = searchFocusRequester,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -691,6 +708,7 @@ private fun MobileSettingsScreen(
                         animateSearchField = rootSearchRevealAnimating,
                         onQueryChange = { settingsSearchQuery = it },
                         onTargetClick = { openSearchTarget(it) },
+                        fieldInHeader = searchInHeader,
                     )
                     if (settingsSearchQuery.isBlank()) {
                         settingsRootContent(
@@ -908,6 +926,30 @@ private fun rememberSettingsRootSearchRevealConnection(
 }
 
 @Composable
+private fun SettingsTabletHeading(
+    page: SettingsPage,
+    query: String,
+    activeCategory: SettingsCategory,
+    onBack: () -> Unit,
+) {
+    val previousPage = page.previousPage()
+    val title = if (page == SettingsPage.Root) {
+        if (query.isBlank()) {
+            stringResource(activeCategory.labelRes)
+        } else {
+            stringResource(Res.string.compose_settings_page_root)
+        }
+    } else {
+        stringResource(page.titleRes)
+    }
+    TabletPageHeader(
+        title = title,
+        showBack = previousPage != null,
+        onBack = { if (previousPage != null) onBack() },
+    )
+}
+
+@Composable
 private fun TabletSettingsScreen(
     page: SettingsPage,
     topChromePadding: Dp? = null,
@@ -1113,41 +1155,63 @@ private fun TabletSettingsScreen(
                     }
                 }
                     val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
+                val searchFocusRequester = remember { FocusRequester() }
+                val searchInHeader = settingsSearchFieldInHeader(isDesktop, page == SettingsPage.Root)
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .widthIn(max = if (isDesktop) 800.dp else Dp.Unspecified)
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .desktopSettingsSearchKeyFocus(searchInHeader) {
+                            runCatching { searchFocusRequester.requestFocus() }
+                        },
                 ) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                    if (searchInHeader) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 40.dp, top = effectiveTopOffset, end = 40.dp),
+                        ) {
+                            if (showInternalHeader) {
+                                SettingsTabletHeading(
+                                    page = page,
+                                    query = settingsSearchQuery,
+                                    activeCategory = activeCategory,
+                                    onBack = onNavigateBack,
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                            }
+                            SettingsSearchHeaderField(
+                                query = settingsSearchQuery,
+                                onQueryChange = { settingsSearchQuery = it },
+                                focusRequester = searchFocusRequester,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
                     LazyColumn(
                         state = listState,
                         modifier = Modifier
-                            .fillMaxSize()
+                            .weight(1f)
+                            .fillMaxWidth()
                             .nestedScroll(rootSearchRevealConnection),
                         contentPadding = PaddingValues(
                             start = 40.dp,
-                            top = effectiveTopOffset,
+                            top = if (searchInHeader) 0.dp else effectiveTopOffset,
                             end = 40.dp,
                             bottom = 40.dp + bottomOverlayPadding,
                         ),
                         verticalArrangement = Arrangement.spacedBy(18.dp),
                     ) {
-                        if (showInternalHeader) {
+                        if (showInternalHeader && !searchInHeader) {
                             item {
-                                val previousPage = page.previousPage()
-                                TabletPageHeader(
-                                    title = if (page == SettingsPage.Root) {
-                                        if (settingsSearchQuery.isBlank()) {
-                                            stringResource(activeCategory.labelRes)
-                                        } else {
-                                            stringResource(Res.string.compose_settings_page_root)
-                                        }
-                                    } else {
-                                        stringResource(page.titleRes)
-                                    },
-                                    showBack = previousPage != null,
-                                    onBack = { if (previousPage != null) onNavigateBack() },
+                                SettingsTabletHeading(
+                                    page = page,
+                                    query = settingsSearchQuery,
+                                    activeCategory = activeCategory,
+                                    onBack = onNavigateBack,
                                 )
                             }
                         }
@@ -1161,6 +1225,7 @@ private fun TabletSettingsScreen(
                                     animateSearchField = rootSearchRevealAnimating,
                                     onQueryChange = { settingsSearchQuery = it },
                                     onTargetClick = { openSearchTarget(it) },
+                                    fieldInHeader = searchInHeader,
                                 )
                                 if (settingsSearchQuery.isBlank()) {
                                     settingsRootContent(
@@ -1336,6 +1401,7 @@ private fun TabletSettingsScreen(
                                 onCommentsEnabledChange = TraktCommentsSettings::setEnabled,
                             )
                         }
+                    }
                     }
                     NuvioDesktopVerticalScrollbar(
                         state = listState,
