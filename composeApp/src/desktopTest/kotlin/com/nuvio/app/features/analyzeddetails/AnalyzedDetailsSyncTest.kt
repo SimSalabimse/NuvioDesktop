@@ -21,7 +21,8 @@ class AnalyzedDetailsSyncTest {
     @Test
     fun vectorsMatchThePublishedBytes() {
         val provenance = resource("PROVENANCE.txt")
-        assertTrue(provenance.contains("5a9eae0539bdf274469b6bb46905b45c93025c3c"))
+        assertTrue(provenance.contains("6e8981caed73992f9c4e316723e2912ee2cb3efe"))
+        assertIdNormalization(resource("id-normalization.json"))
         assertCrypto(resource("crypto.json"))
         assertPassphrase(resource("passphrase-nfc.json"))
         for (name in listOf(
@@ -339,8 +340,10 @@ class AnalyzedDetailsSyncTest {
 
     @Test
     fun paddedIdsAliasesAndImdbSubmissionsSync() {
-        val scope = accountScopeFor("  idb_test_key  ")
+        val scope = checkNotNull(accountScopeFor("  idb_test_key  "))
         assertEquals(SyncCrypto.sha256Hex("idb_test_key"), scope)
+        assertNull(accountScopeFor(""))
+        assertNull(accountScopeFor(" \n\t"))
         FakeSyncServer("test-enroll-secret").use { server ->
             val device = device(server, "device-a") { 1_700_000_000_000 }
             val noted = device.engine.noteSubmissions(
@@ -588,6 +591,34 @@ class AnalyzedDetailsSyncTest {
         store.putString("playback", "gone")
         assertEquals("nuvio_skip_marks=\\uZZZZ\n", Files.readString(marks))
         assertNull(store.getString("playback"))
+    }
+
+    private fun assertIdNormalization(text: String) {
+        val root = parseJson(text) as JsonVal.Obj
+        for (item in (root.value["imdb"] as JsonVal.Arr).value) {
+            val obj = item as JsonVal.Obj
+            val input = (obj.value["input"] as JsonVal.Str).value
+            val show = obj.value["showId"]
+            val expected = if (show is JsonVal.Str) show.value else null
+            assertEquals(expected, showIdForParent(input), input)
+        }
+        for (name in listOf("detection", "none", "alias")) {
+            val record = root.value[name] as JsonVal.Obj
+            val parsed = parseRecord(record) ?: error("$name did not parse")
+            assertEquals((record.value["id"] as JsonVal.Str).value, parsed.id)
+            assertEquals((record.value["kind"] as JsonVal.Str).value, parsed.kind)
+            assertEquals(canonicalJson(record), canonicalJson(parsed.wire))
+        }
+        val scope = root.value["accountScope"] as JsonVal.Obj
+        val key = (scope.value["key"] as JsonVal.Str).value
+        val trimmed = (scope.value["trimmed"] as JsonVal.Str).value
+        val expectedScope = (scope.value["accountScope"] as JsonVal.Str).value
+        assertEquals("cb93951ba45ba9797f45d13f9baf946300314407f7d59b98e8971118b565bbae", expectedScope)
+        assertEquals(trimmed, trimAccountKey(key))
+        assertEquals(expectedScope, accountScopeFor(key))
+        assertNull(accountScopeFor(""))
+        assertNull(accountScopeFor("   "))
+        assertNull(accountScopeFor("\uFEFF\n"))
     }
 
     private fun assertScenario(root: JsonVal.Obj) {

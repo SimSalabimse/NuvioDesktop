@@ -34,8 +34,9 @@ internal actual fun overlayAnalyzedDetails(
 ): List<SkipInterval> = AnalyzedDetailsSyncService.overlay(intervals, parentMetaId, season, episode, fileDurationMs, isMovie)
 
 internal actual fun noteTheIntroDbSubmissions(accountKey: String, notes: List<AnalyzedSubmissionNote>) {
+    val scope = accountScopeFor(accountKey) ?: return
     AnalyzedDetailsSyncService.note(
-        accountScopeFor(accountKey),
+        scope,
         notes.map { note ->
             SubmissionNote(
                 remoteId = note.remoteId,

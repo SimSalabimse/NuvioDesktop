@@ -683,8 +683,30 @@ internal data class SubmissionNote(
     val imdbId: String? = null,
 )
 
-/** SHA-256 hex of the trimmed TheIntroDB key. */
-internal fun accountScopeFor(apiKey: String): String = SyncCrypto.sha256Hex(apiKey.trim())
+/**
+ * SHA-256 hex of the UTF-8 TheIntroDB key after [trimAccountKey].
+ * A key that is empty after trimming has no scope.
+ */
+internal fun accountScopeFor(apiKey: String): String? {
+    val trimmed = trimAccountKey(apiKey)
+    if (trimmed.isEmpty()) return null
+    return SyncCrypto.sha256Hex(trimmed)
+}
+
+/** `String.prototype.trim`: Unicode White_Space and line terminators. */
+internal fun trimAccountKey(apiKey: String): String {
+    var start = 0
+    var end = apiKey.length
+    while (start < end && isAccountScopeWhitespace(apiKey[start])) start++
+    while (end > start && isAccountScopeWhitespace(apiKey[end - 1])) end--
+    return apiKey.substring(start, end)
+}
+
+private fun isAccountScopeWhitespace(ch: Char): Boolean {
+    if (ch == '\uFEFF' || ch == '\u2028' || ch == '\u2029') return true
+    if (ch in '\u0009'..'\u000D') return true
+    return Character.getType(ch.code) == Character.SPACE_SEPARATOR.toInt()
+}
 
 internal fun submissionShowId(tmdbId: Int?, otherId: String?): String? {
     val tmdb = tmdbId?.takeIf { it > 0 }?.let { "tmdb:$it" }?.takeIf(::isShowId)
