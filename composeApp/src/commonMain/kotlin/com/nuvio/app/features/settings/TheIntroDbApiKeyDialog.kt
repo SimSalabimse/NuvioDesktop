@@ -23,28 +23,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
-import com.nuvio.app.features.player.skip.TheIntroDb
+import com.nuvio.app.features.player.skip.TheIntroDbKeyVerdict
+import com.nuvio.app.features.player.skip.checkTheIntroDbApiKey
+import com.nuvio.app.features.player.skip.normalizeTheIntroDbApiKey
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.action_save
 import nuvio.composeapp.generated.resources.settings_playback_theintrodb_api_key
 import nuvio.composeapp.generated.resources.settings_playback_theintrodb_api_key_description
-import nuvio.composeapp.generated.resources.settings_playback_introdb_invalid_key
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TheIntroDbApiKeyDialog(
     initialValue: String,
-    onSave: (String) -> Unit,
+    onSave: (key: String, notice: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     var value by remember { mutableStateOf(initialValue) }
     var isVerifying by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val invalidKeyMessage = stringResource(Res.string.settings_playback_introdb_invalid_key)
 
     BasicAlertDialog(onDismissRequest = { if (!isVerifying) onDismiss() }) {
         Surface(
@@ -94,24 +94,25 @@ internal fun TheIntroDbApiKeyDialog(
                     }
                     TextButton(
                         onClick = {
-                            val trimmed = value.trim()
-                            if (trimmed.isEmpty()) {
-                                onSave(trimmed)
+                            val normalized = normalizeTheIntroDbApiKey(value)
+                            if (normalized.isEmpty()) {
+                                val cleared = TheIntroDbKeyVerdict.Saved(normalized)
+                                onSave(cleared.key, cleared.message)
                                 return@TextButton
                             }
-                            if (trimmed == initialValue) {
+                            if (normalized == initialValue) {
                                 onDismiss()
                                 return@TextButton
                             }
                             isVerifying = true
                             errorMessage = null
                             scope.launch {
-                                val isValid = TheIntroDb.verifyApiKey(trimmed)
+                                val verdict = checkTheIntroDbApiKey(normalized)
                                 isVerifying = false
-                                if (isValid) {
-                                    onSave(trimmed)
-                                } else {
-                                    errorMessage = invalidKeyMessage
+                                when (verdict) {
+                                    is TheIntroDbKeyVerdict.Saved -> onSave(verdict.key, verdict.message)
+                                    is TheIntroDbKeyVerdict.Rejected,
+                                    is TheIntroDbKeyVerdict.Unreachable -> errorMessage = verdict.message
                                 }
                             }
                         },
