@@ -221,11 +221,19 @@ internal fun submittedSegmentButtonLabel(base: String, type: String, ownSubmitte
 
 internal object TheIntroDb {
 
+    /** Catalogue reads. Frozen v3 still returns the media shape this client parses. */
     const val API_BASE = "https://api.theintrodb.org/v3"
     const val MEDIA_URL = "$API_BASE/media"
-    const val SUBMIT_URL = "https://api.theintrodb.org/v4/submit"
-    const val USER_STATS_URL = "$API_BASE/user/stats"
-    const val SUBMISSIONS_URL = "$API_BASE/submissions"
+
+    /**
+     * Account routes. Current package docs set the base to
+     * https://api.theintrodb.org/v4 and say frozen v3 only serves GET /media.
+     * Submit and user stats share this base.
+     */
+    const val ACCOUNT_API_BASE = "https://api.theintrodb.org/v4"
+    const val SUBMIT_URL = "$ACCOUNT_API_BASE/submit"
+    const val USER_STATS_URL = "$ACCOUNT_API_BASE/user/stats"
+    const val SUBMISSIONS_URL = "$ACCOUNT_API_BASE/submissions"
     const val PROVIDER = "theintrodb"
 
     suspend fun fetchTvIntervals(
@@ -296,31 +304,11 @@ internal object TheIntroDb {
         }
     }
 
-    suspend fun verifyApiKey(apiKey: String): Boolean {
-        if (apiKey.isBlank()) return false
-        return try {
-            val response = httpRequestRaw(
-                method = "GET",
-                url = USER_STATS_URL,
-                headers = mapOf(
-                    "Authorization" to "Bearer $apiKey",
-                    "Accept" to "application/json",
-                ),
-                body = "",
-            )
-            response.status in 200..299
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     /** Why the last [listMySubmissions] call stopped early, or null when it went through. */
     var lastListError: String? = null
         private set
 
-    /** This account's submissions for one title (GET /v3/submissions with the Bearer key). */
+    /** This account's submissions for one title (GET /v4/submissions with the Bearer key). */
     suspend fun listMySubmissions(
         apiKey: String,
         tmdbId: Int,

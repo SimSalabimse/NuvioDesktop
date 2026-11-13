@@ -1417,17 +1417,30 @@ private fun PlaybackSettingsSection(
                     }
                     SettingsGroupDivider(isTablet = isTablet)
                     var showTheIntroDbApiKeyDialog by remember { mutableStateOf(false) }
+                    var theIntroDbKeyNotice by remember { mutableStateOf<String?>(null) }
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_playback_theintrodb_api_key),
                         description = maskIntroDbApiKey(autoPlayPlayerSettings.theIntroDbApiKey, notSetLabel),
                         isTablet = isTablet,
                         onClick = { showTheIntroDbApiKeyDialog = true },
                     )
+                    theIntroDbKeyNotice?.let { notice ->
+                        Text(
+                            text = notice,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(
+                                horizontal = if (isTablet) 20.dp else 16.dp,
+                                vertical = 4.dp,
+                            ),
+                        )
+                    }
                     if (showTheIntroDbApiKeyDialog) {
                         TheIntroDbApiKeyDialog(
                             initialValue = autoPlayPlayerSettings.theIntroDbApiKey,
-                            onSave = {
-                                PlayerSettingsRepository.setTheIntroDbApiKey(it)
+                            onSave = { key, notice ->
+                                PlayerSettingsRepository.setTheIntroDbApiKey(key)
+                                theIntroDbKeyNotice = notice
                                 showTheIntroDbApiKeyDialog = false
                             },
                             onDismiss = { showTheIntroDbApiKeyDialog = false },
