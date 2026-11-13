@@ -19,9 +19,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.debrid.DebridSourceFallback
 import com.nuvio.app.features.debrid.DirectDebridPlayableResult
 import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
-import com.nuvio.app.features.debrid.toastMessage
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.p2p.P2pConsentDialog
 import com.nuvio.app.features.p2p.P2pSettingsRepository
@@ -434,31 +434,34 @@ internal fun StreamDestination(
                 }
         } else if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(selectedStream)) {
             StreamsRepository.setOverlayVisible(true, getString(Res.string.debrid_resolving_stream))
-            when (
-                val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
-                    stream = selectedStream,
-                    season = launch.seasonNumber,
-                    episode = launch.episodeNumber,
-                )
+            val outcome = DebridSourceFallback.playable(
+                selectedStream,
+                launch.seasonNumber,
+                launch.episodeNumber,
+                notify = false,
             ) {
-                is DirectDebridPlayableResult.Success -> resolved.stream
-                else -> {
-                    val hasNextCandidate = StreamsRepository.skipAutoPlayStream(selectedStream)
-                    if (!hasNextCandidate) {
-                        resolved.toastMessage()?.let { NuvioToastController.show(it) }
-                    }
-                    if (!hasNextCandidate && resolved == DirectDebridPlayableResult.Stale) {
-                        StreamsRepository.reload(
-                            type = launch.type,
-                            videoId = effectiveVideoId,
-                            parentMetaId = launch.parentMetaId,
-                            season = launch.seasonNumber,
-                            episode = launch.episodeNumber,
-                            manualSelection = launch.manualSelection,
-                        )
-                    }
-                    return@LaunchedEffect
+                StreamsRepository.uiState.value.groups.flatMap { it.streams }
+            }
+            outcome.stream ?: run {
+                val failure = outcome.failure ?: DirectDebridPlayableResult.Error
+                val hasNextCandidate = StreamsRepository.skipAutoPlayStream(selectedStream)
+                if (
+                    DebridSourceFallback.handleUnresolved(
+                        stream = selectedStream,
+                        failure = failure,
+                        hasLaterCandidate = hasNextCandidate,
+                    )
+                ) {
+                    StreamsRepository.reload(
+                        type = launch.type,
+                        videoId = effectiveVideoId,
+                        parentMetaId = launch.parentMetaId,
+                        season = launch.seasonNumber,
+                        episode = launch.episodeNumber,
+                        manualSelection = launch.manualSelection,
+                    )
                 }
+                return@LaunchedEffect
             }
         } else {
             selectedStream
@@ -607,33 +610,28 @@ internal fun StreamDestination(
             if (resolvingDebridStream) return
             streamRouteScope.launch {
                 resolvingDebridStream = true
-                val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
-                    stream = stream,
-                    season = launch.seasonNumber,
-                    episode = launch.episodeNumber,
-                )
+                val outcome = DebridSourceFallback.playable(stream, launch.seasonNumber, launch.episodeNumber) {
+                    StreamsRepository.uiState.value.groups.flatMap { it.streams }
+                }
                 resolvingDebridStream = false
-                when (resolved) {
-                    is DirectDebridPlayableResult.Success -> openSelectedStream(
-                        stream = resolved.stream,
+                val playable = outcome.stream
+                if (playable != null) {
+                    openSelectedStream(
+                        stream = playable,
                         resolvedResumePositionMs = resolvedResumePositionMs,
                         resolvedResumeProgressFraction = resolvedResumeProgressFraction,
                         forceExternal = forceExternal,
                         forceInternal = forceInternal,
                     )
-                    else -> {
-                        resolved.toastMessage()?.let { NuvioToastController.show(it) }
-                        if (resolved == DirectDebridPlayableResult.Stale) {
-                            StreamsRepository.reload(
-                                type = launch.type,
-                                videoId = effectiveVideoId,
-                                parentMetaId = launch.parentMetaId,
-                                season = launch.seasonNumber,
-                                episode = launch.episodeNumber,
-                                manualSelection = launch.manualSelection,
-                            )
-                        }
-                    }
+                } else if (outcome.failure == DirectDebridPlayableResult.Stale) {
+                    StreamsRepository.reload(
+                        type = launch.type,
+                        videoId = effectiveVideoId,
+                        parentMetaId = launch.parentMetaId,
+                        season = launch.seasonNumber,
+                        episode = launch.episodeNumber,
+                        manualSelection = launch.manualSelection,
+                    )
                 }
             }
             return
