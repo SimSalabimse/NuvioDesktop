@@ -399,36 +399,45 @@ internal object TheIntroDb {
             ),
         ) ?: return TheIntroDbSubmitResult.Failed
         return try {
-            var retried = false
-            while (true) {
-                val response = httpRequestRaw(
-                    method = "POST",
-                    url = SUBMIT_URL,
-                    headers = mapOf(
-                        "Authorization" to "Bearer $apiKey",
-                        "Content-Type" to "application/json",
-                    ),
-                    body = body,
-                )
-                val result = theIntroDbSubmitResult(response.status)
-                if (result !is TheIntroDbSubmitResult.Failed) return result
-                val wait = if (!retried) {
-                    theIntroDbRetryWaitMillis(
-                        status = response.status,
-                        retryAfterHeader = retryAfterHeaderValue(response.headers),
-                        nowEpochMs = nowEpochMs(),
-                    )
-                } else {
-                    null
-                }
-                if (wait == null) return TheIntroDbSubmitResult.Failed
-                retried = true
-                pause(wait)
-            }
+            postSubmitOnce(body, apiKey, nowEpochMs, pause)
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
             TheIntroDbSubmitResult.Failed
+        }
+    }
+
+    private suspend fun postSubmitOnce(
+        body: String,
+        apiKey: String,
+        nowEpochMs: () -> Long,
+        pause: suspend (Long) -> Unit,
+    ): TheIntroDbSubmitResult {
+        var retried = false
+        while (true) {
+            val response = httpRequestRaw(
+                method = "POST",
+                url = SUBMIT_URL,
+                headers = mapOf(
+                    "Authorization" to "Bearer $apiKey",
+                    "Content-Type" to "application/json",
+                ),
+                body = body,
+            )
+            val result = theIntroDbSubmitResult(response.status)
+            if (result !is TheIntroDbSubmitResult.Failed) return result
+            val wait = if (retried) {
+                null
+            } else {
+                theIntroDbRetryWaitMillis(
+                    status = response.status,
+                    retryAfterHeader = retryAfterHeaderValue(response.headers),
+                    nowEpochMs = nowEpochMs(),
+                )
+            }
+            if (wait == null) return TheIntroDbSubmitResult.Failed
+            retried = true
+            pause(wait)
         }
     }
 }
