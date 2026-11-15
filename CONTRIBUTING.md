@@ -139,6 +139,12 @@ Opening a feature request does **not** mean a pull request will be accepted for 
 
 ---
 
+## Merge rule R6
+
+A pull request into `enhanced` may be merged only after the desktop app builds and the host (JVM/desktop) unit tests pass. The check is `.github/workflows/pr-host-tests.yml` (`:composeApp:compileKotlinDesktop` and `:composeApp:desktopTest` on Ubuntu). Do not merge on the PR-body template check alone. The PR body must say that the host tests built and passed, with the CI run link or the command and its result. Do not merge into `Dev`.
+
+---
+
 ## Before opening a PR
 
 Please make sure your PR is all of the following:

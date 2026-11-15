@@ -1,0 +1,79 @@
+name: PR host tests
+
+# Compiles the desktop target and runs the JVM/desktop host unit tests.
+# Packaging (DMG, MSI, DEB, RPM, AppImage) is not part of this check.
+# Linux only: the same tasks pass on Ubuntu in local CI (docs/CI_LOCAL.md).
+
+on:
+  pull_request:
+    branches: [enhanced]
+  push:
+    branches: [enhanced]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-host-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-tests:
+    name: Desktop compile and host tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Install desktop test libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb g++ libgtk-3-0
+
+      - name: Provide an empty local.properties
+        run: |
+          # Gradle 9 rejects the optional local.properties input when the path
+          # is set and the file is absent. An empty file has no secrets.
+          if [[ ! -e local.properties ]]; then
+            : > local.properties
+          fi
+
+      - name: Compile desktop and run host tests
+        env:
+          GRADLE_OPTS: -Xmx4g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8 -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          # Prefer g++ when the default c++ cannot see libstdc++. Same rule as scripts/ci-local.sh.
+          if ! printf '#include <iostream>\nint main(){return 0;}\n' | c++ -x c++ - -o /tmp/nuvio-cxx-probe >/dev/null 2>&1; then
+            if ! command -v g++ >/dev/null 2>&1; then
+              echo "c++ cannot compile the C++ standard library and g++ is not installed" >&2
+              exit 1
+            fi
+            shim="$(mktemp -d)"
+            ln -s "$(command -v g++)" "${shim}/c++"
+            if command -v gcc >/dev/null 2>&1; then
+              ln -s "$(command -v gcc)" "${shim}/cc"
+            fi
+            export PATH="${shim}:${PATH}"
+            echo "using g++ as c++ because the default c++ cannot see the standard library"
+          fi
+          xvfb-run -a ./gradlew \
+            :composeApp:compileKotlinDesktop \
+            :composeApp:desktopTest \
+            --no-daemon \
+            --no-configuration-cache \
+            -Pkotlin.daemon.jvmargs=-Xmx3g \
+            --stacktrace
+          python3 -m scripts.ci.junit_summary \
+            composeApp/build/test-results/desktopTest \
+            --label desktopTest

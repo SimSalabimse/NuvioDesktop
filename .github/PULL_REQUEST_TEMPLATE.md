@@ -59,6 +59,8 @@
 ## Testing
 
 <!-- What you tested and how. Include desktop OS/version, installer/updater checks if relevant, commands, and manual desktop flows. Do not write only "not tested" unless this is docs/translation-only. -->
+<!-- Required. Replace with the real result. Example: Host tests: built and passed (https://github.com/org/repo/actions/runs/1). -->
+Host tests:
 
 ## Screenshots / Video
 
