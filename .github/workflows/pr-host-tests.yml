@@ -67,13 +67,24 @@ jobs:
             export PATH="${shim}:${PATH}"
             echo "using g++ as c++ because the default c++ cannot see the standard library"
           fi
+          # Host tests do not load the native player. Skip those builds so this
+          # job does not need GStreamer, libmpv, or WebKit development packages.
           xvfb-run -a ./gradlew \
             :composeApp:compileKotlinDesktop \
             :composeApp:desktopTest \
+            -x :composeMediaPlayer:buildNativeLinux \
+            -x :composeApp:buildLinuxPlayerBridge \
             --no-daemon \
             --no-configuration-cache \
             -Pkotlin.daemon.jvmargs=-Xmx3g \
             --stacktrace
-          python3 -m scripts.ci.junit_summary \
+          summary="$(python3 -m scripts.ci.junit_summary \
             composeApp/build/test-results/desktopTest \
-            --label desktopTest
+            --label desktopTest)"
+          printf '%s\n' "$summary"
+          case "$summary" in
+            *"tests=0 "*)
+              echo "host tests did not run" >&2
+              exit 1
+              ;;
+          esac
