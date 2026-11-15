@@ -44,4 +44,8 @@ Rules the script enforces:
 
 ## Merging
 
-A pull request into `enhanced` needs a `CI-LOCAL PASS` run of its head, including the name and secrets scans. Paste the log path and the PASS line into the PR body. Do not merge into `Dev`.
+### Merge rule R6
+
+Host tests must build and pass before any merge into `enhanced`. The GitHub check is `.github/workflows/pr-host-tests.yml`: on pull requests into `enhanced` and on pushes to `enhanced`, Ubuntu runs `:composeApp:compileKotlinDesktop` and `:composeApp:desktopTest`. Packaging is not part of that job. The PR body must include a line that the host tests built and passed, with the CI run link or the command and its result. Do not merge into `Dev`.
+
+A pull request into `enhanced` also needs a `CI-LOCAL PASS` run of its head, including the name and secrets scans, when GitHub Actions cannot run. Paste the log path and the PASS line into the PR body.

@@ -131,10 +131,7 @@ internal object NativePlayerBridge {
     external fun shutdownWebView2Warmup()
     external fun setWindowsDisplaySleepInhibited(inhibited: Boolean): Boolean
 
-    val controlsPageUrl: String by lazy {
-        ensureLoaded()
-        controlsPageAssets.url
-    }
+    val controlsPageUrl: String by lazy { controlsPageAssets.url }
     private val controlsPageAssets: ControlsPageAssets by lazy { exportControlsPageAssets() }
 
     fun preloadAsync() {

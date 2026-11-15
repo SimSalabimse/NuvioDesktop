@@ -132,6 +132,16 @@ jobs:
               failedRules.push("Bug fixes, UI glitch fixes, behavior fixes, and approved changes must link an issue or approved request.");
             }
 
+            const testingText = cleanedContent("Testing") || "";
+            if (
+              sectionContent("Testing") !== null &&
+              !/host tests:\s*built and passed\b/i.test(testingText)
+            ) {
+              failedRules.push(
+                "Testing must include a line that host tests built and passed, with a CI run link or the command and its result."
+              );
+            }
+
             const uiChanged = checkedLines(impactContent).some((line) =>
               /UI changed only to fix a documented glitch\/bug|UI change has explicit maintainer approval/i.test(line)
             );
