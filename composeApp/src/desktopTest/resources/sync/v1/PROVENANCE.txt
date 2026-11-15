@@ -1,0 +1,6 @@
+Source repository: https://github.com/SimSalabimse/NuvioMobile-Enhanced
+Commit: 6e8981caed73992f9c4e316723e2912ee2cb3efe
+Path: docs/sync/test-vectors/v1/
+Fetched read-only over HTTPS on 2026-11-13.
+
+These files are unmodified copies of the published v1 vectors, including id-normalization.json from that commit. The reference generator is sync-worker/test/reference/generate-vectors.ts at that commit. Do not edit a vector to make a Desktop test pass.

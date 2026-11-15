@@ -1,6 +1,9 @@
 package com.nuvio.app.features.player.skip
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.features.analyzeddetails.AnalyzedSubmissionNote
+import com.nuvio.app.features.analyzeddetails.noteLinkedShowIds
+import com.nuvio.app.features.analyzeddetails.noteTheIntroDbSubmissions
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.PlayerSettingsUiState
 import com.nuvio.app.features.tmdb.TmdbService
@@ -36,6 +39,32 @@ internal object SkipMarkImport {
         }.getOrNull() ?: return 0
         val submissions = TheIntroDb.listMySubmissions(key, tmdbId, mediaType)
         val error = TheIntroDb.lastListError
+        val imdbKnown = sequenceOf(parentMetaId, videoId)
+            .mapNotNull { it?.trim()?.takeIf { id -> id.startsWith("tt", ignoreCase = true) } }
+            .firstOrNull()
+        if (imdbKnown != null) noteLinkedShowIds(tmdbId.toString(), imdbKnown)
+        noteTheIntroDbSubmissions(
+            accountKey = key,
+            notes = submissions.mapNotNull { submission ->
+                val remoteId = submission.id ?: return@mapNotNull null
+                val segment = submission.segment ?: return@mapNotNull null
+                val start = submission.startMs ?: return@mapNotNull null
+                val end = submission.endMs ?: return@mapNotNull null
+                AnalyzedSubmissionNote(
+                    remoteId = remoteId,
+                    tmdbId = submission.tmdbId,
+                    mediaType = mediaType,
+                    season = submission.season,
+                    episode = submission.episode,
+                    segment = segment,
+                    status = submission.status ?: "pending",
+                    startMs = start,
+                    endMs = end,
+                    durationMs = submission.videoDurationMs ?: 0L,
+                    imdbId = imdbKnown ?: parentMetaId,
+                )
+            },
+        )
         var imported = 0
         for (submission in submissions) {
             if (submission.status.equals("rejected", ignoreCase = true)) continue

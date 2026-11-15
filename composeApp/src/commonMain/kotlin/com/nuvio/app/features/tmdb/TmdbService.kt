@@ -2,6 +2,7 @@ package com.nuvio.app.features.tmdb
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetText
+import com.nuvio.app.features.analyzeddetails.noteLinkedShowIds
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
@@ -14,6 +15,8 @@ object TmdbService {
     private val imdbToTmdbCache = linkedMapOf<String, String>()
     private val tmdbToImdbCache = linkedMapOf<String, String>()
     private val cacheMutex = Mutex()
+    private val linkLock = Any()
+    private val knownLinks = linkedSetOf<Pair<String, String>>()
 
     suspend fun ensureTmdbId(videoId: String, mediaType: String, fallbackImdbId: String? = null): String? {
         val apiKey = TmdbSettingsRepository.effectiveApiKey()
@@ -63,6 +66,7 @@ object TmdbService {
             tmdbToImdbCache[cacheKey] = imdbId
             imdbToTmdbCache["$imdbId:${normalizeMediaType(mediaType)}"] = tmdbId.toString()
         }
+        rememberPair(tmdbId.toString(), imdbId)
         return imdbId
     }
 
@@ -90,6 +94,7 @@ object TmdbService {
                 imdbToTmdbCache[cacheKey] = resultId
                 tmdbToImdbCache["$resultId:$normalizedType"] = imdbId
             }
+            rememberPair(resultId, imdbId)
         } else {
             log.d { "No TMDB ID found for $imdbId ($normalizedType)" }
         }
@@ -108,6 +113,12 @@ object TmdbService {
         }.onFailure { error ->
             log.w { "TMDB request failed for $endpoint: ${error.message}" }
         }.getOrNull()
+    }
+
+    private fun rememberPair(tmdbId: String, imdbId: String) {
+        val pair = tmdbId to imdbId.trim()
+        val added = synchronized(linkLock) { knownLinks.add(pair) }
+        if (added) noteLinkedShowIds(pair.first, pair.second)
     }
 
     internal fun normalizeMediaType(mediaType: String): String =

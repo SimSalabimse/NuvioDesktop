@@ -1,6 +1,7 @@
 package com.nuvio.app.features.player
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.features.analyzeddetails.overlayAnalyzedDetails
 import com.nuvio.app.features.player.skip.SkipInterval
 import com.nuvio.app.features.player.skip.SkipIntroRepository
 import com.nuvio.app.features.player.skip.SkipMarkImport
@@ -20,14 +21,26 @@ private val PlayerScreenRuntime.skipIsMovie: Boolean
     get() = (contentType ?: parentMetaType).equals("movie", ignoreCase = true)
 
 /** [intervals] with the user's own marks for the playing episode or movie in place. */
-internal fun PlayerScreenRuntime.withUserSkipMarks(intervals: List<SkipInterval>): List<SkipInterval> =
-    SkipMarks.applyTo(
+internal fun PlayerScreenRuntime.withUserSkipMarks(intervals: List<SkipInterval>): List<SkipInterval> {
+    val season = if (skipIsMovie) null else activeSeasonNumber
+    val episode = if (skipIsMovie) null else activeEpisodeNumber
+    val marked = SkipMarks.applyTo(
         intervals = intervals,
         parentMetaId = parentMetaId,
-        season = if (skipIsMovie) null else activeSeasonNumber,
-        episode = if (skipIsMovie) null else activeEpisodeNumber,
+        season = season,
+        episode = episode,
+        isMovie = skipIsMovie,
+        fileDurationMs = playbackSnapshot.durationMs,
+    )
+    return overlayAnalyzedDetails(
+        intervals = marked,
+        parentMetaId = parentMetaId,
+        season = season,
+        episode = episode,
+        fileDurationMs = playbackSnapshot.durationMs,
         isMovie = skipIsMovie,
     )
+}
 
 /** Imports the user's TheIntroDB submissions for this title once, then re-applies marks. */
 internal suspend fun PlayerScreenRuntime.importUserSkipMarks() {
@@ -133,6 +146,7 @@ internal fun PlayerScreenRuntime.saveUserSkipMark(type: String, startSec: Double
         type = category,
         startMs = (startSec * 1000).toLong(),
         endMs = (endSec * 1000).toLong(),
+        durationMs = playbackSnapshot.durationMs,
     )
     if (!saved) return
     skipIntervals = withUserSkipMarks(skipIntervals)

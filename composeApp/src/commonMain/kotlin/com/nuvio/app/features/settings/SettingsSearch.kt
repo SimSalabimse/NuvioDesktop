@@ -250,6 +250,15 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.settings_playback_subtitle),
         icon = Icons.Rounded.PlayArrow,
     )
+    if (com.nuvio.app.features.analyzeddetails.analyzedDetailsSyncSupported) {
+        addPage(
+            page = SettingsPage.Sync,
+            key = "sync",
+            title = stringResource(Res.string.compose_settings_page_sync),
+            description = stringResource(Res.string.compose_settings_root_sync_description),
+            icon = Icons.Filled.Sync,
+        )
+    }
     addPage(
         page = SettingsPage.Streams,
         key = "streams",
