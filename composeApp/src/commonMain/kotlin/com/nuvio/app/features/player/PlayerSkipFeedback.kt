@@ -84,7 +84,8 @@ internal fun PlayerScreenRuntime.handleSkipFeedbackAction(action: String): Boole
         "skipFeedbackGood" -> {
             if (interval == null) return true
             clearSkipFeedback()
-            saveUserSkipMark(interval.type, interval.startTime, interval.endTime, submit = true)
+            // Good keeps the catalogue time on this computer. It is a guess, so it is not sent.
+            saveUserSkipMark(interval.type, interval.startTime, interval.endTime, submit = false)
         }
         "skipFeedbackWrong" -> {
             if (interval == null) return true
@@ -198,7 +199,7 @@ private suspend fun PlayerScreenRuntime.submitUserSkipMark(
                 startSec = startSec,
                 endSec = endSec,
                 videoDurationMs = playbackSnapshot.durationMs.takeIf { it > 0L },
-            ) || sent
+            ).accepted || sent
         }
     }
     return sent

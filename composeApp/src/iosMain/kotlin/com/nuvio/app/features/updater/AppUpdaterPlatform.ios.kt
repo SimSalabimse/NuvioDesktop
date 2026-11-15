@@ -24,6 +24,10 @@ actual object AppUpdaterPlatform {
 
     actual val currentVersionName: String = AppVersionConfig.VERSION_NAME
 
+    actual val updateChecksEnabled: Boolean = true
+
+    actual val installAfterDownload: Boolean = false
+
     actual fun getSupportedAbis(): List<String> = emptyList()
 
     actual fun getIgnoredTag(): String? = null

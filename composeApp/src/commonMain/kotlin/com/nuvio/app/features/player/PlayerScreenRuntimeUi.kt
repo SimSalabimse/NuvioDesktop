@@ -37,7 +37,13 @@ import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.SkipInterval
 import com.nuvio.app.features.player.skip.SkipIntroRepository
+import com.nuvio.app.features.player.skip.ManualIntroTimeCheck
 import com.nuvio.app.features.player.skip.TheIntroDb
+import com.nuvio.app.features.player.skip.TheIntroDbSubmitResult
+import com.nuvio.app.features.player.skip.ownSubmittedSegmentTypes
+import com.nuvio.app.features.player.skip.canShowManualIntroSubmit
+import com.nuvio.app.features.player.skip.checkManualIntroTimes
+import com.nuvio.app.features.player.skip.submitIntroTitleRef
 import com.nuvio.app.features.streams.AddonStreamGroup
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.tmdb.TmdbService
@@ -380,9 +386,10 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         controlsVisible = controlsVisible && !playerControlsLocked,
         parentalWarnings = parentalWarnings,
         showParentalGuide = showParentalGuide,
-        showSubmitIntro = isSeries &&
-            playerSettingsUiState.canSubmitIntroSegments() &&
-            !activeSubmitIntroImdbId().isNullOrBlank(),
+        showSubmitIntro = canShowManualIntroSubmit(
+            canSubmit = playerSettingsUiState.canSubmitIntroSegments(),
+            title = activeSubmitIntroTitle(),
+        ),
         showVideoSettings = isIos,
         showSources = activeVideoId != null,
         showEpisodes = isSeries,
@@ -407,7 +414,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         submitIntroEndTime = submitIntroEndTimeStr,
         isSubmitIntroSubmitting = isSubmitIntroSubmitting,
         submitIntroStatusMessage = submitIntroStatusMessage.orEmpty(),
-        existingSegmentTypes = calculateExistingSegmentTypes(skipIntervals, submittedSegmentTypesInSession),
+        existingSegmentTypes = ownSubmittedSegmentTypesForControls(),
         showP2pConsent = playerControlsPendingP2pSwitch != null,
         subtitleActiveTab = activeSubtitleTab.name,
         subtitleLanguageItems = playerControlSubtitleSelection.languages,
@@ -1002,15 +1009,23 @@ private fun PlayerScreenRuntime.handlePlayerControlsEvent(type: String, value: D
             submitIntroStatusMessage = null
         }
         "submitIntroStart" -> {
-            val seconds = value.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
-            submitIntroStartTimeSec = seconds
-            submitIntroStartTimeStr = formatPlayerControlsSeconds(seconds)
+            if (!value.isFinite() || value < 0.0) {
+                submitIntroStartTimeSec = null
+                submitIntroStartTimeStr = ""
+            } else {
+                submitIntroStartTimeSec = value
+                submitIntroStartTimeStr = formatPlayerControlsSeconds(value)
+            }
             submitIntroStatusMessage = null
         }
         "submitIntroEnd" -> {
-            val seconds = value.takeIf { it.isFinite() && it >= 0.0 } ?: 0.0
-            submitIntroEndTimeSec = seconds
-            submitIntroEndTimeStr = formatPlayerControlsSeconds(seconds)
+            if (!value.isFinite() || value < 0.0) {
+                submitIntroEndTimeSec = null
+                submitIntroEndTimeStr = ""
+            } else {
+                submitIntroEndTimeSec = value
+                submitIntroEndTimeStr = formatPlayerControlsSeconds(value)
+            }
             submitIntroStatusMessage = null
         }
         "submitIntroCommit" -> submitIntroFromPlayerControls()
@@ -1231,17 +1246,26 @@ private fun PlayerScreenRuntime.requestEpisodeStreamsForPlayerControls(
 
 private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
     if (isSubmitIntroSubmitting) return
-    val imdbId = activeSubmitIntroImdbId()
+    val title = activeSubmitIntroTitle()
+    val imdbId = title.imdbId
+    val isMovie = parentMetaType.equals("movie", ignoreCase = true)
     val season = activeSeasonNumber
     val episode = activeEpisodeNumber
     val start = submitIntroStartTimeSec
     val end = submitIntroEndTimeSec
-    if (imdbId.isNullOrBlank() || season == null || episode == null || start == null || end == null || end <= start) {
+    if (!title.hasId || (!isMovie && (season == null || episode == null))) {
         submitIntroStatusMessage = "Check the start and end times."
         return
     }
+    when (val timeCheck = checkManualIntroTimes(submitIntroSegmentType, start, end, playbackSnapshot.durationMs)) {
+        is ManualIntroTimeCheck.Block -> {
+            submitIntroStatusMessage = timeCheck.message
+            return
+        }
+        is ManualIntroTimeCheck.Warn -> submitIntroStatusMessage = timeCheck.message
+        ManualIntroTimeCheck.Ok -> submitIntroStatusMessage = null
+    }
     isSubmitIntroSubmitting = true
-    submitIntroStatusMessage = null
     scope.launch {
         val settings = PlayerSettingsRepository.uiState.value
         val introDbAppKey = settings.introDbApiKey.trim()
@@ -1249,59 +1273,63 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
         val fallbackTheIntroKey = introDbAppKey.takeIf { it.isNotBlank() && !it.startsWith("idb_", ignoreCase = true) }.orEmpty()
         val resolvedTheIntroKey = theIntroDbKey.ifBlank { fallbackTheIntroKey }
         
-        var submitted = false
+        var introDbSent = false
+        var theIntroResult: TheIntroDbSubmitResult = TheIntroDbSubmitResult.Failed
         
-        if (introDbAppKey.startsWith("idb_", ignoreCase = true) && !parentMetaType.equals("movie", ignoreCase = true) && imdbId.startsWith("tt")) {
-            submitted = SkipIntroRepository.submitIntro(
+        if (introDbAppKey.startsWith("idb_", ignoreCase = true) && !isMovie && imdbId != null && imdbId.startsWith("tt") && season != null && episode != null && start != null && end != null && end > start) {
+            introDbSent = SkipIntroRepository.submitIntro(
                 imdbId = imdbId,
                 season = season,
                 episode = episode,
                 startSec = start,
                 endSec = end,
                 segmentType = submitIntroSegmentType,
-            ) || submitted
+            )
         }
         
         if (resolvedTheIntroKey.isNotBlank()) {
-            val mediaType = when {
-                parentMetaType.equals("movie", ignoreCase = true) -> "movie"
-                else -> "tv"
-            }
-            val resolvedTmdb = TmdbService.ensureTmdbId(
-                videoId = activeVideoId?.takeIf { it.isNotBlank() } ?: imdbId,
+            val mediaType = if (isMovie) "movie" else "tv"
+            val resolvedTmdb = title.tmdbId ?: TmdbService.ensureTmdbId(
+                videoId = activeVideoId?.takeIf { it.isNotBlank() } ?: imdbId.orEmpty(),
                 mediaType = mediaType,
-                fallbackImdbId = imdbId.takeIf { it.startsWith("tt", ignoreCase = true) },
+                fallbackImdbId = imdbId,
             )?.toIntOrNull()
             
             if (resolvedTmdb != null && resolvedTmdb > 0) {
-                submitted = TheIntroDb.submitTimestamp(
+                theIntroResult = TheIntroDb.submitTimestamp(
                     apiKey = resolvedTheIntroKey,
                     tmdbId = resolvedTmdb,
-                    imdbId = imdbId.takeIf { it.startsWith("tt", ignoreCase = true) },
+                    imdbId = imdbId,
                     type = mediaType,
                     segment = submitIntroSegmentType,
-                    season = season.takeIf { mediaType == "tv" && season > 0 },
-                    episode = episode.takeIf { mediaType == "tv" && episode > 0 },
+                    season = season.takeIf { mediaType == "tv" },
+                    episode = episode.takeIf { mediaType == "tv" },
                     startSec = start,
                     endSec = end,
-                    videoDurationMs = playbackSnapshot.durationMs.takeIf { it > 0L },
-                ) || submitted
+                    videoDurationMs = playbackSnapshot.durationMs,
+                )
             }
         }
+        val submitted = introDbSent || theIntroResult.accepted
         
         isSubmitIntroSubmitting = false
-        if (end > start) {
+        val markStart = start ?: 0.0
+        val markEnd = end ?: (playbackSnapshot.durationMs / 1000.0)
+        if (markEnd > markStart) {
             com.nuvio.app.features.player.skip.SkipMarks.record(
                 parentMetaId = parentMetaId,
-                season = season.takeIf { !parentMetaType.equals("movie", ignoreCase = true) },
-                episode = episode.takeIf { !parentMetaType.equals("movie", ignoreCase = true) },
+                season = season.takeIf { !isMovie },
+                episode = episode.takeIf { !isMovie },
                 type = submitIntroSegmentType,
-                startMs = (start * 1000).toLong(),
-                endMs = (end * 1000).toLong(),
+                startMs = (markStart * 1000).toLong(),
+                endMs = (markEnd * 1000).toLong(),
             )
             skipIntervals = withUserSkipMarks(skipIntervals)
         }
-        if (submitted) {
+        if (theIntroResult is TheIntroDbSubmitResult.AlreadySubmitted && !introDbSent) {
+            submittedSegmentTypesInSession.add(submitIntroSegmentType)
+            submitIntroStatusMessage = "Already submitted."
+        } else if (submitted) {
             submittedSegmentTypesInSession.add(submitIntroSegmentType)
             submitIntroStartTimeSec = 0.0
             submitIntroEndTimeSec = 0.0
@@ -1318,14 +1346,17 @@ private fun PlayerScreenRuntime.submitIntroFromPlayerControls() {
 }
 
 private fun PlayerScreenRuntime.activeSubmitIntroContentKey(): String {
-    val imdbId = activeSubmitIntroImdbId()?.takeIf { it.isNotBlank() } ?: return ""
-    return "$imdbId:$activeSeasonNumber:$activeEpisodeNumber"
+    val title = activeSubmitIntroTitle()
+    if (!title.hasId) return ""
+    val id = title.imdbId ?: "tmdb:${title.tmdbId}"
+    return "$id:$activeSeasonNumber:$activeEpisodeNumber"
 }
 
-private fun PlayerScreenRuntime.activeSubmitIntroImdbId(): String? =
-    activeVideoId?.split(":")?.firstOrNull()?.takeIf { it.startsWith("tt") }
-        ?: parentMetaId.takeIf { it.startsWith("tt") }
-        ?: metaUiState.meta?.id?.takeIf { it.startsWith("tt") }
+private fun PlayerScreenRuntime.activeSubmitIntroTitle() = submitIntroTitleRef(
+    listOf(activeVideoId, parentMetaId, metaUiState.meta?.imdbId, metaUiState.meta?.id),
+)
+
+private fun PlayerScreenRuntime.activeSubmitIntroImdbId(): String? = activeSubmitIntroTitle().imdbId
 
 @Composable
 private fun skipPromptLabel(type: String?): String =
@@ -2002,7 +2033,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onSubmitIntroStartTimeChanged = { submitIntroStartTimeStr = it },
         submitIntroEndTimeStr = submitIntroEndTimeStr,
         onSubmitIntroEndTimeChanged = { submitIntroEndTimeStr = it },
-        existingSegmentTypes = calculateExistingSegmentTypes(skipIntervals, submittedSegmentTypesInSession),
+        existingSegmentTypes = ownSubmittedSegmentTypesForControls(),
         onSubmitIntroDismissed = { showSubmitIntroModal = false },
         onSubmitIntroSuccess = {
             submittedSegmentTypesInSession.add(submitIntroSegmentType)
@@ -2031,8 +2062,15 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
     )
 }
 
-private fun calculateExistingSegmentTypes(skipIntervals: List<SkipInterval>, submittedInSession: Set<String>): List<String> {
-    return submittedInSession.toList()
+/** Types this account submitted. Public skip intervals are not included. */
+private fun PlayerScreenRuntime.ownSubmittedSegmentTypesForControls(): List<String> {
+    val movie = parentMetaType.equals("movie", ignoreCase = true)
+    val stored = com.nuvio.app.features.player.skip.SkipMarks.marksFor(
+        parentMetaId = parentMetaId,
+        season = if (movie) null else activeSeasonNumber,
+        episode = if (movie) null else activeEpisodeNumber,
+    ).keys
+    return ownSubmittedSegmentTypes(stored, submittedSegmentTypesInSession).toList()
 }
 
 /** "1:12–2:41 · TheIntroDB" after the Skip button text. */

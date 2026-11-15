@@ -8,6 +8,7 @@ import com.nuvio.app.features.p2p.P2pConsentDialog
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamsUiState
+import com.nuvio.app.features.player.skip.submitIntroTitleRef
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 
 @Composable
@@ -203,27 +204,31 @@ internal fun PlayerScreenModalHosts(
 
     val season = activeSeasonNumber
     val episode = activeEpisodeNumber
-    val imdbId = activeVideoId?.split(":")?.firstOrNull()?.takeIf { it.startsWith("tt") }
-        ?: parentMetaId.takeIf { it.startsWith("tt") }
-        ?: metaUiState.meta?.id?.takeIf { it.startsWith("tt") }
+    val title = submitIntroTitleRef(
+        listOf(activeVideoId, parentMetaId, metaUiState.meta?.imdbId, metaUiState.meta?.id),
+    )
+    val isMovie = parentMetaType.equals("movie", ignoreCase = true)
+    val imdbId = title.imdbId
 
-    if (showSubmitIntroModal && season != null && episode != null && !imdbId.isNullOrBlank()) {
-        com.nuvio.app.features.player.skip.SubmitIntroDialog(
-            imdbId = imdbId,
-            season = season,
-            episode = episode,
-            currentTimeSec = displayedPositionMs / 1000.0,
-            durationMs = durationMs,
-            segmentType = submitIntroSegmentType,
-            onSegmentTypeChange = onSubmitIntroSegmentTypeChanged,
-            startTimeStr = submitIntroStartTimeStr,
-            onStartTimeChange = onSubmitIntroStartTimeChanged,
-            endTimeStr = submitIntroEndTimeStr,
-            onEndTimeChange = onSubmitIntroEndTimeChanged,
-            existingSegmentTypes = existingSegmentTypes,
-            onDismiss = onSubmitIntroDismissed,
-            onSuccess = onSubmitIntroSuccess,
-        )
+    if (showSubmitIntroModal && title.hasId && (isMovie || (season != null && episode != null))) {
+        if (!isMovie && season != null && episode != null && imdbId != null) {
+            com.nuvio.app.features.player.skip.SubmitIntroDialog(
+                imdbId = imdbId,
+                season = season,
+                episode = episode,
+                currentTimeSec = displayedPositionMs / 1000.0,
+                durationMs = durationMs,
+                segmentType = submitIntroSegmentType,
+                onSegmentTypeChange = onSubmitIntroSegmentTypeChanged,
+                startTimeStr = submitIntroStartTimeStr,
+                onStartTimeChange = onSubmitIntroStartTimeChanged,
+                endTimeStr = submitIntroEndTimeStr,
+                onEndTimeChange = onSubmitIntroEndTimeChanged,
+                existingSegmentTypes = existingSegmentTypes,
+                onDismiss = onSubmitIntroDismissed,
+                onSuccess = onSubmitIntroSuccess,
+            )
+        }
     }
 }
 

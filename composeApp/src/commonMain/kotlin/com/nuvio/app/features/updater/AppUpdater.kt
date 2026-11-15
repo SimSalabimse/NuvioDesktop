@@ -74,7 +74,8 @@ class AppUpdaterController internal constructor(
 
     fun ensureAutoCheckStarted() {
         if (autoCheckStarted || !AppFeaturePolicy.inAppUpdaterEnabled ||
-            !AppUpdaterPlatform.isSupported || AppUpdaterPlatform.isDebugBuild
+            !AppUpdaterPlatform.isSupported || AppUpdaterPlatform.isDebugBuild ||
+            !AppUpdaterPlatform.updateChecksEnabled
         ) {
             return
         }
@@ -87,6 +88,15 @@ class AppUpdaterController internal constructor(
             if (showNoUpdateFeedback) {
                 scope.launch {
                     NuvioToastController.show(getString(Res.string.updates_not_available))
+                }
+            }
+            return
+        }
+
+        if (!AppUpdaterPlatform.updateChecksEnabled) {
+            if (showNoUpdateFeedback) {
+                scope.launch {
+                    NuvioToastController.show(getString(Res.string.updates_latest_version))
                 }
             }
             return
@@ -111,7 +121,9 @@ class AppUpdaterController internal constructor(
             if (channel != preferences.channel.value) return@launch
 
             result.onSuccess { update ->
-                val remoteNewer = if (channel == UpdateChannel.ALL_RELEASES) {
+                val remoteNewer = if (AppUpdaterPlatform.releaseSource.forkReleaseFeed) {
+                    VersionUtils.isRemoteNewer(update.tag, AppUpdaterPlatform.currentVersionName)
+                } else if (channel == UpdateChannel.ALL_RELEASES) {
                     VersionUtils.isRemoteNewerLegacy(update.tag, AppUpdaterPlatform.currentVersionName)
                 } else {
                     VersionUtils.isRemoteNewer(update.tag, AppUpdaterPlatform.currentVersionName)
@@ -238,7 +250,9 @@ class AppUpdaterController internal constructor(
                         errorMessage = null,
                     )
                 }
-                installDownloadedUpdate()
+                if (AppUpdaterPlatform.installAfterDownload) {
+                    installDownloadedUpdate()
+                }
             }.onFailure { error ->
                 _uiState.update { state ->
                     state.copy(

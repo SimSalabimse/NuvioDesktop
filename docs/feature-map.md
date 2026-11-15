@@ -31,3 +31,7 @@ What: a desktop `MediaAnalyzerPlatform` that fingerprints a finished download, a
 Files: new desktop actuals beside `features/analysis` (`MediaAnalyzerPlatform`, `MediaAnalysisStore`, a scheduler that calls the functions already in `SegmentOutcomes.kt` and `SiblingClipReference.kt`). `SkipIntroRepository` would gain a local provider that reads the store. `SkipLearning.recordMark` would write the store.
 
 Risks: the decoder is a new native dependency, the store is a new on-disk format, and a wrong same-cut check would apply another cut's times. None of that is in this change. The decision functions are callable and tested without that host.
+
+## Manual TheIntroDB submit
+
+The desktop player submits intro, recap, credits (shown as Outro), and preview for movies and TV, including a segment that starts at the beginning or runs to the end. Video duration is sent only inside the 5 minute to 6 hour guard. Catalogue reads and submits use API v4. A key is checked with POST /map. The v4 docs do not describe a user-stats route.

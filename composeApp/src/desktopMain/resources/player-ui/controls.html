@@ -135,7 +135,7 @@
     <div class="content">
       <header class="header">
         <nav class="header-actions" aria-label="Player actions">
-          <button class="header-button" id="submitIntroButton" data-command="submitIntro" aria-label="Submit intro"><svg><use href="#icon-flag"></use></svg></button>
+          <button class="header-button" id="submitIntroButton" data-command="submitIntro" aria-label="Submit timestamps" title="Submit timestamps"><svg><use href="#icon-flag"></use></svg></button>
           <button class="header-button" id="videoSettingsButton" data-command="videoSettings" aria-label="Video settings"><svg><use href="#icon-build"></use></svg></button>
           <button class="header-button pip-lock-button" id="pipLockButton" type="button" aria-pressed="false" aria-label="Lock player controls"><svg><use href="#icon-lock"></use></svg></button>
           <button class="header-button" id="pipButton" data-command="pictureInPicture" aria-label=""><svg><use href="#icon-pip"></use></svg></button>
@@ -425,6 +425,7 @@
                 <span class="form-label" id="startTimeLabel">START TIME</span>
                 <input class="time-input" id="submitIntroStartInput" value="00:00" inputmode="decimal">
               </label>
+              <button class="capture-button" id="submitIntroFromStartButton" type="button" aria-pressed="false">From start</button>
               <button class="capture-button" id="captureStartButton" type="button">Capture</button>
             </div>
             <div class="time-field-row">
@@ -432,6 +433,7 @@
                 <span class="form-label" id="endTimeLabel">END TIME</span>
                 <input class="time-input" id="submitIntroEndInput" value="00:00" inputmode="decimal">
               </label>
+              <button class="capture-button" id="submitIntroToEndButton" type="button" aria-pressed="false">To end</button>
               <button class="capture-button" id="captureEndButton" type="button">Capture</button>
             </div>
             <div class="submit-status" id="submitIntroStatus"></div>
